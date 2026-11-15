@@ -163,7 +163,7 @@
 
   // ---------- Actions du joueur ----------
   function montrerActions(acteur) {
-    $('tourDe').textContent = 'À ' + acteur.nom + ' (' + acteur.role + ') · Énergie ' + '🔹'.repeat(acteur.energie) + ' ' + acteur.energie + '/' + acteur.energieMax;
+    $('tourDe').textContent = 'À ' + acteur.nom + ' (' + acteur.role + ') · Énergie 🔹' + acteur.energie + '/' + acteur.energieMax;
     $('btnAnnuler').style.display = 'none';
     $('desc').textContent = 'Choisis une compétence. 🔹 = points d\'Énergie nécessaires.';
     $('actions').innerHTML = '';
