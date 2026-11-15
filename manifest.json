@@ -1,0 +1,10 @@
+{
+  "name": "Le Fil des Moires",
+  "short_name": "Fil des Moires",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1b1410",
+  "theme_color": "#1b1410",
+  "lang": "fr",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
