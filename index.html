@@ -128,13 +128,44 @@
   .resultat .grand { font-size: 28px; color: var(--or); font-variant: small-caps; }
   .resultat .etoiles { font-size: 40px; letter-spacing: 6px; margin: 10px 0; }
   .lien { background: none; border: none; color: var(--doux); text-decoration: underline; font-size: 12px; padding: 4px; }
+
+  header .aide { width: 34px; height: 34px; border-radius: 50%; padding: 0; font-size: 17px; }
+  #modale .contenu { max-height: 85vh; display: flex; flex-direction: column; }
+  .onglets { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .onglets button { padding: 6px 10px; font-size: 13px; }
+  .onglets button.on { border-color: var(--or); color: var(--or); }
+  .lexique { overflow-y: auto; font-size: 14px; line-height: 1.4; }
+  .lexique .ligne { padding: 8px 0; border-bottom: 1px solid var(--bord); }
+  .lexique .ligne b { color: var(--or); }
+  .bestiaire { display: flex; flex-direction: column; gap: 10px; }
+  .fiche { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 12px; display: flex; gap: 12px; }
+  .fiche .e { font-size: 52px; line-height: 1; }
+  .fiche h4 { margin: 0 0 4px; color: var(--or); font-size: 17px; }
+  .fiche p { margin: 4px 0; font-size: 13px; line-height: 1.4; }
+  .fiche .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--carte2); margin: 2px 4px 2px 0; }
+  .fiche .special { color: #f0c27a; }
+  #banniere { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(.8); opacity: 0; z-index: 15;
+    background: rgba(20,14,10,.92); border: 1px solid var(--or); border-radius: 14px; padding: 10px 18px; text-align: center;
+    pointer-events: none; transition: opacity .2s, transform .2s; max-width: 86%; }
+  #banniere.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #banniere .qui { font-size: 13px; color: var(--doux); }
+  #banniere .quoi { font-size: 19px; font-weight: bold; }
+  #banniere .eff { font-size: 14px; margin-top: 2px; }
+  .unite.elan-haut { animation: elanHaut .45s; } .unite.elan-bas { animation: elanBas .45s; }
+  @keyframes elanHaut { 40% { transform: translateY(-22px) scale(1.06); } }
+  @keyframes elanBas { 40% { transform: translateY(22px) scale(1.06); } }
+  .unite .eclat { position: absolute; inset: 0; border-radius: 12px; pointer-events: none; opacity: 0; }
+  .unite .eclat.on { animation: eclat .5s; }
+  @keyframes eclat { 0% { opacity: .75; } 100% { opacity: 0; } }
+  .unite.soigne { box-shadow: 0 0 0 2px var(--pv), 0 0 16px rgba(108,192,112,.6); }
+  .actions button small b { color: var(--energie); font-weight: normal; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <h1>🧵 Le Fil des Moires</h1>
-    <span class="mode" id="mode"></span>
+    <span style="display:flex;align-items:center;gap:8px"><span class="mode" id="mode"></span><button class="aide" id="btnLexique" title="Lexique">📖</button></span>
   </header>
   <div class="frise"></div>
 
@@ -153,15 +184,24 @@
     <div style="flex:1"></div>
     <div class="info">Prototype phase 0 · graphismes provisoires</div>
     <div style="display:flex;justify-content:center;gap:10px">
-      <button class="lien" id="btnAide">Revoir les affinités</button>
+      <button class="lien" id="btnAide">📖 Lexique</button>
       <button class="lien" id="btnReset">Réinitialiser (tests)</button>
     </div>
+  </section>
+
+  <!-- Présentation des ennemis -->
+  <section class="ecran" id="intro">
+    <div class="info" id="introTitre"></div>
+    <div id="introListe" class="bestiaire"></div>
+    <div style="flex:1"></div>
+    <button class="principal" id="btnCombat">Au combat</button>
   </section>
 
   <!-- Combat -->
   <section class="ecran" id="combat">
     <div class="info" id="nomRencontre"></div>
     <div class="file" id="file"></div>
+    <div id="banniere"></div>
     <div class="zone" id="ennemis"></div>
     <div class="vs">⚔︎</div>
     <div class="zone" id="allies"></div>
@@ -193,17 +233,9 @@
 </div></div></div>
 
 <div id="modale"><div class="contenu">
-  <h3>Les affinités</h3>
-  <div class="cycle">🔥 Flamme ➜ 🌿 Sylve ➜ 🌊 Onde ➜ 🔥</div>
-  <div class="cycle">⚡ Foudre ➜ 🌪️ Vent ➜ 🪨 Roc ➜ ⚡</div>
-  <div class="cycle">☀️ Lumière ⇄ 🌑 Ombre</div>
-  <div class="cycle">🛡️ Airain : neutre</div>
-  <p class="small">La flèche veut dire « fort contre » (x1,5). Dans l'autre sens, c'est peu efficace (x0,67).<br><br>
-  <b>Poids des actions</b> : Léger, tu rejoues vite. Normal. Lourd, tu frappes fort mais tu recules dans la File.<br>
-  <b>Énergie</b> : +1 à chaque tour (max 5). <b>Gloire</b> : pleine, elle débloque la Prouesse.<br>
-  <b>Hubris</b> : à 100, Némésis te fait perdre un tour et des PV.<br>
-  <b>⚠️ dans la File</b> : l'ennemi prépare un grand coup.</p>
-  <button class="principal" id="modaleOk" style="width:100%">Fermer</button>
+  <div style="display:flex;justify-content:space-between;align-items:center"><h3>📖 Lexique</h3><button class="lien" id="modaleOk">Fermer ✕</button></div>
+  <div class="onglets" id="onglets"></div>
+  <div id="lexiqueCorps" class="lexique"></div>
 </div></div>
 
 <script src="engine.js"></script>
