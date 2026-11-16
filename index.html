@@ -285,30 +285,38 @@
   .chroJour .t { font-weight: bold; }
   .chroJour .c { color: #e8c27a; margin-top: 4px; }
   .chroVide { color: var(--doux); font-style: italic; font-size: 14px; margin-bottom: 6px; }
-  /* Accueil sur un seul écran */
+  /* Onglets façon Clash Royale : chaque onglet tient dans l'écran, la barre reste en bas */
   body.fixe #app { height: 100dvh; min-height: 0; overflow: hidden; }
-  body.fixe #accueil { min-height: 0; gap: 8px; }
+  body.fixe .ecran.onglet.actif { min-height: 0; overflow-y: auto; gap: 8px; padding-bottom: 4px; }
   body.fixe #accueil > * { flex-shrink: 0; }
-  body.fixe #accueil > #parchAccueil { flex: 1 1 0; }
-  .chips { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--doux); }
-  .chips b { color: var(--or); font-weight: normal; }
-  .chips .xpbarre { flex: 0 0 34px; width: 34px; height: 6px; }
-  .tapis.compact { padding: 8px 10px; }
-  .tapis.compact .tete { margin-bottom: 4px; }
-  .alertes { display: flex; gap: 8px; }
-  .alertes .offrande { flex: 1 1 0; min-width: 0; padding: 7px 9px; gap: 8px; }
-  .alertes .offrande .amph { font-size: 26px; }
-  .alertes .offrande .txt { min-width: 0; }
-  .alertes .offrande .txt b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .alertes .offrande .txt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .alertes .offrande .ouvrir, .alertes .offrande .lien { display: none; }
-  #parchAccueil { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  body.fixe #accueil > #parchAccueil { flex: 1 1 0; min-height: 0; overflow-y: auto; }
   #parchAccueil h2 { margin-top: 2px; }
   #parchAccueil .precedemment { margin: 8px 0 0; }
-  nav.navBas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  nav.navBas button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 12px; color: var(--or); border-color: rgba(224,176,79,.45); background: linear-gradient(#3a2a1e, #2a1f18); position: relative; }
-  nav.navBas .ic { font-size: 20px; }
-  nav.navBas .pastille { position: absolute; top: -6px; right: 4px; margin: 0; font-size: 11px; padding: 0 6px; }
+  header h1 { white-space: nowrap; }
+  body.fixe header h1 { font-size: 16px; }
+  .chips { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--doux); white-space: nowrap; }
+  .chips b { color: var(--or); font-weight: normal; }
+  .chips .nv { display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1; }
+  .chips .xpbarre { display: block; flex: none; width: 34px; height: 4px; }
+  .apercuJour { margin-top: 10px; border-top: 1px dashed rgba(120,80,30,.35); padding-top: 8px; font-size: 14px; }
+  .apercuJour .lig { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+  .apercuJour .lig span:last-child { font-size: 22px; letter-spacing: 2px; }
+  .apercuJour .titre { font-variant: small-caps; color: #8a5a20; font-size: 13px; letter-spacing: .04em; }
+  nav.ongletsBas { display: none; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 8px; flex-shrink: 0; }
+  body.fixe nav.ongletsBas { display: grid; }
+  nav.ongletsBas button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0; font-size: 11.5px; color: var(--doux); background: #241a14; border-color: #3a2c22; position: relative; }
+  nav.ongletsBas .ic { font-size: 21px; filter: grayscale(.5); }
+  nav.ongletsBas button.on { color: var(--or); border-color: var(--or); background: linear-gradient(#4a3420, #2a1f18); }
+  nav.ongletsBas button.on .ic { filter: none; transform: scale(1.12); }
+  nav.ongletsBas button.centre { margin-top: -10px; padding-top: 10px; }
+  nav.ongletsBas .pastille { position: absolute; top: -6px; right: 2px; margin: 0; font-size: 11px; padding: 0 6px; }
+  nav.ongletsBas .point { position: absolute; top: -4px; right: 8px; width: 12px; height: 12px; border-radius: 50%; background: #e0503a; box-shadow: 0 0 6px #e0503a; }
+  .carteRoute { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
+  .carteRoute h3 { margin: 0 0 6px; font-variant: small-caps; color: var(--or); font-weight: normal; font-size: 17px; }
+  .palier { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 14px; }
+  .palier .ic { font-size: 22px; width: 30px; text-align: center; }
+  .palier.fait { opacity: .45; } .palier.prochain { color: var(--or); }
+  .palier .rang { margin-left: auto; font-size: 12px; color: var(--doux); }
   .carteReglage { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
   .carteReglage b { color: var(--or); font-weight: normal; font-variant: small-caps; font-size: 16px; }
 </style>
@@ -317,21 +325,12 @@
 <div id="app">
   <header>
     <h1>🧵 Le Fil des Moires</h1>
-    <span style="display:flex;align-items:center;gap:8px"><span class="mode" id="mode"></span><span class="chips" id="chipsAccueil"><span>Nv <b id="niveauEquipe">1</b></span><span class="xpbarre"><i id="xpAccueil"></i></span><span>🪙 <b id="drachmesAccueil">0</b></span></span><button class="rond" id="btnLexique" title="Lexique">📖</button></span>
+    <span style="display:flex;align-items:center;gap:8px"><span class="mode" id="mode"></span><span class="chips" id="chipsAccueil"><span class="nv">Nv <b id="niveauEquipe">1</b><span class="xpbarre"><i id="xpAccueil"></i></span></span><span>🪙 <b id="drachmesAccueil">0</b></span></span><button class="rond" id="btnLexique" title="Lexique">📖</button><button class="rond" id="btnReglages" title="Réglages">⚙️</button></span>
   </header>
   <div class="frise"></div>
 
-  <!-- Accueil : tient sur un écran, sans défilement -->
-  <section class="ecran actif" id="accueil">
-    <div class="tapis compact">
-      <div class="tete"><b>Ta tapisserie</b><span id="tapisCompte"></span></div>
-      <canvas id="tapisAccueil" width="440" height="132" data-rangs="4"></canvas>
-      <div class="route" id="route"></div>
-    </div>
-    <div class="alertes">
-      <div class="offrande dispo" id="choixAttente" style="display:none"></div>
-      <div class="offrande" id="offrande"></div>
-    </div>
+  <!-- Onglet Épreuve (accueil) -->
+  <section class="ecran actif onglet" id="accueil">
     <div class="parchemin" id="parchAccueil">
       <div class="chapitre" id="chapitreAccueil"></div>
       <h2 id="titreEpreuve"></h2>
@@ -339,16 +338,29 @@
       <p class="presage" id="presage"></p>
       <div class="nouveau" id="nouveau"></div>
       <div class="precedemment" id="precedemment"></div>
+      <div class="apercuJour" id="apercuJour"></div>
     </div>
     <div class="info" id="etatJour"></div>
     <button class="principal" id="btnJouer">Commencer l'épreuve</button>
     <button id="btnEcho">Rejouer en Écho (sans récompense)</button>
-    <nav class="navBas">
-      <button id="btnCollection"><span class="ic">🃏</span>Cartes</button>
-      <button id="btnCodex"><span class="ic">🐾</span>Codex</button>
-      <button id="btnChronique"><span class="ic">📜</span>Chronique</button>
-      <button id="btnReglages"><span class="ic">⚙️</span>Réglages</button>
-    </nav>
+  </section>
+
+  <!-- Onglet Trésors : Offrande, choix en attente, Route de la Tapisserie -->
+  <section class="ecran onglet" id="tresors">
+    <div class="bourse"><span>🏺 Trésors</span><span id="filsTresors"></span></div>
+    <div class="offrande dispo" id="choixAttente" style="display:none"></div>
+    <div class="offrande" id="offrande"></div>
+    <div class="carteRoute" id="routeTresors"></div>
+  </section>
+
+  <!-- Onglet Tapisserie : la tapisserie en grand et la Chronique du Chant -->
+  <section class="ecran onglet" id="tapisserie">
+    <div class="tapis">
+      <div class="tete"><b>Ta tapisserie</b><span id="tapisCompte"></span></div>
+      <canvas id="tapisAccueil" width="440" height="300" data-rangs="8"></canvas>
+      <div class="legende" id="tapisLegende"></div>
+    </div>
+    <div id="chroniqueCorps"></div>
   </section>
 
   <!-- Réglages -->
@@ -374,7 +386,7 @@
   </section>
 
   <!-- Collection / Préparation -->
-  <section class="ecran" id="collection">
+  <section class="ecran onglet" id="collection">
     <div class="bourse"><span id="colTitre">📜 Collection</span><span>🪙 <b id="drachmesCol">0</b></span></div>
     <div class="menace" id="colMenace"></div>
     <div class="collection" id="colListe"></div>
@@ -383,7 +395,7 @@
   </section>
 
   <!-- Codex -->
-  <section class="ecran" id="codex"><div class="collection" id="codexCorps"></div></section>
+  <section class="ecran onglet" id="codex"><div class="collection" id="codexCorps"></div></section>
 
   <!-- Scène du récit (avant le combat) et choix (après) -->
   <section class="ecran" id="scene">
@@ -393,8 +405,7 @@
     <button class="principal" id="sceneOk">Continuer</button>
   </section>
 
-  <!-- Chronique du Chant -->
-  <section class="ecran" id="chronique"><div class="collection" id="chroniqueCorps"></div></section>
+
 
   <!-- Choix de Voie et de Serment -->
   <section class="ecran" id="choix"><div class="donCorps" id="choixCorps"></div></section>
@@ -443,6 +454,13 @@
     <div class="parchemin"><b id="finQui">Clotho :</b> <span id="finClotho"></span></div>
     <button class="principal" id="btnRetour">Retour</button>
   </section>
+  <nav class="ongletsBas" id="ongletsBas">
+    <button data-onglet="tresors"><span class="ic">🏺</span>Trésors</button>
+    <button data-onglet="collection"><span class="ic">🃏</span>Cartes</button>
+    <button data-onglet="accueil" class="centre"><span class="ic">⚔️</span>Épreuve</button>
+    <button data-onglet="tapisserie"><span class="ic">🧵</span>Tapisserie</button>
+    <button data-onglet="codex"><span class="ic">🐾</span>Codex</button>
+  </nav>
 </div>
 
 <div id="banniere"></div>
