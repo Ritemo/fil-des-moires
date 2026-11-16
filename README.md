@@ -17,6 +17,8 @@ progression.js cartes, niveaux, XP, drachmes, Don des Moires, Offrande, série, 
 chant1.js    le Chant I écrit : 30 jours, scènes, répliques de fin, choix et leurs conséquences
 epreuves.js  l'épreuve du jour (le Chant I, puis des épreuves générées en attendant le Chant II)
 sauvegarde/ le script Google Apps Script de sauvegarde
+emojis.js   remplace les emojis par les images 3D de art/e/ (même rendu sur tous les appareils)
+art/e/      les émoticônes 3D Fluent Emoji de Microsoft (licence MIT, voir LICENCE-fluentui-emoji.txt)
 sw.js       le cache hors ligne (changer VERSION à chaque modification)
 tests/      les tests et la simulation d'équilibrage
 ```
@@ -59,3 +61,7 @@ Si un jour tu modifies le script, il faut *Déployer* > *Gérer les déploiement
 - **Changer l'équilibrage** : modifier les chiffres dans `data.js` (PV, attaque, puissance des compétences), puis lancer `node tests/simulation.js` pour vérifier les taux de victoire.
 - **Tester plusieurs fois le même jour** : bouton « Réinitialiser (tests) » en bas de l'accueil.
 - **Après une modification** : augmenter `VERSION` dans `sw.js`.
+
+## Illustrations
+
+Les personnages, créatures et cartes utilisent les émoticônes 3D **Fluent Emoji** de Microsoft (licence MIT, libres d'utilisation). Pour ajouter un emoji : déposer son image 3D (256 px, réduite à 160 px) dans `art/e/` sous le nom de son code Unicode (ex. `1f409.png` pour 🐉) et l'ajouter à la table de `emojis.js`. Un emoji sans image reste affiché en texte.

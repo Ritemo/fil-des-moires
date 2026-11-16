@@ -18,7 +18,7 @@
   const motifs = {};
   function motif(emoji) {
     if (motifs[emoji]) return motifs[emoji];
-    const g = [];
+    const g = []; let pret = true;
     for (let k = 0; k < JOURS; k++) {
       const ligne = [];
       for (let c = 0; c < COLS; c++) {
@@ -38,9 +38,17 @@
       const SH = Math.round(4 * RATIO); // le motif est échantillonné avec les proportions réelles des points
       const cv = document.createElement('canvas'); cv.width = COLS * 4; cv.height = JOURS * SH;
       const x = cv.getContext('2d');
-      x.font = Math.round(Math.min(cv.width, cv.height) * 0.8) + 'px serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.fillText(emoji, cv.width / 2, cv.height * 0.52);
-      const d = x.getImageData(0, 0, cv.width, cv.height).data;
+      // L'image 3D du Gardien si elle est chargée ; sinon l'emoji en texte, et on redessinera une fois l'image arrivée
+      const img = racine.Emojis && racine.Emojis.image(emoji, () => { delete motifs[emoji]; if (dernierDessin) dessiner.apply(null, dernierDessin); });
+      const t = Math.min(cv.width, cv.height) * 0.86;
+      if (img && img.complete && img.naturalWidth) x.drawImage(img, (cv.width - t) / 2, (cv.height - t) / 2, t, t);
+      else { x.font = Math.round(t) + 'px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(emoji, cv.width / 2, cv.height * 0.52); }
+      pret = !img || (img.complete && img.naturalWidth > 0);
+      let d;
+      try { d = x.getImageData(0, 0, cv.width, cv.height).data; }
+      catch (e) { // image d'une autre origine (ouverture en fichier local) : on retombe sur l'emoji en texte
+        x.clearRect(0, 0, cv.width, cv.height); x.font = Math.round(t) + 'px serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.fillText(emoji, cv.width / 2, cv.height * 0.52); d = x.getImageData(0, 0, cv.width, cv.height).data; }
       for (let k = 0; k < JOURS; k++) for (let c = 1; c < COLS - 1; c++) {
         let r = 0, v = 0, b = 0, a = 0;
         for (let i = 0; i < SH; i++) for (let j = 0; j < 4; j++) {
@@ -53,7 +61,7 @@
         }
       }
     }
-    motifs[emoji] = g;
+    if (pret) motifs[emoji] = g; // pas de mise en cache tant que l'image 3D n'est pas chargée
     return g;
   }
 
@@ -80,8 +88,10 @@
   }
 
   // Dessine la tapisserie. progression (0 à 1) anime le rang du dernier jour joué.
+  let dernierDessin = null;
   function dessiner(canvas, rangs, progression, opts) {
     opts = opts || {};
+    if (progression == null) dernierDessin = [canvas, rangs, null, opts];
     const { W, H, w, h } = dimensions(canvas);
     const x = canvas.getContext('2d');
     const g = motif(opts.motif || '🐲');

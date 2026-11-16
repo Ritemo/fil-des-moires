@@ -1,6 +1,7 @@
 /* Le Fil des Moires : interface (phase 0 bis). */
 (function () {
   'use strict';
+  if (window.Emojis) window.Emojis.activer(document.body);
   const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves, C = window.Chant1;
   const $ = id => document.getElementById(id);
 
@@ -173,7 +174,10 @@
     const ids = [...new Set(ep.rencontres.flatMap(r => r.ennemis))];
     const gardien = ids.find(id => D.ENNEMIS[id].gardien);
     const vus = id => profil.codex[id] && profil.codex[id].vu;
-    const ennemi = (id, x, y, t, k) => `<text class="flotte" style="animation-delay:${k * 0.4}s" x="${x}" y="${y}" font-size="${t}" text-anchor="middle" ${vus(id) ? '' : 'filter="url(#ombre)" opacity=".85"'}>${D.ENNEMIS[id].emoji}</text>`;
+    // Un emoji dans le SVG : image 3D si disponible, sinon texte
+    const emo = (e, x, y, t, attrs) => { const s = window.Emojis && window.Emojis.src(e);
+      return s ? `<image href="${s}" x="${x - t / 2}" y="${y - t * 0.88}" width="${t}" height="${t}" ${attrs || ''}/>` : `<text x="${x}" y="${y}" font-size="${t}" text-anchor="middle" ${attrs || ''}>${e}</text>`; };
+    const ennemi = (id, x, y, t, k) => emo(D.ENNEMIS[id].emoji, x, y, t, `class="flotte" style="animation-delay:${k * 0.4}s" ${vus(id) ? '' : 'filter="url(#ombre)" opacity=".85"'}`);
     const foes = gardien ? ennemi(gardien, 262, 150, 74, 0) + ids.filter(i => i !== gardien).slice(0, 2).map((id, k) => ennemi(id, 205 + k * 105, 168, 28, k + 1)).join('')
       : ids.slice(0, 3).map((id, k) => ennemi(id, 214 + k * 44, 150 + (k % 2) * 12, 38, k)).join('');
     return `<svg viewBox="0 0 360 190" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
@@ -186,7 +190,7 @@
       ${deco}
       <path d="M0 160 Q90 140 180 158 T360 152 V190 H0Z" fill="${P_.pres}"/>
       ${foes}
-      ${equipe.map((e, k) => `<text x="${64 + k * 40}" y="${178 - (k % 2) * 6}" font-size="32" text-anchor="middle">${e}</text>`).join('')}
+      ${equipe.map((e, k) => emo(e, 64 + k * 42, 182 - (k % 2) * 6, 38)).join('')}
       ${fait ? '<rect width="360" height="190" fill="#000" opacity=".35"/><text x="180" y="104" font-size="20" text-anchor="middle" fill="#f6ead2" font-family="Georgia">Épreuve accomplie</text>' : ''}
     </svg>`;
   }
