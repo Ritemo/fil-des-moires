@@ -11,6 +11,9 @@ data.js     le contenu : héros, ennemis, épreuve, conseils de Clotho
 engine.js   les règles du combat (file d'initiative, affinités, Gloire, Hubris...)
 app.js      l'interface sur téléphone
 index.html  la page, avec son style
+sync.js     la sauvegarde commune entre appareils
+tapisserie.js le dessin de la Tapisserie
+sauvegarde/ le script Google Apps Script de sauvegarde
 sw.js       le cache hors ligne (changer VERSION à chaque modification)
 tests/      les tests et la simulation d'équilibrage
 ```
@@ -23,6 +26,22 @@ Le hasard de l'épreuve du jour dépend de la date : recharger la page ne change
 2. *Add file > Upload files* : déposer tous les fichiers de ce dossier.
 3. *Settings > Pages* : source `main`, dossier `/ (root)`, puis *Save*.
 4. Le jeu est disponible à l'adresse `https://ritemo.github.io/fil-des-moires/`. Sur le téléphone, menu du navigateur, puis *Ajouter à l'écran d'accueil*.
+
+## Sauvegarde commune (téléphone + ordinateur)
+
+La partie est enregistrée dans un fichier de ton Google Drive (`fil-des-moires-sauvegarde.json`), via un petit script Google gratuit et privé.
+
+1. Ouvrir [script.google.com](https://script.google.com) (connecté à ton compte Google), puis *Nouveau projet*. Le renommer « Fil des Moires sauvegarde ».
+2. Effacer le contenu de `Code.gs` et coller celui du fichier `sauvegarde/Code.gs` de ce dépôt. Enregistrer.
+3. *Paramètres du projet* (roue dentée) > *Propriétés du script* > *Ajouter* : nom `CLE`, valeur : une clé secrète de ton choix (par exemple trois mots au hasard). Enregistrer.
+4. *Déployer* > *Nouveau déploiement* > type *Application Web*. « Exécuter en tant que » : **moi**. « Qui a accès » : **Tout le monde**. Déployer, puis autoriser l'accès à ton Drive.
+5. Copier l'**URL de l'application Web** (elle se termine par `/exec`).
+6. Dans le jeu, sur chaque appareil : en bas de l'accueil, *Configurer*, coller l'adresse et la clé, puis *Tester et enregistrer*.
+
+Le jeu garde toujours la version la plus récente. Sans réseau, il continue en local et se resynchronise au retour.
+Si un jour tu modifies le script, il faut *Déployer* > *Gérer les déploiements* > modifier > *Nouvelle version*, sinon l'ancienne version reste en ligne.
+
+**Sans script** : la même fenêtre propose un transfert manuel par code à copier-coller.
 
 ## Gestes courants
 

@@ -1,7 +1,7 @@
 /* Le Fil des Moires : interface (phase 0 bis). */
 (function () {
   'use strict';
-  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie;
+  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync;
   const $ = id => document.getElementById(id);
 
   // ---------- Stockage (protégé : peut être indisponible) ----------
@@ -12,7 +12,24 @@
   const aujourdhui = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const profilVide = () => ({ joursJoues: 0, rangs: [], derniereDate: null, clotho: 'auto', vus: {} });
   let profil = Object.assign(profilVide(), stock.lire('profil', {}));
-  const sauver = () => stock.ecrire('profil', profil);
+  const sauver = () => { profil.maj = Date.now(); stock.ecrire('profil', profil); S.envoyer(profil); };
+
+  // ---------- Sauvegarde commune ----------
+  // Au démarrage et quand l'appli revient au premier plan : on prend la version la plus récente.
+  async function synchroniser() {
+    if (partie) return;
+    const distant = await S.telecharger();
+    if (distant && distant.maj && distant.maj > (profil.maj || 0)) {
+      profil = Object.assign(profilVide(), distant);
+      stock.ecrire('profil', profil);
+      if (!partie && $('accueil').classList.contains('actif')) accueil();
+    } else if (S.conf() && (!distant || (profil.maj || 0) > (distant.maj || 0))) {
+      if (profil.maj) S.envoyer(profil, true);
+    }
+  }
+  const LIBELLES_SYNC = { local: '💾 Sauvegarde sur cet appareil seulement', ok: '☁️ Sauvegarde commune à jour', envoi: '☁️ Envoi en cours...', horsligne: '⚠️ Hors ligne : sauvegarde locale, synchro au retour du réseau', erreur: '⚠️ Sauvegarde commune : clé ou adresse incorrecte' };
+  S.surChangement(e => { if ($('etatSync')) $('etatSync').textContent = LIBELLES_SYNC[e]; });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') synchroniser(); });
 
   let partie = null;
   let enAttente = null;
@@ -492,16 +509,55 @@
     } else {
       h = D.LEXIQUE.filter(l => l.cat === ongletLexique).map(l => `<div class="ligne">${l.icone} <b>${l.terme}</b> : ${l.texte}</div>`).join('');
     }
+    $('titreModale').textContent = '📖 Lexique';
     $('lexiqueCorps').innerHTML = h;
     $('modale').classList.add('visible');
   }
   $('modaleOk').onclick = () => { $('modale').classList.remove('visible'); reprendre(); };
+
+  // ---------- Panneau de sauvegarde commune ----------
+  function ouvrirSync() {
+    const c = S.conf() || { url: '', cle: '' };
+    $('titreModale').textContent = '☁️ Sauvegarde commune';
+    $('onglets').innerHTML = '';
+    let code = '';
+    try { code = btoa(unescape(encodeURIComponent(JSON.stringify(profil)))); } catch (e) { code = ''; }
+    $('lexiqueCorps').innerHTML = `
+      <p class="small">Pour jouer la même partie sur ton téléphone et ton ordinateur. Colle ici l'adresse de ton script Google et ta clé secrète (voir le README du dépôt). À faire une fois sur chaque appareil.</p>
+      <label class="small">Adresse du script (se termine par /exec)</label>
+      <input id="syncUrl" value="${c.url}" placeholder="https://script.google.com/macros/s/.../exec">
+      <label class="small">Clé secrète</label>
+      <input id="syncCle" value="${c.cle}" placeholder="ta clé">
+      <div style="display:flex;gap:6px;margin-top:8px"><button id="syncOk" style="flex:1">Tester et enregistrer</button><button id="syncOff">Désactiver</button></div>
+      <p class="small" id="syncMsg"></p>
+      <hr style="border-color:var(--bord)">
+      <p class="small"><b>Sans script : transfert manuel.</b> Copie ce code sur l'autre appareil, puis colle-le dans le même cadre et touche « Charger ».</p>
+      <textarea id="syncCode" rows="3">${code}</textarea>
+      <button id="syncCharger" style="width:100%;margin-top:6px">Charger ce code</button>`;
+    $('syncOk').onclick = async () => {
+      const url = $('syncUrl').value.trim(), cle = $('syncCle').value.trim();
+      $('syncMsg').textContent = 'Test en cours...';
+      const r = await S.tester(url, cle);
+      if (r === 'ok') { S.configurer({ url, cle }); $('syncMsg').textContent = '✅ Connecté. Ta partie est maintenant commune.'; await synchroniser(); if (!S.conf()) return; S.envoyer(profil, true); }
+      else $('syncMsg').textContent = r === 'cle' ? '❌ La clé ne correspond pas à celle du script.' : '❌ Adresse injoignable. Vérifie qu\'elle se termine par /exec et que l\'accès est « Tout le monde ».';
+    };
+    $('syncOff').onclick = () => { S.configurer(null); $('syncMsg').textContent = 'Sauvegarde commune désactivée sur cet appareil.'; };
+    $('syncCharger').onclick = () => {
+      try {
+        const p = JSON.parse(decodeURIComponent(escape(atob($('syncCode').value.trim()))));
+        if (!p || !Array.isArray(p.rangs)) throw new Error('format');
+        profil = Object.assign(profilVide(), p); sauver(); $('syncMsg').textContent = '✅ Partie chargée.'; accueil();
+      } catch (e) { $('syncMsg').textContent = '❌ Ce code n\'est pas valide.'; }
+    };
+    $('modale').classList.add('visible');
+  }
 
   // ---------- Boutons ----------
   $('btnJouer').onclick = () => demarrer(false);
   $('btnEcho').onclick = () => demarrer(true);
   $('btnRetour').onclick = accueil;
   $('btnLexique').onclick = () => ouvrirLexique();
+  $('btnSync').onclick = ouvrirSync;
   $('btnVitesse').onclick = () => { vitesse = vitesse === 1 ? 0.5 : 1; $('btnVitesse').textContent = 'Vitesse x' + (vitesse === 1 ? 1 : 2); };
   $('btnJourSuivant').onclick = () => { profil.derniereDate = null; sauver(); accueil(); };
   $('btnReset').onclick = () => { profil = profilVide(); sauver(); toursJoueur = 0; accueil(); };
@@ -510,4 +566,6 @@
     try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* rien */ }
   }
   accueil();
+  $('etatSync').textContent = LIBELLES_SYNC[S.conf() ? 'envoi' : 'local'];
+  synchroniser();
 })();

@@ -147,6 +147,7 @@
   .lexique .ligne { padding: 8px 0; border-bottom: 1px solid var(--bord); } .lexique .ligne b { color: var(--or); }
   .cycle { font-size: 16px; margin: 8px 0; text-align: center; }
   .small { font-size: 12px; color: var(--doux); line-height: 1.4; }
+  input, textarea { width: 100%; font-family: inherit; background: var(--carte2); color: var(--texte); border: 1px solid var(--bord); border-radius: 8px; padding: 8px; font-size: 14px; margin: 4px 0; }
   select { font-family: inherit; background: var(--carte2); color: var(--texte); border: 1px solid var(--bord); border-radius: 8px; padding: 6px; font-size: 14px; }
 
   /* Présentation des ennemis */
@@ -196,6 +197,7 @@
         <option value="muette">muette</option>
       </select>
     </div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:6px"><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
     <div class="info">Prototype phase 0 bis · graphismes provisoires</div>
     <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px">
       <button class="lien" id="btnJourSuivant">Passer au jour suivant (test)</button>
@@ -252,7 +254,7 @@
 </div></div></div>
 
 <div id="modale"><div class="contenu">
-  <div style="display:flex;justify-content:space-between;align-items:center"><h3>📖 Lexique</h3><button class="lien" id="modaleOk">Fermer ✕</button></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><h3 id="titreModale">📖 Lexique</h3><button class="lien" id="modaleOk">Fermer ✕</button></div>
   <div class="onglets" id="onglets"></div>
   <div id="lexiqueCorps" class="lexique"></div>
 </div></div>
@@ -260,6 +262,7 @@
 <script src="engine.js"></script>
 <script src="data.js"></script>
 <script src="tapisserie.js"></script>
+<script src="sync.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
