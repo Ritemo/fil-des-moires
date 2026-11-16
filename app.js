@@ -325,7 +325,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.12.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.13.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -526,7 +526,7 @@
     const morceaux = [];
     morceaux.push(victoire ? 'Victoire sur ' + (etat.unites.find(u => u.gardien) || cible).nom : 'Défaite face à ' + cible.nom);
     if (partie.coupMax) morceaux.push('coup le plus fort : ' + partie.coupMax.nom + ' (' + partie.coupMax.degats + ')');
-    morceaux.push(partie.kos ? partie.kos + ' héros tombé' + (partie.kos > 1 ? 's' : '') : 'aucun héros tombé');
+    morceaux.push(partie.kos ? partie.kos + ' chute' + (partie.kos > 1 ? 's' : '') + ' dans l\'équipe' : 'aucun héros tombé');
     const rang = { jour: partie.jour, date: aujourdhui(), titre: partie.ep.titre.replace(/^Le Prologue : /, ''), victoire, etoiles,
       couleur, motif: (etat.unites.find(u => u.gardien) || cible).emoji, resume: morceaux.join(', ') + '.', echo: partie.echo || undefined };
     const parole = partie.ep.fin && partie.ep.fin[victoire ? 'victoire' : 'defaite'];
@@ -1227,7 +1227,14 @@
   }
 
   // ---------- Boutons ----------
-  $('btnJouer').onclick = () => demarrer(false);
+  // La toute première fois : la cinématique d'introduction avant l'épreuve
+  $('btnJouer').onclick = () => {
+    if (!profil.vus.intro && window.Cinematique) return Cinematique.jouer(() => { profil.vus.intro = true; sauver(); demarrer(false); });
+    demarrer(false);
+  };
+  const revoirIntro = () => window.Cinematique && Cinematique.jouer(() => { profil.vus.intro = true; sauver(); });
+  $('btnIntro').onclick = revoirIntro;
+  $('btnTapisInfo').onclick = revoirIntro;
   $('btnEcho').onclick = () => demarrer(true);
   $('btnRetour').onclick = () => {
     VOIX.stop();

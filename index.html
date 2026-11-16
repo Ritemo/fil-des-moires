@@ -229,7 +229,8 @@
   .btnCollection { font-size: 16px; padding: 12px; border: 1px solid var(--or); background: linear-gradient(#3a2a1e, #2a1f18); color: var(--or); }
   .pastille { background: #2e8b57; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 13px; margin-left: 6px; }
   /* Don des Moires */
-  #donVoile { position: fixed; inset: 0; z-index: 22; background: rgba(10,6,4,.88); display: none; align-items: center; justify-content: center; padding: 14px; overflow-y: auto; }
+  #donVoile { position: fixed; inset: 0; z-index: 22; background: rgba(10,6,4,.88); display: none; align-items: flex-start; justify-content: center; padding: 14px; overflow-y: auto; }
+  #donVoile .donCorps { margin: auto 0; }
   #donVoile.visible { display: flex; }
   .donCorps { max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 12px; animation: apparait .4s; }
   @keyframes apparait { from { transform: scale(.9); opacity: 0; } }
@@ -245,12 +246,12 @@
   .txtDon .prete { display: block; color: #ffd34d; margin-top: 3px; }
   /* Compagnon */
   .compCorps { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding-top: 10px; }
-  .compHalo { position: relative; width: 160px; height: 160px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  .compHalo { position: relative; width: 124px; height: 124px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
     background: radial-gradient(circle, rgba(224,176,79,.45), rgba(224,176,79,0) 70%); animation: halo 2.5s ease-in-out infinite; }
   @keyframes halo { 50% { box-shadow: 0 0 60px rgba(224,176,79,.5); } }
-  .compEmoji { font-size: 96px; animation: arrivee 1.2s cubic-bezier(.2,1.4,.4,1); }
+  .compEmoji { font-size: 74px; animation: arrivee 1.2s cubic-bezier(.2,1.4,.4,1); }
   @keyframes arrivee { from { transform: scale(0) rotate(-30deg); opacity: 0; } }
-  .compNom { font-size: 30px; color: var(--or); font-variant: small-caps; animation: apparait .8s .4s both; }
+  .compNom { font-size: 26px; color: var(--or); font-variant: small-caps; animation: apparait .8s .4s both; }
   .compTitre { font-style: italic; color: var(--doux); animation: apparait .8s .6s both; }
   .compTags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; } .compTags .tag { font-size: 12px; padding: 3px 9px; border-radius: 10px; background: var(--carte2); }
   .compBio { line-height: 1.5; margin: 4px 0; } .compApport { color: #f0c27a; font-size: 14px; margin: 0; }
@@ -357,6 +358,34 @@
   .tapisPlein .legende { font-size: 13px; color: var(--doux); text-align: center; line-height: 1.4; }
   #tapisFin { width: auto !important; max-width: 100%; max-height: 320px; margin: 0 auto; }
   img.emo { width: 1.15em; height: 1.15em; vertical-align: -0.2em; object-fit: contain; display: inline-block; pointer-events: none; }
+  /* Le bouton principal d'un écran reste toujours visible en bas, même quand le contenu dépasse */
+  .ecran:not(.onglet) button.principal, #btnColOk, .donCorps button.principal {
+    position: sticky; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 6;
+    box-shadow: 0 8px 18px rgba(0,0,0,.55), 0 0 0 5px rgba(27,20,16,.92); }
+  /* Cinématique */
+  #cine { position: fixed; inset: 0; z-index: 35; background: radial-gradient(ellipse at top, #241830, #08060a 75%); display: none; align-items: center; justify-content: center; padding: 12px; }
+  #cine.visible { display: flex; animation: apparait .6s; }
+  .cineCadre { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 10px; }
+  .cineTete { display: flex; justify-content: space-between; align-items: center; color: var(--or); font-variant: small-caps; font-size: 15px; }
+  #cineScene { border-radius: 14px; overflow: hidden; border: 1px solid rgba(224,176,79,.35); background: #0d0a12; }
+  #cineScene svg { display: block; width: 100%; height: auto; }
+  #cinePoints { display: flex; justify-content: center; gap: 6px; } #cinePoints i { width: 7px; height: 7px; border-radius: 50%; background: #4a3a30; } #cinePoints i.on { background: var(--or); }
+  #cineTexte { min-height: 96px; margin: 0; font-size: 17px; line-height: 1.5; text-align: center; color: #f3e9dc; font-style: italic; }
+  #cineTexte.vu { animation: apparait 1s; }
+  .cineAide { text-align: center; font-size: 12px; color: var(--doux); }
+  #cine .chaine { stroke-dasharray: 220; stroke-dashoffset: 220; animation: tracer 1.6s ease-out forwards; }
+  @keyframes tracer { to { stroke-dashoffset: 0; } }
+  #cine .trame { transform-box: fill-box; transform-origin: left; transform: scaleX(0); animation: tisser .35s ease-out forwards; }
+  @keyframes tisser { to { transform: scaleX(1); } }
+  #cine .apparait { opacity: 0; animation: apparaitSvg 1s forwards; } #cine .tard { animation-delay: 2.2s; }
+  @keyframes apparaitSvg { to { opacity: 1; } }
+  #cine .tombe { animation: tombe 2.6s ease-in infinite; } @keyframes tombe { to { transform: translateY(110px) rotate(25deg); opacity: 0; } }
+  #cine .filor { stroke-dasharray: 160; stroke-dashoffset: 160; animation: tracer 1.4s ease-out forwards, balance 3s ease-in-out 1.4s infinite; transform-origin: top; }
+  @keyframes balance { 50% { transform: rotate(2deg); } }
+  #cine .filDescend { stroke-dasharray: 180; stroke-dashoffset: 180; animation: tracer 2.2s ease-in-out forwards; filter: drop-shadow(0 0 4px #f6d27a); }
+  #cine .halo { opacity: 0; animation: apparaitSvg 1.2s 2s forwards; }
+  #cine .ciseaux { animation: claque 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; } @keyframes claque { 50% { transform: rotate(-18deg) scale(1.1); } }
+  #cine .scint { animation: scint 2.6s ease-in-out infinite; }
   .carteRoute { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
   .carteRoute h3 { margin: 0 0 6px; font-variant: small-caps; color: var(--or); font-weight: normal; font-size: 17px; }
   .palier { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 14px; }
@@ -412,7 +441,7 @@
   <!-- Onglet Tapisserie : la tapisserie en grand et la Chronique du Chant -->
   <section class="ecran onglet" id="tapisserie">
     <div class="tapisPlein">
-      <div class="tete"><b>Tapisserie du Chant I</b><span id="tapisCompte"></span><button class="lien" id="btnChroniqueModale">📜 Chronique</button></div>
+      <div class="tete"><b>Tapisserie du Chant I</b><span id="tapisCompte"></span><button class="lien" id="btnTapisInfo">❔</button><button class="lien" id="btnChroniqueModale">📜 Chronique</button></div>
       <canvas id="tapisAccueil" width="440" height="560"></canvas>
       <div class="legende" id="tapisLegende"></div>
     </div>
@@ -435,6 +464,7 @@
     <div class="carteReglage"><b>Voix de l'histoire</b><label class="interrupteur"><input type="checkbox" id="reglageVoix"><span></span></label></div>
     <div class="carteReglage"><b>Sauvegarde</b><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
     <div class="carteReglage"><b>Inviter un joueur</b><span class="info">Sa propre partie, séparée de la tienne</span><button class="lien" id="btnInviter">Inviter</button></div>
+    <div class="carteReglage"><b>Introduction</b><span class="info">Le Grand Métier, les Moires, la tapisserie</span><button class="lien" id="btnIntro">Revoir</button></div>
     <div class="info" id="joueurActuel"></div>
     <div class="info" id="versionJeu">Phase 2</div>
     <details class="outilsTest"><summary>Outils de test</summary>
@@ -527,6 +557,14 @@
 </div>
 
 <div id="banniere"></div>
+<!-- Cinématique d'introduction -->
+<div id="cine"><div class="cineCadre">
+  <div class="cineTete"><span>Le Fil des Moires</span><button class="lien" id="cinePasser">Passer</button></div>
+  <div id="cineScene"></div>
+  <div id="cinePoints"></div>
+  <p id="cineTexte"></p>
+  <div class="cineAide">Touche l'image pour passer à la suite</div>
+</div></div>
 <div class="voile" id="voile"></div>
 <div id="donVoile"><div class="donCorps" id="donCorps"></div></div>
 <div id="clotho"><div class="bulle"><div class="portrait">🧶</div><div>
@@ -549,6 +587,7 @@
 <script src="emojis.js"></script>
 <script src="son.js"></script>
 <script src="voix.js"></script>
+<script src="cinematique.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

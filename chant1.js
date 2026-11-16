@@ -540,6 +540,18 @@
     }
   };
 
+  // La cinématique d'introduction : le Grand Métier, les Moires, le fil de l'Errant et la tapisserie
+  const INTRO = [
+    { plan: 'metier', qui: 'narrateur', texte: "Avant les dieux, il y avait la Nuit. Et dans la Nuit, un métier à tisser plus vaste que le ciel : le Grand Métier." },
+    { plan: 'fils', qui: 'narrateur', texte: "Le monde est une tapisserie tendue sur ce métier. Chaque être vivant y est un fil : sa couleur dit ce qu'il est, sa longueur, combien de temps il vivra." },
+    { plan: 'soeurs', qui: 'clotho', texte: "Nous sommes trois sœurs, les Moires. Moi, Clotho, je file. Lachésis mesure. Atropos coupe." },
+    { plan: 'effilochage', qui: 'narrateur', texte: "Mais depuis une génération, le monde s'effiloche. Des fils se défont, des villages s'oublient, et la nuit, des fils d'or pendent du ciel, coupés." },
+    { plan: 'errant', qui: 'clotho', texte: "Ma sœur Atropos veut tout trancher. Alors j'ai filé, en secret, un fil qu'elle ne peut pas voir. Un fil sans destin. C'est toi, l'Errant." },
+    { plan: 'tissage', qui: 'clotho', texte: "Chaque jour, tu affronteras une épreuve. Et chaque soir, je tisserai ce que tu as fait dans ta tapisserie : un rang par jour." },
+    { plan: 'qualite', qui: 'clotho', texte: "Une victoire parfaite, et le rang brille d'or. Une défaite, et il s'abîme. Mais le fil ne rompt jamais : on continue le lendemain." },
+    { plan: 'chant', qui: 'clotho', texte: "Trente rangs font un Chant, et un motif apparaît. Garde-la belle, ta tapisserie. Elle compte plus que tu ne crois." }
+  ];
+
   // Évalue une condition « j6=ianthe » ou « j21!=epargner »
   function verifie(cond, histoire) {
     if (!cond) return true;
@@ -559,6 +571,6 @@
     return j;
   }
 
-  const Chant1 = { PERSOS, CHAPITRES, JOURS, chapitreDu, jourDuChant, verifie, DERNIER_JOUR: 30 };
+  const Chant1 = { INTRO, PERSOS, CHAPITRES, JOURS, chapitreDu, jourDuChant, verifie, DERNIER_JOUR: 30 };
   if (typeof module !== 'undefined' && module.exports) module.exports = Chant1; else racine.Chant1 = Chant1;
 })(typeof window !== 'undefined' ? window : this);

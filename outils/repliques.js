@@ -17,5 +17,6 @@ Object.values(C.JOURS).forEach(j => {
     if (b.choix) b.choix.options.forEach(o => ajouter('narrateur', o.resultat));
   });
 });
+(C.INTRO || []).forEach(l => ajouter(l.qui, l.texte));
 ajouter('clotho', "Je te lirai les paroles de l'histoire.");
 process.stdout.write(JSON.stringify([...vues.values()], null, 1));
