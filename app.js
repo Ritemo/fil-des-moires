@@ -345,7 +345,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.16.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.16.1 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1309,7 +1309,9 @@
       let equipe = r && r.equipe, actuelle = false;
       if (!equipe) {
         actuelle = true;
-        const ids = ['errant'].concat(f.compagnons.includes('phaena') ? ['phaena'] : [], [f.creature && f.creatures.includes(f.creature) ? f.creature : 'griffon']);
+        // seulement les compagnons déjà rencontrés : au jour 1, l'Errant est seul
+        const ids = ['errant'].concat(f.compagnons.includes('phaena') ? ['phaena'] : [],
+          f.creature && f.creature !== 'griffon' && f.creatures.includes(f.creature) ? [f.creature] : f.compagnons.includes('griffon') ? ['griffon'] : []);
         equipe = ids.map(id => ({ id, cartes: (f.equipement[id] || []).filter(c => f.cartes[c]) }));
       }
       h += `<h3 class="ficheT">${actuelle ? 'Son équipe' : 'Son équipe ce jour-là'}</h3>` + equipe.map(m => {
