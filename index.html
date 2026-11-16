@@ -256,6 +256,12 @@
   @keyframes secoue { 0%, 70%, 100% { transform: rotate(0); } 75% { transform: rotate(-12deg); } 85% { transform: rotate(10deg); } 95% { transform: rotate(-5deg); } }
   .amphGrande { font-size: 120px; text-align: center; cursor: pointer; } .amphGrande.secoue { animation: secoue 1s infinite; }
   .precedemment { font-size: 13px; background: rgba(160,110,40,.15); border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; line-height: 1.4; }
+
+  .optChoix { align-items: flex-start; } .grosIcone { font-size: 44px; width: 56px; text-align: center; }
+  .grille.mini { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 8px; } .grille.mini .tuile .art { height: 54px; } .grille.mini .tuile .art span { font-size: 30px; }
+  .avert { color: #f0c27a !important; }
+  .passif { display: block; color: var(--texte); margin-bottom: 4px; }
+  #choix .compHalo { margin: 0 auto; } #choix .compNom { text-align: center; }
 </style>
 </head>
 <body>
@@ -274,6 +280,7 @@
       <div class="legende" id="tapisLegende">Touche un rang pour revoir ta journée.</div>
       <div class="route" id="route"></div>
     </div>
+    <div class="offrande dispo" id="choixAttente" style="display:none"></div>
     <div class="offrande" id="offrande"></div>
     <div class="bourse"><span>Niveau <b id="niveauEquipe">1</b></span><div class="xpbarre"><i id="xpAccueil"></i></div><span>🪙 <b id="drachmesAccueil">0</b></span></div>
     <div class="parchemin">
@@ -312,6 +319,9 @@
     <div style="flex:1"></div>
     <button class="principal" id="btnColOk">Retour</button>
   </section>
+
+  <!-- Choix de Voie et de Serment -->
+  <section class="ecran" id="choix"><div class="donCorps" id="choixCorps"></div></section>
 
   <!-- Arrivée d'un compagnon -->
   <section class="ecran" id="compagnon"><div id="compCorps" class="compCorps"></div></section>

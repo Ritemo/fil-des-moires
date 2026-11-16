@@ -79,8 +79,56 @@
         if (c.puissance) c.puissance = Math.round(c.puissance * multiplicateurCarte(c.niveau));
       });
       const m = multiplicateurEquipe(profil.niveau);
-      return Object.assign({}, h, { competences: comps, pvMax: Math.round(h.pvMax * m), attaque: Math.round(h.attaque * m) });
+      const u = Object.assign({}, h, { competences: comps, pvMax: Math.round(h.pvMax * m), attaque: Math.round(h.attaque * m) });
+      appliquerPassifs(u, profil);
+      return u;
     });
+  }
+  // Passifs de Voie (Errant) et de Serments (toute l'équipe)
+  function appliquerPassifs(u, profil) {
+    const s = profil.serments || {};
+    const a = id => Object.values(s).includes(id);
+    if (u.id === 'errant') {
+      if (profil.voie === 'hoplite') { u.pvMax = Math.round(u.pvMax * 1.2); u.gardeReduction = 0.3; }
+      if (profil.voie === 'chasseur') { u.vitesse += 15; u.critBonus = (u.critBonus || 0) + 0.1; }
+      if (profil.voie === 'mystique') { u.energieDepart = (u.energieDepart || 2) + 1; u.energieMax = 6; }
+    }
+    if (a('aube')) u.energieDepart = (u.energieDepart || 2) + 1;
+    if (a('sang')) u.pvMax = Math.round(u.pvMax * 1.1);
+    if (a('vengeance')) u.vengeance = true;
+    if (a('fil')) u.soinMult = 1.2;
+    if (a('airain')) u.defense = Math.round(u.defense * 1.12);
+    if (a('hermes')) u.vitesse += 10;
+    if (a('nemesis')) u.critBonus = (u.critBonus || 0) + 0.08;
+    if (a('or')) u.competences.filter(c => c.prouesse).forEach(c => { c.puissance = Math.round(c.puissance * 1.3); });
+  }
+  const gloireDepart = profil => Object.values(profil.serments || {}).includes('gloire') ? 30 : 0;
+  const secondSouffle = profil => Object.values(profil.serments || {}).includes('souffle');
+
+  // ---------- Voies et Serments ----------
+  // Prochain choix en attente : { type: 'voie' | 'voie2' | 'serment', niveau? }
+  function choixEnAttente(profil) {
+    profil.serments = profil.serments || {};
+    if (profil.niveau >= 5 && !profil.voie) return { type: 'voie' };
+    for (const n of Object.keys(D.SERMENTS).map(Number)) if (profil.niveau >= n && !profil.serments[n]) return { type: 'serment', niveau: n };
+    if (profil.niveau >= 10 && profil.voie && !profil.voie2) return { type: 'voie2' };
+    return null;
+  }
+  function donnerCartesVoie(profil, voie) {
+    D.VOIES[voie].cartes.forEach(id => { if (!profil.cartes[id]) profil.cartes[id] = { niveau: 1, doublons: 0 }; });
+  }
+  function choisirVoie(profil, voie, secondaire) {
+    if (!D.VOIES[voie]) return false;
+    if (secondaire) { if (voie === profil.voie) return false; profil.voie2 = voie; }
+    else profil.voie = voie;
+    donnerCartesVoie(profil, voie);
+    return true;
+  }
+  function choisirSerment(profil, niveau, id) {
+    profil.serments = profil.serments || {};
+    if (profil.serments[niveau] || !D.SERMENTS[niveau].some(x => x.id === id)) return false;
+    profil.serments[niveau] = id;
+    return true;
   }
   // Les ennemis suivent le niveau de l'équipe à partir du jour 4
   function ennemisPourJoueur(r, profil, jour) {
@@ -126,7 +174,7 @@
     const heros = herosDisponibles(profil);
     const options = [];
     // 1. Une carte inédite, si possible
-    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && heros.includes(carteInfo(id).heros.id));
+    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && !carteInfo(id).carte.voie && heros.includes(carteInfo(id).heros.id));
     if (inedites.length && hasard() < 0.5) options.push({ type: 'carte', id: inedites[Math.floor(hasard() * inedites.length)] });
     // 2. Des doublons d'une carte équipée (ou possédée)
     const equipees = heros.flatMap(h => profil.equipement[h] || []).filter(id => profil.cartes[id] && profil.cartes[id].niveau < NIVEAU_MAX_CARTE);
@@ -171,7 +219,7 @@
     const q = QUALITES[qualite], hasard = M.creerHasard(graine), objets = [];
     const heros = herosDisponibles(profil);
     const equipees = heros.flatMap(h => profil.equipement[h] || []).filter(id => profil.cartes[id] && profil.cartes[id].niveau < NIVEAU_MAX_CARTE);
-    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && heros.includes(carteInfo(id).heros.id));
+    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && !carteInfo(id).carte.voie && heros.includes(carteInfo(id).heros.id));
     objets.push({ type: 'drachmes', nombre: q.drachmes[0] + Math.floor(hasard() * (q.drachmes[1] - q.drachmes[0] + 1)) });
     for (let i = 1; i < q.objets; i++) {
       if (inedites.length && hasard() < q.inedite) { const id = inedites.splice(Math.floor(hasard() * inedites.length), 1)[0]; objets.push({ type: 'carte', id }); continue; }
@@ -231,6 +279,7 @@
   }
 
   const Progression = {
+    choixEnAttente, choisirVoie, choisirSerment, gloireDepart, secondSouffle, appliquerPassifs,
     QUALITES, ROUTE, offrandeDisponible, ouvrirOffrande, remplirAmphore, qualiteSerie, prochainPalier, reclamerRoute, ecartJours,
     NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, NOMS_RARETE, COULEURS_RARETE,
     initialiser, rarete, carteInfo, coutAmelioration, peutAmeliorer, ameliorer, basculerEquipement,

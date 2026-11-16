@@ -115,6 +115,9 @@
     const LIB = { carte: '🆕 une carte inédite', fil: '🧵 un Fil de réserve', amphore: '🏆 une amphore dorée' };
     $('route').textContent = pal ? `Route de la Tapisserie : au rang ${pal.rang}, ${LIB[pal.type]} (encore ${pal.rang - profil.rangs.length}).` : 'Route de la Tapisserie terminée pour ce Chant.';
     afficherOffrande();
+    const ch = P.choixEnAttente(profil);
+    $('choixAttente').style.display = ch ? 'flex' : 'none';
+    if (ch) $('choixAttente').innerHTML = `<div class="amph">✨</div><div class="txt"><b>Un choix t'attend</b><span>${ch.type === 'voie' ? 'Choisis la Voie de l\'Errant' : ch.type === 'voie2' ? 'Choisis une Voie secondaire' : 'Prête un Serment (niveau ' + ch.niveau + ')'}</span></div><div class="ouvrir">Choisir</div>`;
     $('niveauEquipe').textContent = profil.niveau;
     $('xpAccueil').style.width = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau)) + '%';
     $('drachmesAccueil').textContent = profil.drachmes;
@@ -130,7 +133,7 @@
     const ep = E.epreuve(jour, aujourdhui());
     const graine = echo ? Math.floor(Math.random() * 1e9) : M.graineDuJour(aujourdhui() + '|' + jour);
     const totalEnnemis = ep.rencontres.reduce((n, r) => n + r.ennemis.length, 0);
-    partie = { echo, jour, ep, rencontre: 0, reprise: null, gloire: 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
+    partie = { echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? P.gloireDepart(profil) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
     $('mode').textContent = echo ? 'Écho' : 'Jour ' + jour;
     if (jour === 4 && !echo) clotho('discret');
     const suite = () => { if (jour > 3) ouvrirCollection(true); else presenterEnnemis(); };
@@ -161,7 +164,7 @@
   function lancerRencontre() {
     const r = partie.ep.rencontres[partie.rencontre];
     partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101, allies: P.equipeDuJoueur(partie.ep, profil, partie.jour),
-      ennemis: P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire });
+      ennemis: P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire, secondSouffle: P.secondSouffle(profil) });
     partie.pvAff = {};
     $('nomRencontre').textContent = r.nom;
     $('journal').innerHTML = '';
@@ -283,7 +286,10 @@
     const info = P.carteInfo(id); const c = info.carte, h = info.heros;
     const r = P.rarete(id), possede = profil.cartes[id];
     const a = aff(c.affinite);
-    if (!possede && !opts.reveler) return `<div class="tuile inconnue" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}"><div class="art" style="--a:#3a2a1e"><span>❔</span></div><div class="nom">À découvrir</div><div class="sous">${P.NOMS_RARETE[r]}</div></div>`;
+    if (!possede && !opts.reveler) {
+      if (c.voie) { const v = D.VOIES[c.voie]; return `<div class="tuile inconnue" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}"><div class="art" style="--a:#3a2a1e"><span>${v.icone}</span></div><div class="nom">${c.nom}</div><div class="sous">${v.nom}</div></div>`; }
+      return `<div class="tuile inconnue" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}"><div class="art" style="--a:#3a2a1e"><span>❔</span></div><div class="nom">À découvrir</div><div class="sous">${P.NOMS_RARETE[r]}</div></div>`;
+    }
     const niveau = possede ? possede.niveau : 1;
     const equipee = (profil.equipement[h.id] || []).includes(id);
     return `<div class="tuile ${opts.grande ? 'grande' : ''} ${equipee && opts.montrerEquipe ? 'equipee' : ''}" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}">
@@ -458,6 +464,49 @@
   }
   $('btnCollection').onclick = () => ouvrirCollection(false);
 
+  // ---------- Choix : Voie, Voie secondaire, Serment ----------
+  function ouvrirChoix() {
+    const ch = P.choixEnAttente(profil);
+    if (!ch) return accueil();
+    let options, titre, intro;
+    if (ch.type === 'serment') {
+      titre = 'Serment du niveau ' + ch.niveau;
+      intro = 'Lachésis te tend deux fils. Tu n\'en garderas qu\'un, pour toujours. Le Serment profite à toute l\'équipe.';
+      options = D.SERMENTS[ch.niveau].map(x => ({ id: x.id, icone: x.icone, nom: x.nom, desc: x.desc }));
+    } else {
+      const sec = ch.type === 'voie2';
+      titre = sec ? 'Voie secondaire de l\'Errant' : 'La Voie de l\'Errant';
+      intro = sec ? 'Ton fil s\'est épaissi. Choisis une seconde Voie : tu gagnes ses deux cartes (sans son passif).' : 'Ton fil vierge prend une couleur. Choisis la Voie de l\'Errant : elle lui donne un passif et deux cartes exclusives. Ce choix est définitif.';
+      options = Object.keys(D.VOIES).filter(v => !sec || v !== profil.voie).map(v => { const x = D.VOIES[v];
+        return { id: v, icone: x.icone, nom: x.nom, desc: (sec ? '' : '<span class="passif">Passif : ' + x.passif + '</span>') + '<i>' + x.lore + '</i>', cartes: x.cartes }; });
+    }
+    let choix = null;
+    $('choixCorps').innerHTML = `<div class="titreDon">${titre}</div><div class="consigne">${intro}</div>
+      <div class="optionsDon">${options.map((o, i) => `<div class="optDon optChoix" data-i="${i}"><div class="grosIcone">${o.icone}</div><div class="txtDon"><b>${o.nom}</b>${o.desc}${o.cartes ? '<div class="grille mini">' + o.cartes.map(id => tuileCarte(id, { reveler: true })).join('') + '</div>' : ''}</div></div>`).join('')}</div>
+      <div class="consigne avert">⚠️ Choix définitif</div>
+      <button class="principal" id="choixOk" disabled>Choisis une option</button>
+      <button class="lien" id="choixPlusTard">Plus tard</button>`;
+    ecran('choix');
+    $('choixCorps').querySelectorAll('.optChoix').forEach(el => el.onclick = () => {
+      $('choixCorps').querySelectorAll('.optChoix').forEach(x => x.classList.toggle('choisi', x === el));
+      choix = options[+el.dataset.i]; $('choixOk').disabled = false; $('choixOk').textContent = 'Je choisis : ' + choix.nom;
+    });
+    $('choixPlusTard').onclick = accueil;
+    $('choixOk').onclick = () => {
+      if (!choix) return;
+      if (ch.type === 'serment') P.choisirSerment(profil, ch.niveau, choix.id);
+      else P.choisirVoie(profil, choix.id, ch.type === 'voie2');
+      sauver();
+      $('choixCorps').innerHTML = `<div class="compHalo"><div class="compEmoji">${choix.icone}</div></div><div class="compNom">${choix.nom}</div>
+        <div class="consigne">${choix.cartes ? 'Deux nouvelles cartes rejoignent la Collection de l\'Errant. Pense à les équiper.' : 'Le Serment est prêté. Il agit dès la prochaine épreuve.'}</div>
+        ${choix.cartes ? '<div class="grille">' + choix.cartes.map(id => tuileCarte(id)).join('') + '</div>' : ''}
+        <button class="principal" id="choixFin">Continuer</button>`;
+      particules(document.querySelector('.compHalo'), '✨', 12);
+      $('choixFin').onclick = () => (P.choixEnAttente(profil) ? ouvrirChoix() : accueil());
+    };
+  }
+  $('choixAttente').onclick = ouvrirChoix;
+
   // ---------- Arrivée d'un compagnon ----------
   function presenterCompagnon(id, suite) {
     const h = D.HEROS.find(x => x.id === id);
@@ -599,6 +648,8 @@
     let etats = '';
     if (u.etats.brulure) etats += `<span title="Brûlure">🔥<sub>${u.etats.brulure.tours}</sub></span>`;
     if (u.etats.etourdi) etats += '<span title="Étourdi">💫</span>';
+    if (u.etats.bouclier) etats += '<span title="Bouclier">🔰</span>';
+    if (u.etats.critique) etats += '<span title="Prochain coup critique">👁️</span>';
     if (u.etats.aveugle) etats += '<span title="Aveuglé">🙈</span>';
     if (u.etats.cauterise) etats += `<span title="Cautérisé">♨️<sub>${u.etats.cauterise}</sub></span>`;
     if (u.gardePar) etats += '<span title="Protégé">🛡️</span>';
@@ -722,6 +773,9 @@
         case 'interception': plus(400, () => { flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
         case 'garde': plus(350, () => { flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
         case 'presage': plus(350, () => { flotter(carteEl(e.cible), '⏩ joue ensuite', 'info'); ajouterEffet(N(e.cible) + ' joue juste après'); }); break;
+        case 'bouclier': plus(220, () => { flotter(carteEl(e.cible), '🔰', 'info'); ajouterEffet('Bouclier levé'); }); break;
+        case 'bouclierUse': plus(200, () => { flotter(carteEl(e.cible), '🔰 amorti', 'info'); }); break;
+        case 'releve': plus(900, () => { banniere('💨 Second Souffle', N(e.cible) + ' se relève !', '25 % des PV'); particules(carteEl(e.cible), '✨', 8); journal(N(e.cible) + ' se relève grâce au Second Souffle.'); }); break;
         case 'aveugle': plus(450, () => { flotter(carteEl(e.cible), '🙈 aveuglé', 'info'); ajouterEffet('Le Cyclope est aveuglé', true); journal('Le Cyclope est aveuglé : sa prochaine attaque risque de rater.'); }); break;
         case 'oeil': plus(350, () => { flotter(carteEl(e.cible), '👁️ prochain coup critique', 'info'); ajouterEffet(N(e.cible) + ' : prochain coup critique'); }); break;
         case 'recul': plus(300, () => { flotter(carteEl(e.cible), '⏪ recule', 'info'); ajouterEffet('Recule dans la File'); }); break;

@@ -77,6 +77,7 @@
       tour: 0,
       gloire: options.gloire || 0,
       gloireActive: options.gloireActive !== false,
+      secondSouffle: !!options.secondSouffle,
       unites: [],
       journal: [],
       premieresFois: options.premieresFois || {},
@@ -168,6 +169,12 @@
   }
 
   function tomber(etat, u, evenements) {
+    if (u.camp === 'allie' && etat.secondSouffle) {
+      etat.secondSouffle = false;
+      u.pv = Math.round(u.pvMax * 0.25); u.etats = {};
+      evenements.push({ type: 'releve', cible: u.uid });
+      return;
+    }
     u.ko = true; u.pv = 0; u.etats = {};
     evenements.push({ type: 'ko', cible: u.uid });
     if (u.camp === 'ennemi') gagnerGloire(etat, 20, evenements);
@@ -205,11 +212,12 @@
   // ---------- Dégâts ----------
   function calculerDegats(etat, attaquant, cible, comp) {
     const mult = multiplicateur(comp.affinite, cible.affinite);
-    let critique = etat.hasard() < (comp.critique || 0.1);
+    let critique = etat.hasard() < (comp.critique || 0.1) + (attaquant.critBonus || 0);
     if (attaquant.etats && attaquant.etats.critique) { critique = true; delete attaquant.etats.critique; }
     const variation = 0.9 + 0.2 * etat.hasard();
     let d = comp.puissance * attaquant.attaque / (attaquant.attaque + cible.defense) * 1.6;
     d = d * mult * (critique ? 1.5 : 1) * variation;
+    if (attaquant.vengeance && etat.unites.some(u => u.camp === attaquant.camp && u.ko)) d *= 1.15;
     return { degats: Math.max(1, Math.round(d)), mult, critique };
   }
 
@@ -221,7 +229,7 @@
       const gardien = unite(etat, cible.gardePar);
       if (gardien && !gardien.ko) {
         evenements.push({ type: 'interception', gardien: gardien.uid, protege: cible.uid });
-        cible = gardien; reduction = 0.5; cibleInitiale.gardePar = null;
+        cible = gardien; reduction = gardien.gardeReduction || 0.5; cibleInitiale.gardePar = null;
       }
     }
     const precision = attaquant.etats && attaquant.etats.aveugle ? 0.55 : (comp.precision || 0.95);
@@ -230,6 +238,7 @@
       return;
     }
     const r = calculerDegats(etat, attaquant, cible, comp);
+    if (cible.etats.bouclier) { reduction *= 0.5; delete cible.etats.bouclier; evenements.push({ type: 'bouclierUse', cible: cible.uid }); }
     const degats = Math.max(1, Math.round(r.degats * reduction));
     cible.pv = Math.max(0, cible.pv - degats);
     evenements.push({ type: 'degats', source: attaquant.uid, cible: cible.uid, degats, mult: r.mult, critique: r.critique, affinite: comp.affinite });
@@ -285,7 +294,7 @@
     } else if (comp.type === 'soin') {
       const cibles = comp.zone ? vivants(etat, acteur.camp) : [cible];
       cibles.forEach(c => {
-        const soin = Math.round(comp.puissance * (0.9 + 0.2 * etat.hasard()));
+        const soin = Math.round(comp.puissance * (acteur.soinMult || 1) * (0.9 + 0.2 * etat.hasard()));
         const avant = c.pv;
         c.pv = Math.min(c.pvMax, c.pv + soin);
         evenements.push({ type: 'soin', source: acteur.uid, cible: c.uid, soin: c.pv - avant });
@@ -300,6 +309,14 @@
         evenements.push({ type: 'soin', source: acteur.uid, cible: c.uid, soin: c.pv - avant });
       });
       gagnerGloire(etat, comp.gloire || 0, evenements);
+    } else if (comp.type === 'bouclier') {
+      vivants(etat, acteur.camp).forEach(c => { c.etats.bouclier = true; evenements.push({ type: 'bouclier', cible: c.uid }); });
+    } else if (comp.type === 'benediction') {
+      const avant = cible.pv;
+      cible.pv = Math.min(cible.pvMax, cible.pv + Math.round(comp.puissance * (acteur.soinMult || 1) * (0.9 + 0.2 * etat.hasard())));
+      evenements.push({ type: 'soin', source: acteur.uid, cible: cible.uid, soin: cible.pv - avant });
+      cible.etats.critique = true;
+      evenements.push({ type: 'oeil', source: acteur.uid, cible: cible.uid });
     } else if (comp.type === 'oeil') {
       cible.etats.critique = true;
       evenements.push({ type: 'oeil', source: acteur.uid, cible: cible.uid });

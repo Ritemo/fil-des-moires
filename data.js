@@ -17,6 +17,12 @@
         { id: 'ares', art: '⚔️', nom: "Colère d'Arès", type: 'attaque', cible: 'ennemi', puissance: 115, cout: 3, poids: 'lourd', affinite: 'airain', desc: 'Le coup le plus puissant de l\'Errant. Lourd et coûteux.' },
         { id: 'pommeau', art: '🔨', nom: 'Coup de pommeau', type: 'attaque', cible: 'ennemi', puissance: 22, cout: 0, poids: 'leger', affinite: 'airain', etourdit: 0.5, desc: 'Léger. 50 % d\'étourdir la cible.' },
         { id: 'ralliement', art: '📯', nom: 'Cri de ralliement', type: 'ralliement', cible: 'aucune', zone: true, puissance: 20, gloire: 25, cout: 2, poids: 'normal', affinite: 'airain', desc: '+25 Gloire et environ 20 PV pour toute l\'équipe.' },
+        { id: 'mur', art: '🛡️', nom: 'Mur de boucliers', voie: 'hoplite', type: 'bouclier', cible: 'aucune', zone: true, cout: 2, poids: 'leger', affinite: 'airain', desc: 'Léger. Toute l\'équipe prend moitié moins de dégâts au prochain coup reçu.' },
+        { id: 'coupbouclier', art: '🔰', nom: 'Coup de bouclier', voie: 'hoplite', type: 'attaque', cible: 'ennemi', puissance: 34, cout: 1, poids: 'normal', affinite: 'airain', etourdit: 0.6, desc: '60 % d\'étourdir la cible.' },
+        { id: 'fleche', art: '🏹', nom: "Flèche d'Artémis", voie: 'chasseur', type: 'attaque', cible: 'ennemi', puissance: 46, cout: 1, poids: 'leger', affinite: 'sylve', critique: 0.5, desc: 'Sylve, légère. 50 % de coup critique.' },
+        { id: 'pluie', art: '🌧️', nom: 'Pluie de flèches', voie: 'chasseur', type: 'attaque', cible: 'ennemi', zone: true, puissance: 30, cout: 2, poids: 'normal', affinite: 'vent', desc: 'Vent. Touche tous les ennemis.' },
+        { id: 'lameombre', art: '🌑', nom: "Lame d'ombre", voie: 'mystique', type: 'attaque', cible: 'ennemi', puissance: 54, cout: 1, poids: 'normal', affinite: 'ombre', desc: 'Ombre, forte contre la Lumière.' },
+        { id: 'benediction', art: '🕊️', nom: 'Bénédiction', voie: 'mystique', type: 'benediction', cible: 'allie', puissance: 36, cout: 2, poids: 'normal', affinite: 'lumiere', desc: 'Soigne un allié (environ 36 PV) et rend son prochain coup critique.' },
         garde,
         { id: 'prouesse', art: '🏛️', nom: 'Phalange des Moires', type: 'attaque', cible: 'ennemi', zone: true, puissance: 85, cout: 0, poids: 'normal', affinite: 'airain', prouesse: true, desc: 'Prouesse (Gloire pleine) : toute l\'équipe frappe tous les ennemis.' }
       ]
@@ -123,10 +129,34 @@
 
   // Rareté de chaque carte (la Garde n'est pas une carte : toujours disponible)
   const RARETES = {
+    mur: 'epique', coupbouclier: 'rare', fleche: 'rare', pluie: 'epique', lameombre: 'rare', benediction: 'epique',
     frappe: 'commune', torche: 'commune', pommeau: 'commune', charge: 'rare', ralliement: 'rare', ares: 'epique', prouesse: 'legendaire',
     rayon: 'commune', ronces: 'rare', soin: 'rare', aube: 'rare', presage: 'epique', oeil: 'epique',
     serres: 'commune', cri: 'commune', eclair: 'rare', rafale: 'rare', pique: 'epique'
   };
+  // Les Voies de l'Errant : un passif et deux cartes exclusives
+  const VOIES = {
+    hoplite: { nom: 'Voie de l\'Hoplite', icone: '🛡️', resume: 'Tenir la ligne', passif: '+20 % de PV pour l\'Errant, et sa Garde n\'encaisse plus que 30 % du coup (au lieu de 50 %).',
+      lore: "Le bouclier avant le glaive. Ceux qui marchent derrière toi rentreront chez eux.", cartes: ['mur', 'coupbouclier'] },
+    chasseur: { nom: 'Voie du Chasseur', icone: '🏹', resume: 'Frapper juste et vite', passif: '+15 vitesse et +10 % de chance de critique pour l\'Errant.',
+      lore: "Artémis t'a appris à voir la faille dans la cuirasse. Une seule flèche suffit, si elle part au bon moment.", cartes: ['fleche', 'pluie'] },
+    mystique: { nom: 'Voie du Mystique', icone: '🔮', resume: 'Les fils et les ombres', passif: '+1 Énergie au départ et +1 Énergie maximum pour l\'Errant.',
+      lore: "Ton fil est vierge : tu peux le tremper dans la lumière comme dans l'ombre. Clotho n'aime pas ça.", cartes: ['lameombre', 'benediction'] }
+  };
+  // Serments : à certains niveaux d'équipe, un choix définitif entre deux bénédictions
+  const SERMENTS = {
+    4: [{ id: 'aube', nom: "Serment de l'Aube", icone: '🌅', desc: '+1 Énergie au départ de chaque combat pour toute l\'équipe.' },
+        { id: 'sang', nom: 'Serment du Sang', icone: '🩸', desc: '+10 % de PV pour toute l\'équipe.' }],
+    8: [{ id: 'gloire', nom: 'Serment de Gloire', icone: '🏆', desc: 'La Gloire démarre à 30 au début de chaque épreuve.' },
+        { id: 'vengeance', nom: 'Serment de Vengeance', icone: '⚔️', desc: '+15 % de dégâts tant qu\'un allié est tombé.' }],
+    12: [{ id: 'fil', nom: 'Serment du Fil', icone: '🧵', desc: 'Tous les soins sont plus forts de 20 %.' },
+         { id: 'airain', nom: "Serment de l'Airain", icone: '🛡️', desc: '+12 % de défense pour toute l\'équipe.' }],
+    16: [{ id: 'hermes', nom: "Serment d'Hermès", icone: '🪽', desc: '+10 vitesse pour toute l\'équipe.' },
+         { id: 'nemesis', nom: 'Serment de Némésis', icone: '🎯', desc: '+8 % de chance de critique pour toute l\'équipe.' }],
+    20: [{ id: 'or', nom: "Serment d'Or", icone: '👑', desc: 'La Prouesse est plus puissante de 30 %.' },
+         { id: 'souffle', nom: 'Second Souffle', icone: '💨', desc: 'Une fois par combat, le premier héros qui tombe se relève avec 25 % de ses PV.' }]
+  };
+
   // Cartes possédées au départ (les autres se découvrent)
   const CARTES_DEPART = ['frappe', 'torche', 'charge', 'ares', 'prouesse', 'rayon', 'ronces', 'soin', 'presage', 'serres', 'eclair', 'pique'];
   // Équipement par défaut (4 cartes par héros)
@@ -229,6 +259,8 @@
     { cat: 'États', icone: '💫', terme: 'Étourdi', texte: "Perd son prochain tour." },
     { cat: 'États', icone: '♨️', terme: 'Cautérisé', texte: "Propre à l'Hydre : aucune tête ne peut repousser pendant 2 de ses tours." },
     { cat: 'États', icone: '🐍', terme: 'Têtes', texte: "Nombre de têtes de l'Hydre. Chaque tête = une attaque par tour." },
+    { cat: 'Cartes', icone: '🧭', terme: 'Voies', texte: "Au niveau 5, l'Errant choisit sa Voie : Hoplite (défense), Chasseur (vitesse, critiques) ou Mystique (Énergie, Ombre et Lumière). Chacune donne un passif et deux cartes exclusives. Au niveau 10, une Voie secondaire ajoute ses deux cartes (sans le passif)." },
+    { cat: 'Cartes', icone: '📜', terme: 'Serments', texte: "Aux niveaux 4, 8, 12, 16 et 20, un choix définitif entre deux bénédictions pour toute l'équipe." },
     { cat: 'Cartes', icone: '🃏', terme: 'Cartes', texte: "Chaque capacité est une carte, avec une rareté (Commune, Rare, Épique, Légendaire) et un niveau de 1 à 5. Chaque niveau donne +10 % de puissance." },
     { cat: 'Cartes', icone: '⬆', terme: 'Améliorer', texte: "Il faut des doublons de la carte et des drachmes. Les cartes rares demandent moins de doublons que les communes." },
     { cat: 'Cartes', icone: '🪙', terme: 'Drachmes', texte: "La monnaie du jeu, gagnée à chaque épreuve (plus avec des étoiles). Elle sert à payer les améliorations." },
@@ -240,13 +272,14 @@
     { cat: 'Épreuve', icone: '🧵', terme: 'Fil de réserve', texte: "Gagné tous les 7 jours de série (2 au maximum). Il protège automatiquement ta série si tu manques un jour." },
     { cat: 'Épreuve', icone: '🛤️', terme: 'Route de la Tapisserie', texte: "Aux rangs 2, 4, 6, 9, 12 et 15 de ta Tapisserie, une récompense connue à l'avance : une carte inédite, un Fil de réserve ou une amphore dorée." },
     { cat: 'Épreuve', icone: '☀️', terme: 'Épreuve des Dieux', texte: "Le dimanche, le Gardien est renforcé, et l'XP et les drachmes sont multipliés par 1,5." },
+    { cat: 'États', icone: '🔰', terme: 'Bouclier', texte: "Le prochain coup reçu est réduit de moitié." },
     { cat: 'États', icone: '🙈', terme: 'Aveuglé', texte: "Propre au Cyclope : touché par la Lumière, sa prochaine attaque a 45 % de chances de rater." },
     { cat: 'Épreuve', icone: '📅', terme: 'Épreuve du jour', texte: "Une nouvelle épreuve chaque jour. Une seule tentative compte pour les récompenses." },
     { cat: 'Épreuve', icone: '🔁', terme: 'Mode Écho', texte: "Rejouer l'épreuve après ta tentative, pour t'entraîner. Aucune récompense." },
     { cat: 'Épreuve', icone: '⭐', terme: 'Étoiles', texte: "3 : victoire sans perte. 2 : un héros tombé. 1 : victoire de justesse." }
   ];
 
-  const Donnees = { RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
+  const Donnees = { VOIES, SERMENTS, RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = Donnees;
   else racine.Donnees = Donnees;
 })(typeof window !== 'undefined' ? window : this);

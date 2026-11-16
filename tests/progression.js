@@ -11,7 +11,7 @@ function jouerJour(profil, jour, graine) {
   const ep = E.epreuve(jour, dateDu(graine, jour));
   let reprise = null, gloire = 0, etat;
   for (const [k, r] of ep.rencontres.entries()) {
-    etat = M.creerCombat({ graine: graine + k * 101, allies: P.equipeDuJoueur(ep, profil, jour), ennemis: P.ennemisPourJoueur(r, profil, jour), reprise, gloire, gloireActive: ep.gloire });
+    etat = M.creerCombat({ graine: graine + k * 101, allies: P.equipeDuJoueur(ep, profil, jour), ennemis: P.ennemisPourJoueur(r, profil, jour), reprise, gloire: k === 0 ? P.gloireDepart(profil) : gloire, gloireActive: ep.gloire, secondSouffle: P.secondSouffle(profil) });
     let n = 0;
     while (!etat.fini && n++ < 600) {
       const d = M.debutTour(etat);
@@ -53,6 +53,13 @@ function campagne(graineBase, jours) {
       const opts = P.genererDon(profil, graineBase + jour);
       P.appliquerDon(profil, opts.find(o => o.type === 'carte') || opts.find(o => o.type === 'doublons'));
     }
+    // Choix de Voie et de Serments au hasard, et équipe les cartes de Voie
+    let ch; const hz = M.creerHasard(graineBase + jour * 5);
+    while ((ch = P.choixEnAttente(profil))) {
+      if (ch.type === 'serment') P.choisirSerment(profil, ch.niveau, D.SERMENTS[ch.niveau][Math.floor(hz() * 2)].id);
+      else { const vs = Object.keys(D.VOIES).filter(v => v !== profil.voie); const v = vs[Math.floor(hz() * vs.length)]; P.choisirVoie(profil, v, ch.type === 'voie2');
+        if (ch.type === 'voie') profil.equipement.errant = ['frappe', 'torche'].concat(D.VOIES[v].cartes); }
+    }
     let ok = true; while (ok) { ok = false; for (const id of Object.keys(profil.cartes)) if (P.ameliorer(profil, id)) ok = true; }
     journal.push({ jour, victoire: r.victoire, niveau: profil.niveau, cartes: Object.keys(profil.cartes).length, maxNiv: Math.max(...Object.values(profil.cartes).map(c => c.niveau)) });
   }
@@ -68,7 +75,7 @@ assert(P.ameliorer(p, 'frappe') && p.cartes.frappe.niveau === 2 && p.drachmes ==
 assert.strictEqual(P.ajouterXp(P.initialiser({}), 50), 1);
 assert.strictEqual(P.genererDon(P.initialiser({ joursJoues: 3 }), 5).length, 3);
 
-const N = 120, JOURS = 14;
+const N = 120, JOURS = 21;
 const vict = Array(JOURS + 1).fill(0); let niv7 = 0, niv14 = 0, cartes7 = 0, max7 = 0;
 for (let i = 0; i < N; i++) {
   const { journal } = campagne(1000 + i * 31, JOURS);
@@ -78,6 +85,6 @@ for (let i = 0; i < N; i++) {
 const pct = j => Math.round(100 * vict[j] / N);
 console.log('Victoires par jour (%) :', Array.from({ length: JOURS }, (_, i) => 'J' + (i + 1) + ' ' + pct(i + 1)).join(' · '));
 const moy = (a, b) => Math.round(Array.from({ length: b - a + 1 }, (_, i) => pct(a + i)).reduce((x, y) => x + y) / (b - a + 1));
-console.log('Moyenne jours 4 à 14 :', moy(4, 14) + ' %');
+console.log('Moyenne jours 4 à 14 :', moy(4, 14) + ' %', '· jours 15 à 21 :', moy(15, 21) + ' %');
 console.log('Jour 7 : niveau moyen ' + (niv7 / N).toFixed(1) + ', cartes possédées ' + (cartes7 / N).toFixed(1) + ', meilleure carte niveau ' + (max7 / N).toFixed(1) + ' · Jour 14 : niveau ' + (niv14 / N).toFixed(1));
 console.log('Tests progression OK');
