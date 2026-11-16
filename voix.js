@@ -20,8 +20,9 @@
     lysandre: { pitch: 0.9, rate: 0.85, genre: 'f' },
     kelos: { pitch: 0.95, rate: 0.95, genre: 'h' }
   };
-  const FEMININ = /(amelie|amélie|audrey|aurelie|aurélie|celine|céline|denise|eloise|élise|julie|lea|léa|marie|virginie|hortense|brigitte|vivienne|female|femme|google français)/i;
-  const MASCULIN = /(thomas|nicolas|paul|henri|claude|guillaume|jean|remy|rémy|male|homme|antoine|yves|mathieu)/i;
+  const FEMININ = /(denise|eloise|vivienne|coralie|jacqueline|yvette|josephine|amelie|amélie|audrey|aurelie|aurélie|celine|céline|denise|eloise|élise|julie|lea|léa|marie|virginie|hortense|brigitte|vivienne|female|femme|google français)/i;
+  const NATUREL = /(natural|neural|online|premium|enhanced|wavenet|naturelle)/i;
+  const MASCULIN = /(henri|remy|alain|jerome|maurice|yves|thomas|nicolas|paul|henri|claude|guillaume|jean|remy|rémy|male|homme|antoine|yves|mathieu)/i;
   let voixFr = [];
   function chargerVoix() {
     if (!synth) return;
@@ -32,7 +33,10 @@
     if (!voixFr.length) return null;
     const t = TIMBRES[qui] || TIMBRES.narrateur;
     const f = voixFr.filter(v => FEMININ.test(v.name)), h = voixFr.filter(v => MASCULIN.test(v.name));
-    const liste = (t.genre === 'f' ? f : h).length ? (t.genre === 'f' ? f : h) : voixFr;
+    let liste = (t.genre === 'f' ? f : h).length ? (t.genre === 'f' ? f : h) : voixFr;
+    // les voix « naturelles » (neuronales, en ligne) passent en premier quand l'appareil en propose
+    const naturelles = liste.filter(v => NATUREL.test(v.name));
+    if (naturelles.length) liste = naturelles;
     // la même voix pour un même personnage, réparties si plusieurs sont disponibles
     const n = Object.keys(TIMBRES).indexOf(qui);
     return liste[Math.max(0, n) % liste.length];

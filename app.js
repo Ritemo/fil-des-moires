@@ -250,8 +250,13 @@
         ${r.recit ? `<div class="ligne"><i>${r.recit}</i></div>` : ''}<div class="ligne">${r.resume}</div>${opt ? `<div class="ligne">🔀 Ton choix : ${opt.texte}.</div>` : ''}`;
     $('modale').classList.add('visible');
   };
+  // Les Réglages s'ouvrent aussi en pleine partie (histoire, combat) : « Retour » ramène à l'écran quitté
+  let ecranAvantReglages = null;
   $('btnReglages').onclick = () => {
-    if (partie) return;
+    if ($('reglages').classList.contains('actif')) return;
+    ecranAvantReglages = partie ? (document.querySelector('.ecran.actif') || {}).id : null;
+    document.querySelector('.outilsTest').style.display = partie ? 'none' : '';
+    $('btnInviter').closest('.carteReglage').style.display = partie ? 'none' : '';
     const r = SON.reglages(); $('reglageSfx').checked = r.sfx !== false; $('reglageAmb').checked = r.amb !== false;
     $('reglageVoix').checked = VOIX.actif(); $('reglageVoix').disabled = !VOIX.disponible();
     const c = S.conf(); $('joueurActuel').textContent = c && c.joueur ? 'Partie de ' + c.joueur.charAt(0).toUpperCase() + c.joueur.slice(1) : '';
@@ -320,8 +325,8 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.11.0 · illustrations Fluent Emoji (MIT)';
-  $('reglagesOk').onclick = accueil;
+  $('versionJeu').textContent = 'Version 1.11.1 · illustrations Fluent Emoji (MIT)';
+  $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
   function demarrer(echo) {
