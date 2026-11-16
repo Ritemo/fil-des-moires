@@ -64,6 +64,7 @@ function campagne(graineBase, jours) {
         if (ch.type === 'voie') profil.equipement.errant = ['frappe', 'torche'].concat(D.VOIES[v].cartes); }
     }
     let ok = true; while (ok) { ok = false; for (const id of Object.keys(profil.cartes)) if (P.ameliorer(profil, id)) ok = true; }
+    for (const id of Object.keys(profil.cartes)) if (P.evoluer(profil, id)) evolutions++;
     journal.push({ jour, victoire: r.victoire, niveau: profil.niveau, cartes: Object.keys(profil.cartes).length, maxNiv: Math.max(...Object.values(profil.cartes).map(c => c.niveau)) });
   }
   return { profil, journal };
@@ -78,6 +79,7 @@ assert(P.ameliorer(p, 'frappe') && p.cartes.frappe.niveau === 2 && p.drachmes ==
 assert.strictEqual(P.ajouterXp(P.initialiser({}), 50), 1);
 assert.strictEqual(P.genererDon(P.initialiser({ joursJoues: 3 }), 5).length, 3);
 
+let evolutions = 0;
 const N = 120, JOURS = 32;
 const vict = Array(JOURS + 1).fill(0); let niv7 = 0, niv14 = 0, cartes7 = 0, max7 = 0;
 for (let i = 0; i < N; i++) {
@@ -90,4 +92,7 @@ console.log('Victoires par jour (%) :', Array.from({ length: JOURS }, (_, i) => 
 const moy = (a, b) => Math.round(Array.from({ length: b - a + 1 }, (_, i) => pct(a + i)).reduce((x, y) => x + y) / (b - a + 1));
 console.log('Moyenne jours 4 à 14 :', moy(4, 14) + ' %', '· jours 15 à 21 :', moy(15, 21) + ' %', '· jours 22 à 30 :', moy(22, 30) + ' %');
 console.log('Jour 7 : niveau moyen ' + (niv7 / N).toFixed(1) + ', cartes possédées ' + (cartes7 / N).toFixed(1) + ', meilleure carte niveau ' + (max7 / N).toFixed(1) + ' · Jour 14 : niveau ' + (niv14 / N).toFixed(1));
+{ let m = 0; for (let i = 0; i < 20; i++) m += campagne(5000 + i, 32).journal[31].maxNiv; console.log('Meilleure carte au jour 32 : niveau ' + (m / 20).toFixed(1)); }
+console.log('Évolutions faites en moyenne sur 32 jours : ' + (evolutions / N).toFixed(1));
+{ const q = P.initialiser({}); q.cartes.frappe.niveau = 5; q.drachmes = 300; assert(P.evoluer(q, 'frappe') && q.drachmes === 0 && !P.evoluer(q, 'frappe')); }
 console.log('Tests progression OK');

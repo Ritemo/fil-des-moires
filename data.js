@@ -224,6 +224,47 @@
       ] }
   ];
 
+
+  // Évolutions : au niveau 5, une carte peut évoluer une fois (300 drachmes). mult : puissance ; mod : champs remplacés.
+  const COUT_EVOLUTION = 300;
+  const EVOLUTIONS = {
+    frappe: { nom: "Frappe d'Achille", art: '⚔️', mult: 1.2, mod: { critique: 0.3 }, desc: 'Puissance +20 %, 30 % de critique.' },
+    torche: { nom: "Torche d'Héphaïstos", art: '🌋', mult: 1.2, mod: { brulure: { tours: 3, degats: 12 } }, desc: 'Puissance +20 %, brûlure plus forte et plus longue.' },
+    charge: { nom: 'Charge du Taureau de Crète', art: '🐂', mult: 1.15, mod: { etourdit: 0.6 }, desc: 'Puissance +15 %, 60 % d\'étourdir.' },
+    ares: { nom: "Fureur d'Arès", art: '🗡️', mult: 1.25, mod: { critique: 0.25 }, desc: 'Puissance +25 %, 25 % de critique.' },
+    pommeau: { nom: 'Pommeau de bronze céleste', art: '🔨', mult: 1.3, mod: { etourdit: 0.5 }, desc: 'Puissance +30 %, 50 % d\'étourdir.' },
+    ralliement: { nom: 'Chant de guerre', art: '🎺', mult: 1.2, mod: { cout: 1 }, desc: 'Ne coûte plus que 1 Énergie, effet +20 %.' },
+    mur: { nom: 'Égide', art: '🛡️', mult: 1.2, mod: { cout: 1 }, desc: 'Ne coûte plus que 1 Énergie, bouclier +20 %.' },
+    coupbouclier: { nom: "Bouclier d'Ajax", art: '🪖', mult: 1.2, mod: { etourdit: 0.5 }, desc: 'Puissance +20 %, 50 % d\'étourdir.' },
+    fleche: { nom: "Flèche d'argent", art: '🏹', mult: 1.2, mod: { critique: 0.5 }, desc: 'Puissance +20 %, 50 % de critique.' },
+    pluie: { nom: 'Pluie de Stymphale', art: '🪶', mult: 1.3, mod: {}, desc: 'Puissance +30 % sur tous les ennemis.' },
+    lameombre: { nom: "Lame d'Hadès", art: '🌑', mult: 1.2, mod: { poids: 'leger' }, desc: 'Puissance +20 %, devient légère (tu rejoues vite).' },
+    benediction: { nom: "Bénédiction d'Athéna", art: '🦉', mult: 1.2, mod: { cout: 1 }, desc: 'Ne coûte plus que 1 Énergie, effet +20 %.' },
+    rayon: { nom: "Rayon d'Hélios", art: '🌞', mult: 1.25, mod: { critique: 0.25 }, desc: 'Puissance +25 %, 25 % de critique.' },
+    ronces: { nom: 'Ronces de Perséphone', art: '🥀', mult: 1.15, mod: { etourdit: 0.3 }, desc: 'Puissance +15 %, 30 % d\'étourdir en plus du recul.' },
+    soin: { nom: "Baume d'Asclépios", art: '⚕️', mult: 1.3, mod: {}, desc: 'Soin +30 %.' },
+    aube: { nom: "Aurore d'Éos", art: '🌅', mult: 1.3, mod: {}, desc: 'Soin de groupe +30 %.' },
+    oeil: { nom: "Œil d'Argos", art: '👁️', mult: 1, mod: { cout: 0 }, desc: 'Ne coûte plus d\'Énergie.' },
+    presage: { nom: 'Oracle de Delphes', art: '🏛️', mult: 1, mod: { cout: 1 }, desc: 'Ne coûte plus que 1 Énergie.' },
+    serres: { nom: "Serres d'airain", art: '🦅', mult: 0.65, mod: { coups: 2 }, desc: 'Frappe deux fois (environ +30 % au total).' },
+    eclair: { nom: 'Foudre de Zeus', art: '⚡', mult: 1.25, mod: { etourdit: 0.25 }, desc: 'Puissance +25 %, 25 % d\'étourdir.' },
+    cri: { nom: "Cri d'orage", art: '📯', mult: 1.3, mod: { recul: 90 }, desc: 'Puissance +30 %, repousse beaucoup plus loin.' },
+    rafale: { nom: 'Tempête', art: '🌀', mult: 1.2, mod: { cout: 2 }, desc: 'Ne coûte plus que 2 Énergie, puissance +20 %.' },
+    pique: { nom: "Chute d'orage", art: '🌩️', mult: 1.2, mod: { critique: 0.3 }, desc: 'Puissance +20 %, 30 % de critique.' },
+    corne_l: { nom: 'Charge du bouc', art: '🐐', mult: 1.2, mod: { etourdit: 0.25 }, desc: 'Puissance +20 %, 25 % d\'étourdir.' },
+    flute_l: { nom: 'Flûte de Pan enchantée', art: '🎵', mult: 1.2, mod: { etourdit: 0.35 }, desc: 'Puissance +20 %, 35 % d\'étourdir chacun.' },
+    vin_l: { nom: 'Grand cru de Dionysos', art: '🍇', mult: 1.3, mod: {}, desc: 'Soin +30 %.' },
+    griffes_l: { nom: 'Griffes de bronze', art: '🪶', mult: 0.65, mod: { coups: 2 }, desc: 'Frappe deux fois (environ +30 % au total).' },
+    bourrasque_l: { nom: 'Ouragan', art: '🌪️', mult: 1.25, mod: { recul: 40 }, desc: 'Puissance +25 %, repousse la cible.' },
+    cristrident_l: { nom: 'Cri des Érinyes', art: '😱', mult: 1.3, mod: { etourdit: 0.3 }, desc: 'Puissance +30 %, 30 % d\'étourdir.' },
+    vague_l: { nom: 'Raz-de-marée', art: '🌊', mult: 0.75, mod: { zone: true }, desc: 'Touche tous les ennemis.' },
+    chant_l: { nom: 'Chant des profondeurs', art: '🐚', mult: 1.2, mod: { etourdit: 0.45 }, desc: 'Puissance +20 %, 45 % d\'étourdir chacun.' },
+    ecume_l: { nom: "Écume d'Aphrodite", art: '🫧', mult: 1.3, mod: {}, desc: 'Soin +30 %.' },
+    epines_l: { nom: 'Épines de Perséphone', art: '🌹', mult: 1.2, mod: { etourdit: 0.25 }, desc: 'Puissance +20 %, 25 % d\'étourdir.' },
+    seve_l: { nom: "Sève de l'Arbre-Mère", art: '🌳', mult: 1.3, mod: {}, desc: 'Soin +30 %.' },
+    racines_l: { nom: 'Racines du Monde', art: '🌲', mult: 1.2, mod: { etourdit: 0.4 }, desc: 'Puissance +20 %, 40 % d\'étourdir chacun.' }
+  };
+
   // Rareté de chaque carte (la Garde n'est pas une carte : toujours disponible)
   const RARETES = {
     epines_l: 'commune', seve_l: 'rare', racines_l: 'epique', corne_l: 'commune', flute_l: 'epique', vin_l: 'rare', griffes_l: 'commune', bourrasque_l: 'rare', cristrident_l: 'rare', vague_l: 'rare', chant_l: 'epique', ecume_l: 'rare',
@@ -321,6 +362,7 @@
     don: "Le Don des Moires. Une carte nouvelle, des doublons pour renforcer une carte, ou des drachmes. Choisis selon ce qui te manque.",
     collection: "Ta Collection est sur l'accueil (📜). Avec assez de doublons et de drachmes, une carte monte de niveau. À partir du jour 4, tu choisiras aussi tes 4 cartes par héros avant de partir.",
     niveau: "Ton équipe monte de niveau. Elle frappe plus fort et résiste mieux. Les ennemis, eux aussi, grandissent avec toi.",
+    evolution: "Une carte au niveau 5 ! Elle peut maintenant évoluer une fois : nouveau nom, nouvelle forme, et un effet en plus. Ouvre sa fiche dans tes Cartes.",
     lierCarte: "L'Errant a appris un geste nouveau : 🧵 Lier. Il ne sert pas à frapper. Quand une créature sauvage est presque à bout (moins de 35 % de PV), il peut nouer son fil au tien. Garde-la en vie jusque-là, puis essaie.",
     lienRate: "Le fil a glissé : ça arrive. Frappe-la encore un peu et retente, la chance monte quand ses PV baissent. Et chaque créature de cette espèce que tu vaincs rend le nœud suivant plus sûr.",
     choixCrea: "Tu as plusieurs créatures, maintenant. Une seule part avec toi : choisis-la en haut de la Préparation. Regarde ce qui t'attend aujourd'hui et prends celle dont l'affinité frappe fort contre.",
@@ -347,6 +389,7 @@
 
   // Lexique consultable à tout moment
   const LEXIQUE = [
+    { cat: 'Cartes', icone: '✦', terme: 'Évolution', texte: "Une carte au niveau 5 peut évoluer une fois, contre 300 drachmes : elle change de nom et d'illustration, et gagne un effet (critique, étourdissement, coût réduit, double coup...). Le détail est dans sa fiche." },
     { cat: 'Récit', icone: '📜', terme: 'Chant', texte: "Une saison de 30 jours, dans une région, autour d'un Sceau. Le Chant I se passe dans les Vals d'Aelwen, en quatre chapitres. La Chronique (sur l'accueil) garde tout ce que tu y as vécu." },
     { cat: 'Récit', icone: '🔀', terme: 'Choix', texte: "Certains jours se terminent par un choix. Il est définitif : il change des répliques, des combats et parfois la fin du Chant." },
     { cat: 'Récit', icone: '✨', terme: 'Sceau', texte: "Une des sept pierres d'étoile qui enchaînent Kronar, le Titan qui dévore. Elles se fissurent. Celui du Chant I, le Sceau de Maïa, dort sous l'étang noir." },
@@ -390,7 +433,7 @@
     { cat: 'Épreuve', icone: '⭐', terme: 'Étoiles', texte: "3 : victoire sans perte. 2 : un héros tombé. 1 : victoire de justesse." }
   ];
 
-  const Donnees = { LIER, CREATURES, VOIES, SERMENTS, RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
+  const Donnees = { EVOLUTIONS, COUT_EVOLUTION, LIER, CREATURES, VOIES, SERMENTS, RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = Donnees;
   else racine.Donnees = Donnees;
 })(typeof window !== 'undefined' ? window : this);

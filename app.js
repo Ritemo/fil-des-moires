@@ -50,7 +50,7 @@
     const j = partie ? partie.jour : profil.joursJoues + 1;
     return j <= 3 ? 'bavarde' : j <= 10 ? 'discrete' : 'muette';
   }
-  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'don', 'collection', 'niveau', 'gardien', 'tapisserie', 'discret', 'intention', 'lierCarte', 'lier', 'lienRate', 'lie', 'choixCrea', 'codex'];
+  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'don', 'collection', 'niveau', 'gardien', 'tapisserie', 'discret', 'intention', 'lierCarte', 'lier', 'lienRate', 'lie', 'choixCrea', 'codex', 'evolution'];
   const fileClotho = [];
   function clotho(cle) {
     if (profil.vus[cle]) return;
@@ -413,7 +413,7 @@
   // Tuile de carte : illustration sur fond d'affinité, rareté en bordure, coût, niveau, héros, barre de doublons
   function tuileCarte(id, opts) {
     opts = opts || {};
-    const info = P.carteInfo(id); const c = info.carte, h = info.heros;
+    const info = P.carteInfo(id); const c = P.carteEvoluee(profil, info.carte), h = info.heros;
     const r = P.rarete(id), possede = profil.cartes[id];
     const a = aff(c.affinite);
     if (!possede && !opts.reveler) {
@@ -422,15 +422,15 @@
     }
     const niveau = possede ? possede.niveau : 1;
     const equipee = (profil.equipement[h.id] || []).includes(id);
-    return `<div class="tuile ${opts.grande ? 'grande' : ''} ${equipee && opts.montrerEquipe ? 'equipee' : ''}" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}">
+    return `<div class="tuile ${opts.grande ? 'grande' : ''} ${c.evoluee ? 'evoluee' : ''} ${equipee && opts.montrerEquipe ? 'equipee' : ''}" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}">
       ${c.cout ? `<div class="cout">🔹${c.cout}</div>` : ''}
-      <div class="art" style="--a:${a.couleur}"><span>${c.art || a.icone}</span><div class="affb" title="${a.nom}">${a.icone}</div><div class="nv">Nv ${niveau}</div></div>
+      <div class="art" style="--a:${a.couleur}"><span>${c.art || a.icone}</span><div class="affb" title="${a.nom}">${a.icone}</div><div class="nv">${c.evoluee ? '✦ ' : ''}Nv ${niveau}</div></div>
       <div class="nom">${c.nom}</div>
       <div class="sous">${h.emoji} ${h.nom}</div>
       ${possede ? barreDoublons(id, opts.ajout) : ''}
       ${equipee && opts.montrerEquipe ? '<div class="coche">✓</div>' : ''}</div>`;
   }
-  function nbAmeliorables() { return Object.keys(profil.cartes).filter(id => P.peutAmeliorer(profil, id)).length; }
+  function nbAmeliorables() { return Object.keys(profil.cartes).filter(id => P.peutAmeliorer(profil, id) || P.peutEvoluer(profil, id)).length; }
 
   // ---------- Offrande du jour ----------
   function afficherOffrande() {
@@ -545,6 +545,7 @@
   let modePreparation = false;
   function ouvrirCollection(preparation) {
     modePreparation = !!preparation;
+    if (Object.values(profil.cartes).some(c => c.niveau >= P.NIVEAU_MAX_CARTE)) clotho('evolution');
     $('colTitre').textContent = preparation ? '⚔️ Préparation : ta créature et 4 cartes par héros' : '📜 Collection';
     $('drachmesCol').textContent = profil.drachmes;
     $('btnColOk').textContent = 'Partir';
@@ -578,8 +579,9 @@
   }
   // Fiche détaillée d'une carte
   function ouvrirFiche(id) {
-    const info = P.carteInfo(id); const c = info.carte, h = info.heros;
+    const info = P.carteInfo(id); const c = P.carteEvoluee(profil, info.carte), h = info.heros;
     const possede = profil.cartes[id], cout = P.coutAmelioration(profil, id);
+    const evo = D.EVOLUTIONS[id];
     const a = aff(c.affinite);
     const fort = (M.FORT_CONTRE[c.affinite] || []).map(x => aff(x).icone + ' ' + aff(x).nom).join(', ');
     const p = n => c.puissance ? Math.round(c.puissance * P.multiplicateurCarte(n)) : null;
@@ -592,12 +594,16 @@
       <div class="ligne">${c.desc}</div>
       <div class="ligne">${c.cout ? '🔹 ' + c.cout + ' Énergie' : 'Gratuite'} · poids ${M.NOM_POIDS[c.poids || 'normal']}${p(possede.niveau) ? ` · Puissance <b>${p(possede.niveau)}</b>${cout ? ' → ' + p(possede.niveau + 1) + ' au niveau suivant' : ''}` : ''}</div>
       ${cout ? `<div class="ligne">Pour le niveau ${possede.niveau + 1} : 🃏 ${possede.doublons}/${cout.doublons} exemplaires et 🪙 ${cout.drachmes} (tu as ${profil.drachmes})</div>` : '<div class="ligne">Niveau maximum atteint.</div>'}
+      ${evo && !c.evoluee ? `<div class="ligne evoLigne">✦ <b>Évolution au niveau 5</b> : ${evo.art} ${evo.nom}. ${evo.desc}${possede.niveau >= P.NIVEAU_MAX_CARTE ? ` Coût : 🪙 ${D.COUT_EVOLUTION} (tu as ${profil.drachmes}).` : ''}</div>` : ''}
+      ${c.evoluee ? '<div class="ligne evoLigne">✦ <b>Carte évoluée.</b></div>' : ''}
       <div style="display:flex;gap:8px;margin-top:10px">
         ${cout ? `<button class="${P.peutAmeliorer(profil, id) ? 'principal' : ''}" id="ficheAm" style="flex:1" ${P.peutAmeliorer(profil, id) ? '' : 'disabled'}>⬆ Améliorer (🪙${cout.drachmes})</button>` : ''}
+        ${!cout && evo && !c.evoluee ? `<button class="${P.peutEvoluer(profil, id) ? 'principal' : ''}" id="ficheEvo" style="flex:1" ${P.peutEvoluer(profil, id) ? '' : 'disabled'}>✦ Faire évoluer (🪙${D.COUT_EVOLUTION})</button>` : ''}
         ${c.prouesse ? '' : `<button id="ficheEq" style="flex:1">${equipee ? 'Retirer' : 'Équiper'}</button>`}
       </div><div class="small" id="ficheMsg"></div>`;
     $('modale').classList.add('visible');
     if ($('ficheAm')) $('ficheAm').onclick = () => { if (P.ameliorer(profil, id)) { sauver(); ouvrirFiche(id); ouvrirCollection(modePreparation); $('modale').classList.add('visible'); rejouer(document.querySelector('#lexiqueCorps .tuile'), 'monte'); } };
+    if ($('ficheEvo')) $('ficheEvo').onclick = () => { if (P.evoluer(profil, id)) { sauver(); ouvrirCollection(modePreparation); ouvrirFiche(id); rejouer(document.querySelector('#lexiqueCorps .tuile'), 'evolue'); particules(document.querySelector('#lexiqueCorps .tuile'), '✦', 14); } };
     if ($('ficheEq')) $('ficheEq').onclick = () => { if (!P.basculerEquipement(profil, h.id, id)) { $('ficheMsg').textContent = '4 cartes déjà équipées pour ce héros : retire-en une d\'abord.'; return; } sauver(); ouvrirCollection(modePreparation); ouvrirFiche(id); };
   }
 

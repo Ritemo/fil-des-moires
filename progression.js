@@ -37,6 +37,26 @@
     for (const h of D.HEROS.concat(D.CREATURES)) { const c = h.competences.find(x => x.id === id); if (c) return { carte: c, heros: h }; }
     return null;
   }
+  // ---------- Évolutions (niveau 5) ----------
+  const evolution = id => D.EVOLUTIONS[id] || null;
+  function peutEvoluer(profil, id) {
+    const c = profil.cartes[id];
+    return !!(c && c.niveau >= NIVEAU_MAX_CARTE && !c.evoluee && evolution(id) && profil.drachmes >= D.COUT_EVOLUTION);
+  }
+  function evoluer(profil, id) {
+    if (!peutEvoluer(profil, id)) return false;
+    profil.drachmes -= D.COUT_EVOLUTION;
+    profil.cartes[id].evoluee = true;
+    return true;
+  }
+  // Applique l'évolution à une copie de la carte (nom, illustration, effet, puissance)
+  function carteEvoluee(profil, carte) {
+    const c = profil.cartes[carte.id], e = evolution(carte.id);
+    if (!c || !c.evoluee || !e) return carte;
+    const x = Object.assign({}, carte, JSON.parse(JSON.stringify(e.mod)), { nom: e.nom, art: e.art, evoluee: true, desc: carte.desc + ' Évoluée : ' + e.desc });
+    if (x.puissance) x.puissance = Math.round(x.puissance * e.mult);
+    return x;
+  }
   function coutAmelioration(profil, id) {
     const c = profil.cartes[id];
     if (!c || c.niveau >= NIVEAU_MAX_CARTE) return null;
@@ -80,7 +100,7 @@
       if (jour > 3) {
         const equipees = (profil.equipement[h.id] || []).filter(id => profil.cartes[id]);
         comps = modele.competences.filter(c => equipees.includes(c.id) || c.type === 'garde' || (c.prouesse && ep.gloire));
-        comps = JSON.parse(JSON.stringify(comps));
+        comps = JSON.parse(JSON.stringify(comps)).map(c => carteEvoluee(profil, c));
         if (!comps.some(c => c.type === 'garde')) comps.push(JSON.parse(JSON.stringify(D.HEROS[0].competences.find(c => c.type === 'garde'))));
         if (h.id === 'errant') comps.push(JSON.parse(JSON.stringify(D.LIER)));
       } else comps = h.competences.filter(c => profil.cartes[c.id] || c.type === 'garde');
@@ -337,7 +357,7 @@
   }
 
   const Progression = {
-    lierCreature, liable, noterCodex, lienBonus, appliquerChoix, bonusDuJour,
+    peutEvoluer, evoluer, carteEvoluee, lierCreature, liable, noterCodex, lienBonus, appliquerChoix, bonusDuJour,
     choixEnAttente, choisirVoie, choisirSerment, gloireDepart, secondSouffle, appliquerPassifs,
     QUALITES, ROUTE, offrandeDisponible, ouvrirOffrande, remplirAmphore, qualiteSerie, prochainPalier, reclamerRoute, ecartJours,
     NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, NOMS_RARETE, COULEURS_RARETE,

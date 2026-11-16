@@ -25,6 +25,10 @@ Le hasard de l'épreuve du jour dépend de la date : recharger la page ne change
 
 À partir du jour 4, l'Errant peut **Lier** une créature affaiblie (moins de 35 % de PV, hors Gardien). Une créature liée rejoint la Collection et peut remplacer Kelos dans la Préparation. Le **Chant I** (« Les Vals d'Aelwen ») dure 30 jours en quatre chapitres. Chaque jour commence par une courte scène et se termine par une réplique ; certains jours se terminent par un choix définitif qui change la suite. La **Chronique** (sur l'accueil) garde le récit de chaque jour. Si l'Hydre éveillée n'est pas vaincue au jour 30, la finale revient le lendemain.
 
+Une carte au **niveau 5** peut **évoluer** une fois (300 drachmes) : nouveau nom, nouvelle illustration, un effet en plus. Les évolutions sont dans `EVOLUTIONS` (data.js).
+
+L'accueil est organisé en **onglets** en bas de l'écran : Trésors (Offrande, choix en attente, Route), Cartes, Épreuve, Tapisserie (avec la Chronique) et Codex. Les Réglages sont sous l'icône ⚙️ du bandeau.
+
 Le **Codex** liste les créatures croisées, vaincues et liées ; chaque spécimen vaincu rend le lien suivant un peu plus facile.
 
 ## Mise en ligne (sans savoir coder)

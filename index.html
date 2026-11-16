@@ -311,6 +311,12 @@
   nav.ongletsBas button.centre { margin-top: -10px; padding-top: 10px; }
   nav.ongletsBas .pastille { position: absolute; top: -6px; right: 2px; margin: 0; font-size: 11px; padding: 0 6px; }
   nav.ongletsBas .point { position: absolute; top: -4px; right: 8px; width: 12px; height: 12px; border-radius: 50%; background: #e0503a; box-shadow: 0 0 6px #e0503a; }
+  .tuile.evoluee { box-shadow: 0 0 0 2px #f6d27a, 0 0 16px rgba(246,210,122,.55); }
+  .tuile.evoluee .art { background-image: linear-gradient(135deg, rgba(255,240,190,.35), transparent 40%, rgba(255,240,190,.25) 70%, transparent); }
+  .tuile.evoluee .nom { color: #f6d27a; }
+  .evoLigne { background: rgba(246,210,122,.1); border-radius: 8px; padding: 6px 8px; }
+  .evolue { animation: evolue 1.2s ease-out; }
+  @keyframes evolue { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.12) rotate(-2deg); filter: brightness(2.2); } 60% { transform: scale(.96) rotate(1deg); } 100% { transform: scale(1); filter: brightness(1); } }
   .carteRoute { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
   .carteRoute h3 { margin: 0 0 6px; font-variant: small-caps; color: var(--or); font-weight: normal; font-size: 17px; }
   .palier { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 14px; }
