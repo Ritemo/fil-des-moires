@@ -1,110 +1,173 @@
-/* Le Fil des Moires : dessin de la Tapisserie (provisoire, à embellir en phase visuelle). */
+/* Le Fil des Moires : la Tapisserie du Chant.
+   Une vraie tapisserie de 30 rangs (un par jour), tissée de bas en haut. Son motif est le Gardien final du Chant
+   (pour le Chant I : l'Hydre). Un jour parfait (3 étoiles) donne un rang éclatant, rehaussé d'or ; une victoire
+   moins nette, un rang plus terne ; une défaite, un rang abîmé (fils ternes, trous, fils qui pendent).
+   Les rangs pas encore tissés montrent la chaîne nue et, en transparence, le motif à venir. */
 (function (racine) {
   'use strict';
-  const COULEURS = {
-    or: ['#e0a93a', '#f6d27a'], gris: ['#77736b', '#9d988d'],
-    flamme: ['#c4492a', '#e8774f'], sylve: ['#4b8a3a', '#79b862'], onde: ['#2c6fb3', '#5b9be0'],
-    foudre: ['#c9a417', '#ecd04f'], vent: ['#3f9c8c', '#7fd0c0'], roc: ['#8a6446', '#b38a68'],
-    lumiere: ['#d8c58a', '#f3e6b8'], ombre: ['#5b4380', '#8a6fb3'], airain: ['#8f7a55', '#b9a37a']
-  };
-  const RANGS_DEFAUT = 6;
-  // Nombre de rangs visibles : attribut data-rangs du canvas (6 par défaut)
-  const nbRangs = canvas => +(canvas.dataset && canvas.dataset.rangs) || RANGS_DEFAUT;
+  const COLS = 36, JOURS = 30, CADRE = 16, RATIO = 1.75; // ratio hauteur / largeur d'un point
 
-  function couleurs(rang) {
-    if (!rang.victoire) return COULEURS.gris;
-    if (rang.etoiles === 3) return COULEURS.or;
-    return COULEURS[rang.couleur] || COULEURS.airain;
-  }
+  // ---------- Petits outils de couleur ----------
+  const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const mel = (c, d, t) => [c[0] + (d[0] - c[0]) * t, c[1] + (d[1] - c[1]) * t, c[2] + (d[2] - c[2]) * t];
+  const fois = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+  const css = c => 'rgb(' + c.map(v => Math.max(0, Math.min(255, Math.round(v)))).join(',') + ')';
+  const gris = c => { const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; return [l, l, l]; };
 
-  // Dessine la tapisserie. progression (0 à 1) anime le dernier rang.
-  function dessiner(canvas, rangs, progression) {
-    const x = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height, RANGS_VISIBLES = nbRangs(canvas);
-    const marge = 14, haut = 14, hRang = (H - 2 * haut) / RANGS_VISIBLES;
-    const debut = Math.max(0, rangs.length - RANGS_VISIBLES);
-    const visibles = rangs.slice(debut);
-    // Fond : chaîne de lin
-    x.fillStyle = '#3a2418'; x.fillRect(0, 0, W, H);
-    x.strokeStyle = '#5a3a26'; x.lineWidth = 1;
-    for (let i = marge; i < W - marge; i += 6) { x.beginPath(); x.moveTo(i + .5, 0); x.lineTo(i + .5, H); x.stroke(); }
-    // Bordures grecques en haut et en bas
-    [2, H - haut + 2].forEach(y => {
-      x.fillStyle = '#7a5230'; x.fillRect(0, y, W, haut - 4);
-      x.strokeStyle = '#e0b04f'; x.lineWidth = 1.5;
-      for (let i = 6; i < W - 10; i += 14) {
-        x.beginPath(); x.moveTo(i, y + haut - 6); x.lineTo(i, y + 2); x.lineTo(i + 8, y + 2); x.lineTo(i + 8, y + 7); x.lineTo(i + 4, y + 7); x.stroke();
+  // ---------- Le motif : fond de nuit et d'eau, étoiles, et le Gardien du Chant ----------
+  const motifs = {};
+  function motif(emoji) {
+    if (motifs[emoji]) return motifs[emoji];
+    const g = [];
+    for (let k = 0; k < JOURS; k++) {
+      const ligne = [];
+      for (let c = 0; c < COLS; c++) {
+        const t = k / (JOURS - 1);
+        let col = mel([24, 30, 58], [40, 56, 84], t);
+        if (k >= JOURS - 7) { // l'étang
+          const vague = Math.sin(c * 0.7 + k * 1.3) > 0.55;
+          col = vague ? [58, 104, 120] : [22, 52, 70];
+        } else if (k < 14 && hash(k, c) < 0.05) col = [232, 197, 106]; // étoiles
+        if (c === 0 || c === COLS - 1) col = (k % 2) ? [138, 90, 42] : [190, 140, 60]; // lisières
+        ligne.push(col);
       }
-    });
-    // Rangs tissés
-    visibles.forEach((r, k) => {
-      const y = haut + k * hRang + 2;
-      const anime = progression != null && k === visibles.length - 1;
-      const p = anime ? progression : 1;
-      const [c1, c2] = couleurs(r);
-      x.globalAlpha = r.echo ? 0.4 : 1;
-      const largeur = (W - 2 * marge) * p;
-      const pas = 6;
-      for (let i = 0; i * pas < largeur; i++) {
-        for (let j = 0; j < 3; j++) {
-          x.fillStyle = (i + j) % 2 ? c1 : c2;
-          x.fillRect(marge + i * pas, y + j * (hRang - 4) / 3, pas, (hRang - 4) / 3 + .5);
+      g.push(ligne);
+    }
+    // Le Gardien, dessiné puis échantillonné point par point
+    if (typeof document !== 'undefined') {
+      const SH = Math.round(4 * RATIO); // le motif est échantillonné avec les proportions réelles des points
+      const cv = document.createElement('canvas'); cv.width = COLS * 4; cv.height = JOURS * SH;
+      const x = cv.getContext('2d');
+      x.font = Math.round(Math.min(cv.width, cv.height) * 0.8) + 'px serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(emoji, cv.width / 2, cv.height * 0.52);
+      const d = x.getImageData(0, 0, cv.width, cv.height).data;
+      for (let k = 0; k < JOURS; k++) for (let c = 1; c < COLS - 1; c++) {
+        let r = 0, v = 0, b = 0, a = 0;
+        for (let i = 0; i < SH; i++) for (let j = 0; j < 4; j++) {
+          const p = ((k * SH + i) * cv.width + c * 4 + j) * 4;
+          const al = d[p + 3] / 255; r += d[p] * al; v += d[p + 1] * al; b += d[p + 2] * al; a += al;
+        }
+        if (a > SH * 2) { // point couvert par le Gardien : on renforce un peu les couleurs
+          const col = [r / a, v / a, b / a], l = gris(col)[0];
+          g[k][c] = mel(col, [l, l, l], -0.25);
         }
       }
-      if (r.victoire && r.etoiles === 3 && p >= 1) {
-        x.fillStyle = 'rgba(255,255,220,.8)';
-        for (let i = 0; i < 10; i++) x.fillRect(marge + ((i * 37 + k * 13) % (W - 2 * marge)), y + ((i * 7) % (hRang - 6)), 2, 2);
-      }
-      if (p >= 1) {
-        x.font = Math.round(hRang * .62) + 'px serif'; x.textBaseline = 'middle'; x.textAlign = 'left';
-        x.fillText(r.motif || '•', marge + 6, y + (hRang - 4) / 2 + 1);
-        x.font = 'bold ' + Math.round(hRang * .36) + 'px Georgia, serif';
-        const texte = 'Jour ' + r.jour + ' · ' + (r.titre || '');
-        const lt = x.measureText(texte).width;
-        x.fillStyle = 'rgba(30,18,10,.72)';
-        x.fillRect(marge + hRang + 3, y + 3, lt + 10, hRang - 10);
-        x.fillStyle = '#f6ead2';
-        x.fillText(texte, marge + hRang + 8, y + (hRang - 4) / 2 + 1);
-        if (r.echo) { x.textAlign = 'right'; x.fillStyle = '#f6ead2'; x.fillText('ÉCHO · non tissé', W - marge - 6, y + (hRang - 4) / 2 + 1); x.textAlign = 'left'; }
-        x.fillStyle = 'rgba(30,18,10,.85)';
-        if (r.victoire && !r.echo) { x.textAlign = 'right'; x.fillText('★'.repeat(r.etoiles), W - marge - 6, y + (hRang - 4) / 2 + 1); }
-      } else {
-        // la navette
-        x.fillStyle = '#f3e9dc';
-        x.beginPath(); x.ellipse(marge + largeur + 8, y + (hRang - 4) / 2, 10, 4, 0, 0, 7); x.fill();
-        x.strokeStyle = c2; x.lineWidth = 2; x.beginPath(); x.moveTo(marge + largeur, y + (hRang - 4) / 2); x.lineTo(marge + largeur + 8, y + (hRang - 4) / 2); x.stroke();
-      }
-    });
-    x.globalAlpha = 1;
-    // Rangs à venir
-    for (let k = visibles.length; k < RANGS_VISIBLES; k++) {
-      const y = haut + k * hRang + 2;
-      x.setLineDash([3, 4]); x.strokeStyle = '#6b4a30'; x.strokeRect(marge, y, W - 2 * marge, hRang - 4); x.setLineDash([]);
     }
-    return { debut, hRang, haut };
+    motifs[emoji] = g;
+    return g;
   }
 
-  // Renvoie le rang touché (ou null)
+  // ---------- Le meilleur rang de chaque jour (les Échos ne tissent pas ; la finale rejouée répare le dernier rang) ----------
+  function rangsParJour(rangs) {
+    const m = {};
+    rangs.filter(r => !r.echo).forEach(r => {
+      const j = Math.min(r.jour, JOURS);
+      if (!m[j] || r.victoire || !m[j].victoire) m[j] = r;
+    });
+    return m;
+  }
+  function qualite(r) {
+    if (!r) return 'vide';
+    if (!r.victoire) return 'echec';
+    return r.etoiles >= 3 ? 'parfait' : r.etoiles === 2 ? 'bien' : 'juste';
+  }
+
+  function dimensions(canvas) {
+    const W = canvas.width, w = (W - 2 * CADRE) / COLS, h = w * RATIO;
+    const H = Math.round(2 * CADRE + JOURS * h);
+    if (canvas.height !== H) canvas.height = H;
+    return { W, H, w, h };
+  }
+
+  // Dessine la tapisserie. progression (0 à 1) anime le rang du dernier jour joué.
+  function dessiner(canvas, rangs, progression, opts) {
+    opts = opts || {};
+    const { W, H, w, h } = dimensions(canvas);
+    const x = canvas.getContext('2d');
+    const g = motif(opts.motif || '🐲');
+    const parJour = rangsParJour(rangs);
+    const dernier = rangs.filter(r => !r.echo).slice(-1)[0];
+    const jourAnime = progression != null && dernier ? Math.min(dernier.jour, JOURS) : null;
+    // Beauté d'ensemble : aucun échec et que des rangs à 2 ou 3 étoiles → lisière dorée
+    const joues = Object.values(parJour);
+    const splendide = joues.length >= 3 && joues.every(r => r.victoire && r.etoiles >= 2);
+
+    // Fond : la chaîne nue
+    x.fillStyle = '#2e1c12'; x.fillRect(0, 0, W, H);
+    x.strokeStyle = '#4e3322'; x.lineWidth = 1;
+    for (let c = 0; c <= COLS; c++) { const xx = CADRE + c * w + w / 2; x.beginPath(); x.moveTo(xx, CADRE); x.lineTo(xx, H - CADRE); x.stroke(); }
+
+    for (let k = 0; k < JOURS; k++) {
+      const jour = JOURS - k; // on tisse de bas en haut : le jour 1 est en bas
+      const r = parJour[jour], q = qualite(r);
+      const y = CADRE + k * h;
+      let limite = COLS;
+      if (jour === jourAnime) limite = Math.floor(COLS * progression);
+      for (let c = 0; c < COLS; c++) {
+        const xx = CADRE + c * w;
+        let col = g[k][c];
+        if (q === 'vide' || c >= limite) { // motif à venir, en transparence
+          x.globalAlpha = 0.13; x.fillStyle = css(col); x.fillRect(xx + 1, y + 1, w - 2, h - 2); x.globalAlpha = 1;
+          continue;
+        }
+        const z = hash(jour * 7 + 3, c);
+        if (q === 'echec' && z < 0.18) continue; // trou dans la trame
+        if (q === 'bien') col = mel(col, gris(col), 0.18);
+        if (q === 'juste') col = fois(mel(col, gris(col), 0.35), 0.9);
+        if (q === 'echec') col = fois(mel(col, [107, 90, 74], 0.6), 0.8);
+        // un point de tissage : deux demi-mailles et une ombre
+        x.fillStyle = css(fois(col, 0.9)); x.fillRect(xx, y, w / 2, h);
+        x.fillStyle = css(fois(col, 1.08)); x.fillRect(xx + w / 2, y, w / 2, h);
+        x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(xx, y + h - 1.2, w, 1.2);
+        if (q === 'parfait' && z > 0.93) { x.fillStyle = 'rgba(255,236,170,.95)'; x.fillRect(xx + w / 2 - 1, y + h / 2 - 1, 2.4, 2.4); }
+      }
+      // fils qui pendent sous un rang raté
+      if (q === 'echec') {
+        x.strokeStyle = 'rgba(150,130,110,.8)'; x.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          const xx = CADRE + hash(jour, i + 50) * (W - 2 * CADRE), lg = h * (0.6 + hash(jour, i + 90) * 1.2);
+          x.beginPath(); x.moveTo(xx, y + h); x.quadraticCurveTo(xx + 3, y + h + lg / 2, xx - 1, y + h + lg); x.stroke();
+        }
+      }
+      // la navette pendant le tissage
+      if (jour === jourAnime && progression < 1) {
+        const xx = CADRE + limite * w;
+        x.fillStyle = '#f3e9dc'; x.beginPath(); x.ellipse(xx + 9, y + h / 2, 11, 4, 0, 0, 7); x.fill();
+      }
+    }
+
+    // Le métier : ensouples haut et bas, frise grecque, lisière dorée si la tapisserie est splendide
+    [0, H - CADRE].forEach(y => {
+      x.fillStyle = '#6a4426'; x.fillRect(0, y, W, CADRE);
+      x.strokeStyle = '#e0b04f'; x.lineWidth = 1.5;
+      for (let i = 6; i < W - 10; i += 14) { x.beginPath(); x.moveTo(i, y + CADRE - 4); x.lineTo(i, y + 3); x.lineTo(i + 8, y + 3); x.lineTo(i + 8, y + 8); x.lineTo(i + 4, y + 8); x.stroke(); }
+    });
+    x.strokeStyle = splendide ? '#f6d27a' : '#5a3a26'; x.lineWidth = splendide ? 3 : 2;
+    x.strokeRect(CADRE - 2, CADRE - 1, W - 2 * CADRE + 4, H - 2 * CADRE + 2);
+    return { splendide, tisses: joues.length };
+  }
+
+  // Renvoie le jour touché : { jour, rang } (rang absent si le jour n'est pas encore tissé)
   function rangTouche(canvas, rangs, evenement) {
-    const r = canvas.getBoundingClientRect();
-    const y = (evenement.clientY - r.top) * canvas.height / r.height;
-    const RANGS_VISIBLES = nbRangs(canvas);
-    const haut = 14, hRang = (canvas.height - 2 * haut) / RANGS_VISIBLES;
-    const k = Math.floor((y - haut) / hRang);
-    const debut = Math.max(0, rangs.length - RANGS_VISIBLES);
-    return rangs[debut + k] || null;
+    const b = canvas.getBoundingClientRect();
+    const y = (evenement.clientY - b.top) * canvas.height / b.height;
+    const { h } = dimensions(canvas);
+    const k = Math.floor((y - CADRE) / h);
+    if (k < 0 || k >= JOURS) return null;
+    const jour = JOURS - k;
+    return { jour, rang: rangsParJour(rangs)[jour] || null };
   }
 
-  // Anime le tissage du dernier rang
-  function tisser(canvas, rangs, duree, fin) {
+  // Anime le tissage du rang du jour
+  function tisser(canvas, rangs, duree, fin, opts) {
     const t0 = performance.now();
     function etape(t) {
       const p = Math.min(1, (t - t0) / duree);
-      dessiner(canvas, rangs, p);
+      dessiner(canvas, rangs, p, opts);
       if (p < 1) requestAnimationFrame(etape); else if (fin) fin();
     }
     requestAnimationFrame(etape);
   }
 
-  racine.Tapisserie = { dessiner, rangTouche, tisser };
+  racine.Tapisserie = { dessiner, rangTouche, tisser, JOURS };
 })(window);

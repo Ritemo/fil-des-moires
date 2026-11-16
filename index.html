@@ -289,7 +289,7 @@
   body.fixe #app { height: 100dvh; min-height: 0; overflow: hidden; }
   body.fixe .ecran.onglet.actif { min-height: 0; overflow-y: auto; gap: 8px; padding-bottom: 4px; }
   body.fixe #accueil > * { flex-shrink: 0; }
-  body.fixe #accueil > #parchAccueil { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+  body.fixe #accueil > #parchAccueil { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
   #parchAccueil h2 { margin-top: 2px; }
   #parchAccueil .precedemment { margin: 8px 0 0; }
   header h1 { white-space: nowrap; }
@@ -317,6 +317,24 @@
   .evoLigne { background: rgba(246,210,122,.1); border-radius: 8px; padding: 6px 8px; }
   .evolue { animation: evolue 1.2s ease-out; }
   @keyframes evolue { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.12) rotate(-2deg); filter: brightness(2.2); } 60% { transform: scale(.96) rotate(1deg); } 100% { transform: scale(1); filter: brightness(1); } }
+  .vignette { border-radius: 14px; overflow: hidden; border: 1px solid var(--bord); box-shadow: 0 4px 18px rgba(0,0,0,.4); }
+  body.fixe #accueil > .vignette { flex: 1 1 190px; min-height: 160px; }
+  .vignette svg { display: block; width: 100%; height: 100%; }
+  .vignette .flotte { animation: flotte 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes flotte { 50% { transform: translateY(-5px); } }
+  .vignette .scint { animation: scint 2.6s ease-in-out infinite; }
+  @keyframes scint { 50% { opacity: .2; } }
+  .vignette .feuille { animation: feuille 7s linear infinite; }
+  @keyframes feuille { to { transform: translate(-40px, 200px) rotate(200deg); } }
+  .vignette .filtombe { animation: filtombe 5s linear infinite; }
+  @keyframes filtombe { to { transform: translateY(230px); opacity: .2; } }
+  .vignette .reflet { animation: scint 3s ease-in-out infinite; }
+  .tapisPlein { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; min-height: 0; }
+  .tapisPlein .tete { width: 100%; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--doux); }
+  .tapisPlein .tete b { color: var(--or); font-weight: normal; font-variant: small-caps; font-size: 16px; flex: 1; }
+  .tapisPlein canvas { width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 265px); border-radius: 6px; box-shadow: 0 6px 24px rgba(0,0,0,.5); cursor: pointer; }
+  .tapisPlein .legende { font-size: 13px; color: var(--doux); text-align: center; line-height: 1.4; }
+  #tapisFin { width: auto !important; max-width: 100%; max-height: 320px; margin: 0 auto; }
   .carteRoute { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
   .carteRoute h3 { margin: 0 0 6px; font-variant: small-caps; color: var(--or); font-weight: normal; font-size: 17px; }
   .palier { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 14px; }
@@ -337,6 +355,7 @@
 
   <!-- Onglet Épreuve (accueil) -->
   <section class="ecran actif onglet" id="accueil">
+    <div class="vignette" id="vignette"></div>
     <div class="parchemin" id="parchAccueil">
       <div class="chapitre" id="chapitreAccueil"></div>
       <h2 id="titreEpreuve"></h2>
@@ -361,12 +380,11 @@
 
   <!-- Onglet Tapisserie : la tapisserie en grand et la Chronique du Chant -->
   <section class="ecran onglet" id="tapisserie">
-    <div class="tapis">
-      <div class="tete"><b>Ta tapisserie</b><span id="tapisCompte"></span></div>
-      <canvas id="tapisAccueil" width="440" height="300" data-rangs="8"></canvas>
+    <div class="tapisPlein">
+      <div class="tete"><b>Tapisserie du Chant I</b><span id="tapisCompte"></span><button class="lien" id="btnChroniqueModale">📜 Chronique</button></div>
+      <canvas id="tapisAccueil" width="440" height="560"></canvas>
       <div class="legende" id="tapisLegende"></div>
     </div>
-    <div id="chroniqueCorps"></div>
   </section>
 
   <!-- Réglages -->

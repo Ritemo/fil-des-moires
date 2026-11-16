@@ -123,6 +123,7 @@
     $('nouveau').textContent = '✨ ' + (ep.nouveau || '');
     $('nouveau').style.display = fait || !ep.nouveau ? 'none' : 'block';
     $('chapitreAccueil').textContent = nomChapitre(ep);
+    $('vignette').innerHTML = vignetteSvg(ep, fait);
     $('btnJouer').style.display = fait ? 'none' : 'block';
     $('btnEcho').style.display = fait ? 'block' : 'none';
     const dernier = profil.rangs[profil.rangs.length - 1];
@@ -138,6 +139,56 @@
       const g = r.ennemis.some(id => D.ENNEMIS[id].gardien);
       return `<div class="lig"><span>${g ? '👑 Gardien' : 'Rencontre ' + (k + 1)}</span><span>${r.ennemis.map(id => vu(id) ? D.ENNEMIS[id].emoji : '❔').join('')}</span></div>`;
     }).join('');
+  }
+
+  // ---------- Vignette illustrée de l'épreuve (SVG, selon le chapitre) ----------
+  const PAYSAGES = {
+    I: { ciel: ['#f4b26a', '#8a3f2c'], loin: '#7a3a24', pres: '#3a1e14', astre: '#ffe1a0', deco: 'foret' },
+    II: { ciel: ['#b9c9d6', '#45566c'], loin: '#5f6f7e', pres: '#2c3640', astre: '#f4f1e4', deco: 'ruines' },
+    III: { ciel: ['#c39be0', '#33204e'], loin: '#5a3c74', pres: '#22162e', astre: '#ffd27a', deco: 'fils' },
+    IV: { ciel: ['#33426a', '#0c1222'], loin: '#1e2a44', pres: '#0d1424', astre: '#f2f0dc', deco: 'etang' }
+  };
+  function vignetteSvg(ep, fait) {
+    const P_ = PAYSAGES[ep.chapitre ? ep.chapitre.num : 'IV'];
+    const h = (a, b) => { let x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return x - Math.floor(x); };
+    let deco = '';
+    if (P_.deco === 'foret') {
+      for (let i = 0; i < 9; i++) { const x = 20 + i * 40 + h(i, 1) * 14, t = 46 + h(i, 2) * 30; deco += `<rect x="${x - 2}" y="${150 - t * 0.35}" width="4" height="${t * 0.4}" fill="#2a140c"/><circle cx="${x}" cy="${150 - t * 0.55}" r="${t * 0.32}" fill="${['#b2481e', '#d0782a', '#8a2f16'][i % 3]}" opacity=".9"/>`; }
+      for (let i = 0; i < 8; i++) deco += `<circle class="feuille" style="animation-delay:${(h(i, 3) * 6).toFixed(1)}s" cx="${h(i, 4) * 360}" cy="-6" r="2.4" fill="#e08a3a"/>`;
+    } else if (P_.deco === 'ruines') {
+      [[40, 70], [86, 46], [250, 76], [300, 30], [336, 58]].forEach(([x, t], i) => { deco += `<rect x="${x}" y="${150 - t}" width="14" height="${t}" fill="#e9e4d4" opacity=".85"/><rect x="${x - 3}" y="${150 - t}" width="20" height="5" fill="#d8d2c0"/>${i % 2 ? '' : `<path d="M${x} ${150 - t} l7 -6 l7 6z" fill="#cfc8b4"/>`}`; });
+      deco += '<path d="M120 150 q40 -60 80 0" stroke="#e9e4d4" stroke-width="9" fill="none" opacity=".7"/>';
+    } else if (P_.deco === 'fils') {
+      for (let i = 0; i < 7; i++) deco += `<line class="filtombe" style="animation-delay:${(h(i, 5) * 5).toFixed(1)}s" x1="${30 + i * 50}" y1="-40" x2="${36 + i * 50}" y2="0" stroke="#f2c96a" stroke-width="1.6"/>`;
+      for (let i = 0; i < 5; i++) deco += `<circle cx="${60 + i * 60}" cy="${132 - h(i, 6) * 10}" r="${18 + h(i, 7) * 12}" fill="#4a3060" opacity=".5"/>`;
+    } else {
+      deco += '<ellipse cx="180" cy="168" rx="190" ry="22" fill="#0a1830"/>';
+      for (let i = 0; i < 6; i++) deco += `<rect class="reflet" style="animation-delay:${i * 0.5}s" x="${150 + h(i, 8) * 70}" y="${160 + i * 3}" width="${16 + h(i, 9) * 20}" height="1.5" fill="#e8e6d0" opacity=".5"/>`;
+      for (let i = 0; i < 12; i++) { const x = h(i, 10) * 360; deco += `<path d="M${x} 170 q2 -18 ${(h(i, 11) - 0.5) * 8} -30" stroke="#22381e" stroke-width="2" fill="none"/>`; }
+    }
+    const etoiles = Array.from({ length: 14 }, (_, i) => `<circle class="scint" style="animation-delay:${(h(i, 12) * 3).toFixed(1)}s" cx="${h(i, 13) * 360}" cy="${h(i, 14) * 70}" r="${0.8 + h(i, 15)}" fill="#fff6d8"/>`).join('');
+    // L'équipe à gauche, les ennemis du jour à droite (silhouettes pour ceux jamais vus)
+    const equipe = ['errant'].concat(ep.equipe && ep.equipe.phaena === undefined ? [] : ['phaena'], [profil.creature || 'griffon'])
+      .map(id => (D.HEROS.concat(D.CREATURES).find(x => x.id === id) || {}).emoji).filter(Boolean);
+    const ids = [...new Set(ep.rencontres.flatMap(r => r.ennemis))];
+    const gardien = ids.find(id => D.ENNEMIS[id].gardien);
+    const vus = id => profil.codex[id] && profil.codex[id].vu;
+    const ennemi = (id, x, y, t, k) => `<text class="flotte" style="animation-delay:${k * 0.4}s" x="${x}" y="${y}" font-size="${t}" text-anchor="middle" ${vus(id) ? '' : 'filter="url(#ombre)" opacity=".85"'}>${D.ENNEMIS[id].emoji}</text>`;
+    const foes = gardien ? ennemi(gardien, 262, 150, 74, 0) + ids.filter(i => i !== gardien).slice(0, 2).map((id, k) => ennemi(id, 205 + k * 105, 168, 28, k + 1)).join('')
+      : ids.slice(0, 3).map((id, k) => ennemi(id, 214 + k * 44, 150 + (k % 2) * 12, 38, k)).join('');
+    return `<svg viewBox="0 0 360 190" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P_.ciel[1]}"/><stop offset="1" stop-color="${P_.ciel[0]}"/></linearGradient>
+        <filter id="ombre"><feColorMatrix type="matrix" values="0 0 0 0 0.05  0 0 0 0 0.03  0 0 0 0 0.02  0 0 0 1 0"/></filter>
+        <radialGradient id="halo"><stop offset="0" stop-color="${P_.astre}" stop-opacity=".9"/><stop offset="1" stop-color="${P_.astre}" stop-opacity="0"/></radialGradient></defs>
+      <rect width="360" height="190" fill="url(#ciel)"/>${etoiles}
+      <circle cx="300" cy="48" r="44" fill="url(#halo)"/><circle cx="300" cy="48" r="16" fill="${P_.astre}"/>
+      <path d="M0 120 Q60 88 120 112 T240 104 T360 116 V190 H0Z" fill="${P_.loin}"/>
+      ${deco}
+      <path d="M0 160 Q90 140 180 158 T360 152 V190 H0Z" fill="${P_.pres}"/>
+      ${foes}
+      ${equipe.map((e, k) => `<text x="${64 + k * 40}" y="${178 - (k % 2) * 6}" font-size="32" text-anchor="middle">${e}</text>`).join('')}
+      ${fait ? '<rect width="360" height="190" fill="#000" opacity=".35"/><text x="180" y="104" font-size="20" text-anchor="middle" fill="#f6ead2" font-family="Georgia">Épreuve accomplie</text>' : ''}
+    </svg>`;
   }
 
   // ---------- Onglet Trésors ----------
@@ -160,12 +211,23 @@
   // ---------- Onglet Tapisserie (et Chronique) ----------
   function ouvrirTapisserie() {
     ecran('tapisserie');
-    $('tapisCompte').textContent = profil.rangs.filter(r => !r.echo).length + ' / 30 rangs';
-    T.dessiner($('tapisAccueil'), profil.rangs);
-    $('tapisLegende').textContent = profil.rangs.length ? 'Touche un rang pour revoir ta journée.' : 'Ta tapisserie est vierge. Ta première épreuve y tissera un rang.';
-    $('chroniqueCorps').innerHTML = chroniqueHtml();
+    const r = T.dessiner($('tapisAccueil'), profil.rangs);
+    $('tapisCompte').textContent = r.tisses + ' / 30 rangs';
+    $('tapisLegende').textContent = !r.tisses ? 'Ta tapisserie est vierge. Chaque épreuve y tisse un rang, de bas en haut.'
+      : r.splendide ? '✨ Aucun accroc : ta tapisserie est splendide. Touche un rang pour revoir ta journée.' : 'Touche un rang pour revoir ta journée. Chaque victoire parfaite la rend plus belle.';
   }
-  $('tapisAccueil').onclick = e => { const r = T.rangTouche($('tapisAccueil'), profil.rangs, e); if (r) $('tapisLegende').textContent = 'Jour ' + r.jour + ' : ' + (r.recit || r.resume); };
+  $('btnChroniqueModale').onclick = () => { $('titreModale').textContent = '📜 Chronique du Chant I'; $('onglets').innerHTML = ''; $('lexiqueCorps').innerHTML = chroniqueHtml(); $('modale').classList.add('visible'); };
+  $('tapisAccueil').onclick = e => {
+    const t = T.rangTouche($('tapisAccueil'), profil.rangs, e);
+    if (!t) return;
+    const r = t.rang, j = C.JOURS[t.jour], ch = j && j.choix, opt = ch && ch.options.find(o => o.id === profil.histoire.choix['j' + t.jour]);
+    $('titreModale').textContent = 'Jour ' + t.jour + (r ? ' · ' + r.titre : '');
+    $('onglets').innerHTML = '';
+    $('lexiqueCorps').innerHTML = !r ? `<div class="ligne">Ce rang n'est pas encore tissé.${t.jour > profil.joursJoues + 1 ? ' Il le sera dans ' + (t.jour - profil.joursJoues - 1) + ' jour(s).' : ' C\'est celui de ton épreuve du jour.'}</div>`
+      : `<div class="ligne" style="font-size:22px">${r.victoire ? '★'.repeat(r.etoiles) + '☆'.repeat(3 - r.etoiles) + ' Victoire' : '✕ Défaite : ce rang est abîmé'}</div>
+        ${r.recit ? `<div class="ligne"><i>${r.recit}</i></div>` : ''}<div class="ligne">${r.resume}</div>${opt ? `<div class="ligne">🔀 Ton choix : ${opt.texte}.</div>` : ''}`;
+    $('modale').classList.add('visible');
+  };
   $('btnReglages').onclick = () => { if (!partie) ecran('reglages'); };
   $('reglagesOk').onclick = accueil;
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
