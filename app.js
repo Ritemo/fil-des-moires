@@ -10,8 +10,14 @@
     ecrire(cle, v) { try { localStorage.setItem('fdm_' + cle, JSON.stringify(v)); } catch (e) { /* rien */ } }
   };
   const aujourdhui = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const profilVide = () => ({ joursJoues: 0, rangs: [], derniereDate: null, clotho: 'auto', vus: {} });
-  let profil = P.initialiser(Object.assign(profilVide(), stock.lire('profil', {})));
+  const profilVide = () => ({ joursJoues: 0, rangs: [], derniereDate: null, clotho: 'auto', vus: {}, compagnons: ['errant'] });
+  // Complète un profil ancien (compagnons déjà rencontrés d'après les jours joués)
+  function migrer(p) {
+    P.initialiser(p);
+    if (!p.compagnons || (p.compagnons.length === 1 && p.joursJoues >= 2)) p.compagnons = ['errant'].concat(p.joursJoues >= 2 ? ['phaena'] : [], p.joursJoues >= 3 ? ['griffon'] : []);
+    return p;
+  }
+  let profil = migrer(Object.assign(profilVide(), stock.lire('profil', {})));
   const sauver = () => { profil.maj = Date.now(); stock.ecrire('profil', profil); S.envoyer(profil); };
 
   // ---------- Sauvegarde commune ----------
@@ -20,7 +26,7 @@
     if (partie) return;
     const distant = await S.telecharger();
     if (distant && distant.maj && distant.maj > (profil.maj || 0)) {
-      profil = P.initialiser(Object.assign(profilVide(), distant));
+      profil = migrer(Object.assign(profilVide(), distant));
       stock.ecrire('profil', profil);
       if (!partie && $('accueil').classList.contains('actif')) accueil();
     } else if (S.conf() && (!distant || (profil.maj || 0) > (distant.maj || 0))) {
@@ -103,7 +109,9 @@
     $('niveauEquipe').textContent = profil.niveau;
     $('xpAccueil').style.width = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau)) + '%';
     $('drachmesAccueil').textContent = profil.drachmes;
-    $('btnCollection').style.display = profil.joursJoues >= 1 ? 'inline' : 'none';
+    $('btnCollection').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
+    const n = nbAmeliorables();
+    $('btnCollection').innerHTML = '📜 Collection de cartes' + (n ? ` <span class="pastille">⬆ ${n}</span>` : '');
   }
   $('tapisAccueil').onclick = e => { const r = T.rangTouche($('tapisAccueil'), profil.rangs, e); if (r) $('tapisLegende').textContent = 'Jour ' + r.jour + ' : ' + r.resume; };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
@@ -116,8 +124,10 @@
     partie = { echo, jour, ep, rencontre: 0, reprise: null, gloire: 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
     $('mode').textContent = echo ? 'Écho' : 'Jour ' + jour;
     if (jour === 4 && !echo) clotho('discret');
-    if (jour > 3) ensuite(() => ouvrirCollection(true), 0);
-    else ensuite(presenterEnnemis, 0);
+    const suite = () => { if (jour > 3) ouvrirCollection(true); else presenterEnnemis(); };
+    const nouveaux = echo ? [] : Object.keys(ep.equipe).filter(id => !profil.compagnons.includes(id));
+    const enchainer = () => { const id = nouveaux.shift(); if (id) presenterCompagnon(id, enchainer); else suite(); };
+    ensuite(enchainer, 0);
   }
 
   // ---------- Présentation des ennemis ----------
@@ -229,7 +239,6 @@
     $('finEtoiles').textContent = victoire ? '★'.repeat(etoiles) + '☆'.repeat(3 - etoiles) : '✕';
     $('finXp').textContent = partie.echo ? 'Écho : rang non tissé' : '';
     afficherGains(g, niveaux, niveauAvant, butin);
-    $('don').innerHTML = '';
     $('finResume').textContent = rang.resume;
     $('finClotho').textContent = D.CLOTHO[victoire ? 'victoire' : 'defaite'];
     $('btnRetour').disabled = true;
@@ -239,79 +248,176 @@
     });
   }
 
+  // ---------- Cartes : tuiles illustrées et barres de doublons ----------
   function nomCarte(id) { const i = P.carteInfo(id); return i ? aff(i.carte.affinite).icone + ' ' + i.carte.nom : id; }
+  // Barre de doublons façon Clash Royale. ajout : doublons qui viennent d'arriver (affichés en surbrillance)
+  function barreDoublons(id, ajout) {
+    const possede = profil.cartes[id];
+    if (!possede) return '';
+    const cout = P.coutAmelioration(profil, id);
+    if (!cout) return '<div class="barreD max"><i style="width:100%"></i><span>Niveau max</span></div>';
+    const total = possede.doublons, avant = Math.max(0, total - (ajout || 0));
+    const pAvant = Math.min(100, Math.round(100 * avant / cout.doublons)), pApres = Math.min(100, Math.round(100 * total / cout.doublons));
+    const prete = total >= cout.doublons;
+    return `<div class="barreD ${prete ? 'prete' : ''}" data-avant="${pAvant}" data-apres="${pApres}"><i class="ajout" style="width:${ajout ? pAvant : pApres}%"></i><i style="width:${ajout ? pAvant : pApres}%"></i><span>${prete ? '⬆ ' : ''}${total} / ${cout.doublons}</span></div>`;
+  }
+  function animerBarres(racine) {
+    setTimeout(() => (racine || document).querySelectorAll('.barreD[data-apres]').forEach(b => {
+      b.querySelectorAll('i').forEach(i => { i.style.width = b.dataset.apres + '%'; });
+    }), 350);
+  }
+  // Tuile de carte : illustration sur fond d'affinité, rareté en bordure, coût, niveau, héros, barre de doublons
+  function tuileCarte(id, opts) {
+    opts = opts || {};
+    const info = P.carteInfo(id); const c = info.carte, h = info.heros;
+    const r = P.rarete(id), possede = profil.cartes[id];
+    const a = aff(c.affinite);
+    if (!possede && !opts.reveler) return `<div class="tuile inconnue" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}"><div class="art" style="--a:#3a2a1e"><span>❔</span></div><div class="nom">À découvrir</div><div class="sous">${P.NOMS_RARETE[r]}</div></div>`;
+    const niveau = possede ? possede.niveau : 1;
+    const equipee = (profil.equipement[h.id] || []).includes(id);
+    return `<div class="tuile ${opts.grande ? 'grande' : ''} ${equipee && opts.montrerEquipe ? 'equipee' : ''}" style="--r:${P.COULEURS_RARETE[r]}" data-id="${id}">
+      ${c.cout ? `<div class="cout">🔹${c.cout}</div>` : ''}
+      <div class="art" style="--a:${a.couleur}"><span>${c.art || a.icone}</span><div class="affb" title="${a.nom}">${a.icone}</div><div class="nv">Nv ${niveau}</div></div>
+      <div class="nom">${c.nom}</div>
+      <div class="sous">${h.emoji} ${h.nom}</div>
+      ${possede ? barreDoublons(id, opts.ajout) : ''}
+      ${equipee && opts.montrerEquipe ? '<div class="coche">✓</div>' : ''}</div>`;
+  }
+  function nbAmeliorables() { return Object.keys(profil.cartes).filter(id => P.peutAmeliorer(profil, id)).length; }
+
+  // ---------- Gains de fin d'épreuve ----------
   function afficherGains(g, niveaux, niveauAvant, butin) {
     if (!g) { $('finGains').innerHTML = ''; return; }
     const pct = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau));
-    const lignes = Object.keys(butin).map(id => nomCarte(id) + ' +' + butin[id]).join(', ');
+    const ids = Object.keys(butin);
     $('finGains').innerHTML = `<div class="bourse"><span>Niveau <b>${profil.niveau}</b></span><div class="xpbarre"><i id="xpFin" style="width:0%"></i></div><span>+${g.xp} XP</span></div>
       <div class="bourse"><span>🪙 +${g.drachmes} drachmes (total <b>${profil.drachmes}</b>)</span></div>
-      ${lignes ? `<div class="bourse"><span>🃏 Butin : ${lignes}</span></div>` : ''}
+      ${ids.length ? `<div class="sousTitre">🃏 Butin : des doublons pour tes cartes</div><div class="grille">${ids.map(id => tuileCarte(id, { ajout: butin[id] }).replace('</div></div>', `</div><div class="gain">+${butin[id]}</div></div>`)).join('')}</div>` : ''}
       ${niveaux ? `<div class="niveauPlus">✨ Niveau ${niveauAvant} → ${profil.niveau} : +4 % PV et attaque par niveau</div>` : ''}`;
     setTimeout(() => { const x = $('xpFin'); if (x) x.style.width = pct + '%'; }, 100);
+    animerBarres($('finGains'));
     if (niveaux) clotho('niveau');
   }
+
+  // ---------- Don des Moires (plein écran) ----------
   function proposerDon(options) {
-    const libelle = o => {
-      if (o.type === 'carte') { const i = P.carteInfo(o.id); return `🆕 Nouvelle carte : ${nomCarte(o.id)}<small>${P.NOMS_RARETE[P.rarete(o.id)]} · ${i.heros.nom} · ${i.carte.desc}</small>`; }
-      if (o.type === 'doublons') return `🃏 ${o.nombre} doublons : ${nomCarte(o.id)}<small>Pour améliorer cette carte (actuellement niveau ${profil.cartes[o.id].niveau}).</small>`;
-      return `🪙 Bourse de ${o.nombre} drachmes<small>Pour payer les améliorations.</small>`;
+    let choix = null;
+    const tuileDon = (o, i) => {
+      if (o.type === 'drachmes') return `<div class="optDon" data-i="${i}"><div class="tuile bourseT" style="--r:#e0b04f"><div class="art" style="--a:#a8742a"><span>🪙</span></div><div class="nom">${o.nombre} drachmes</div><div class="sous">Pour toute l'équipe</div></div>
+        <div class="txtDon"><b>Une bourse</b>Pour payer les améliorations de tes cartes.</div></div>`;
+      const info = P.carteInfo(o.id);
+      const qui = `<span class="pour">Pour ${info.heros.emoji} ${info.heros.nom}</span>`;
+      if (o.type === 'carte') return `<div class="optDon" data-i="${i}">${tuileCarte(o.id, { reveler: true }).replace('<div class="art"', '<div class="neuf">NOUVELLE</div><div class="art"')}
+        <div class="txtDon"><b>Nouvelle carte</b>${qui}${info.carte.desc}</div></div>`;
+      const cout = P.coutAmelioration(profil, o.id);
+      const apres = profil.cartes[o.id].doublons + o.nombre;
+      const fera = cout && apres >= cout.doublons ? '<span class="prete">Assez pour monter de niveau !</span>' : '';
+      return `<div class="optDon" data-i="${i}">${tuileCarte(o.id).replace('</div></div>', `</div><div class="gain">+${o.nombre}</div></div>`)}
+        <div class="txtDon"><b>+${o.nombre} exemplaires</b>${qui}${info.carte.desc}${fera}</div></div>`;
     };
-    $('don').innerHTML = '<div class="titreDon">Le Don des Moires : choisis-en un</div>' +
-      options.map((o, i) => `<button data-i="${i}">${libelle(o)}</button>`).join('') +
-      '<button class="lien" data-i="-1">Passer (+25 🪙)</button>';
-    $('don').querySelectorAll('button').forEach(b => b.onclick = () => {
-      const i = +b.dataset.i;
-      P.appliquerDon(profil, i >= 0 ? options[i] : null);
-      sauver();
-      $('don').innerHTML = '<div class="titreDon">' + (i >= 0 ? 'Don reçu : ' + libelle(options[i]).replace(/<small>.*<\/small>/, '') : 'Tu passes : +25 🪙') + '</div>';
-      $('btnRetour').disabled = false;
-      clotho('collection');
+    $('donCorps').innerHTML = `<div class="titreDon">🎁 Le Don des Moires</div>
+      <div class="consigne">Touche <b>une</b> récompense, puis confirme.</div>
+      <div class="optionsDon">${options.map(tuileDon).join('')}</div>
+      <button class="principal" id="donOk" disabled>Choisis un don</button>
+      <button class="lien" id="donPasser">Passer et prendre 25 🪙</button>`;
+    $('donVoile').classList.add('visible');
+    $('donCorps').querySelectorAll('.optDon').forEach(el => el.onclick = () => {
+      $('donCorps').querySelectorAll('.optDon').forEach(x => x.classList.toggle('choisi', x === el));
+      choix = +el.dataset.i;
+      $('donOk').disabled = false; $('donOk').textContent = 'Prendre ce don';
     });
+    const conclure = i => {
+      const o = i >= 0 ? options[i] : null;
+      P.appliquerDon(profil, o);
+      sauver();
+      let h = '';
+      if (!o) h = '<div class="titreDon">Tu passes : +25 🪙</div>';
+      else if (o.type === 'drachmes') h = `<div class="titreDon">+${o.nombre} 🪙</div><div class="consigne">Total : ${profil.drachmes} drachmes.</div>`;
+      else if (o.type === 'carte') h = `<div class="titreDon">Nouvelle carte !</div><div class="grille un">${tuileCarte(o.id, { grande: true })}</div><div class="consigne">${(profil.equipement[P.carteInfo(o.id).heros.id] || []).includes(o.id) ? 'Elle est déjà équipée.' : 'Équipe-la depuis la Collection.'}</div>`;
+      else {
+        const prete = P.peutAmeliorer(profil, o.id) || (P.coutAmelioration(profil, o.id) && profil.cartes[o.id].doublons >= P.coutAmelioration(profil, o.id).doublons);
+        h = `<div class="titreDon">+${o.nombre} exemplaires</div><div class="grille un">${tuileCarte(o.id, { grande: true, ajout: o.nombre })}</div><div class="consigne">${prete ? '⬆ Cette carte peut monter de niveau dans la Collection.' : 'La barre se remplit : encore quelques exemplaires pour monter de niveau.'}</div>`;
+      }
+      $('donCorps').innerHTML = h + '<button class="principal" id="donFin">Continuer</button>';
+      animerBarres($('donCorps'));
+      $('donFin').onclick = () => { $('donVoile').classList.remove('visible'); $('btnRetour').disabled = false; clotho('collection'); };
+    };
+    $('donOk').onclick = () => { if (choix != null) conclure(choix); };
+    $('donPasser').onclick = () => conclure(-1);
     clotho('don');
   }
 
-  // ---------- Collection et Préparation ----------
+  // ---------- Collection et Préparation (grille) ----------
   let modePreparation = false;
   function ouvrirCollection(preparation) {
     modePreparation = !!preparation;
-    $('colTitre').textContent = preparation ? '⚔️ Préparation : choisis 4 cartes par héros' : '📜 Collection';
+    $('colTitre').textContent = preparation ? '⚔️ Préparation : 4 cartes par héros' : '📜 Collection';
     $('drachmesCol').textContent = profil.drachmes;
     $('btnColOk').textContent = preparation ? 'Partir' : 'Retour';
     if (preparation) {
       const noms = [...new Set(partie.ep.rencontres.flatMap(r => r.ennemis))].map(id => { const e = D.ENNEMIS[id]; return e.emoji + ' ' + e.nom + ' (' + aff(e.affinite).icone + ', faible contre ' + listeAff(faiblesses(e.affinite)) + ')'; });
-      $('colMenace').textContent = 'Ce qui t\'attend : ' + noms.join(' · ');
-    } else $('colMenace').textContent = 'Améliore tes cartes avec des doublons et des drachmes. Chaque niveau donne +10 % de puissance.';
+      $('colMenace').textContent = 'Ce qui t\'attend : ' + noms.join(' · ') + '. Touche une carte pour l\'équiper ou la retirer.';
+    } else $('colMenace').textContent = 'Touche une carte pour voir son détail, l\'améliorer ou l\'équiper. ✓ = équipée.';
     const heros = P.herosDisponibles(profil);
     $('colListe').innerHTML = D.HEROS.filter(h => heros.includes(h.id)).map(h => {
-      const cartes = h.competences.filter(c => c.type !== 'garde');
+      const ids = h.competences.filter(c => c.type !== 'garde').map(c => c.id);
       const eq = profil.equipement[h.id] || [];
-      return `<h3>${h.emoji} ${h.nom} <span class="small">(${eq.length}/${P.SLOTS} équipées)</span></h3>` + cartes.map(c => {
-        const r = P.rarete(c.id), col = P.COULEURS_RARETE[r], possede = profil.cartes[c.id];
-        if (!possede) return `<div class="carteC inconnue" style="--r:${col}"><div class="ic">❔</div><div class="mil"><div class="nm">Carte à découvrir <small>${P.NOMS_RARETE[r]}</small></div><div class="sd">Elle viendra d'un Don des Moires.</div></div></div>`;
-        const cout = P.coutAmelioration(profil, c.id);
-        const prog = cout ? Math.min(100, Math.round(100 * possede.doublons / cout.doublons)) : 100;
-        const puiss = c.puissance ? ' · Puiss. ' + Math.round(c.puissance * P.multiplicateurCarte(possede.niveau)) : '';
-        const equipee = eq.includes(c.id);
-        const btnEq = c.prouesse ? '' : `<button class="${equipee ? 'on' : ''}" data-eq="${h.id}|${c.id}">${equipee ? '✓ Équipée' : 'Équiper'}</button>`;
-        const btnAm = cout ? `<button class="${P.peutAmeliorer(profil, c.id) ? 'pret' : ''}" data-am="${c.id}" ${P.peutAmeliorer(profil, c.id) ? '' : 'disabled'}>⬆ 🪙${cout.drachmes}</button>` : '<button disabled>Max</button>';
-        return `<div class="carteC" style="--r:${col}"><div class="ic">${aff(c.affinite).icone}</div><div class="mil">
-          <div class="nm">${c.nom} <small>${P.NOMS_RARETE[r]} · Nv ${possede.niveau}</small></div>
-          <div class="sd">${c.cout ? '🔹' + c.cout : 'Gratuit'}${puiss} · ${c.desc}</div>
-          <div class="sd">🃏 ${possede.doublons}${cout ? ' / ' + cout.doublons : ''} doublons</div><div class="prog"><i style="width:${prog}%"></i></div></div>
-          <div class="btns">${btnAm}${btnEq}</div></div>`;
-      }).join('');
+      return `<h3>${h.emoji} ${h.nom} <span class="small">${eq.length}/${P.SLOTS} équipées</span></h3><div class="grille">` + ids.map(id => tuileCarte(id, { montrerEquipe: true })).join('') + '</div>';
     }).join('');
-    $('colListe').querySelectorAll('[data-am]').forEach(b => b.onclick = () => { if (P.ameliorer(profil, b.dataset.am)) { sauver(); ouvrirCollection(modePreparation); } });
-    $('colListe').querySelectorAll('[data-eq]').forEach(b => b.onclick = () => {
-      const [h, c] = b.dataset.eq.split('|');
-      if (!P.basculerEquipement(profil, h, c)) { $('colMenace').textContent = 'Déjà 4 cartes équipées pour ce héros : retire-en une d\'abord.'; return; }
-      sauver(); ouvrirCollection(modePreparation);
+    $('colListe').querySelectorAll('.tuile').forEach(t => t.onclick = () => {
+      const id = t.dataset.id;
+      if (!profil.cartes[id]) return;
+      if (modePreparation && !P.carteInfo(id).carte.prouesse) {
+        const h = P.carteInfo(id).heros.id;
+        if (!P.basculerEquipement(profil, h, id)) { $('colMenace').textContent = '4 cartes déjà équipées pour ce héros : retire-en une d\'abord.'; return; }
+        sauver(); ouvrirCollection(true);
+      } else ouvrirFiche(id);
     });
     ecran('collection');
   }
+  // Fiche détaillée d'une carte
+  function ouvrirFiche(id) {
+    const info = P.carteInfo(id); const c = info.carte, h = info.heros;
+    const possede = profil.cartes[id], cout = P.coutAmelioration(profil, id);
+    const a = aff(c.affinite);
+    const fort = (M.FORT_CONTRE[c.affinite] || []).map(x => aff(x).icone + ' ' + aff(x).nom).join(', ');
+    const p = n => c.puissance ? Math.round(c.puissance * P.multiplicateurCarte(n)) : null;
+    const equipee = (profil.equipement[h.id] || []).includes(id);
+    $('titreModale').textContent = c.nom;
+    $('onglets').innerHTML = '';
+    $('lexiqueCorps').innerHTML = `<div class="grille un">${tuileCarte(id, { grande: true })}</div>
+      <div class="ligne"><b>${P.NOMS_RARETE[P.rarete(id)]}</b> · carte de ${h.emoji} ${h.nom} · niveau ${possede.niveau}/${P.NIVEAU_MAX_CARTE}</div>
+      <div class="ligne">${a.icone} <b>${a.nom}</b>${fort ? ' · fort contre ' + fort : ' · neutre'}</div>
+      <div class="ligne">${c.desc}</div>
+      <div class="ligne">${c.cout ? '🔹 ' + c.cout + ' Énergie' : 'Gratuite'} · poids ${M.NOM_POIDS[c.poids || 'normal']}${p(possede.niveau) ? ` · Puissance <b>${p(possede.niveau)}</b>${cout ? ' → ' + p(possede.niveau + 1) + ' au niveau suivant' : ''}` : ''}</div>
+      ${cout ? `<div class="ligne">Pour le niveau ${possede.niveau + 1} : 🃏 ${possede.doublons}/${cout.doublons} exemplaires et 🪙 ${cout.drachmes} (tu as ${profil.drachmes})</div>` : '<div class="ligne">Niveau maximum atteint.</div>'}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        ${cout ? `<button class="${P.peutAmeliorer(profil, id) ? 'principal' : ''}" id="ficheAm" style="flex:1" ${P.peutAmeliorer(profil, id) ? '' : 'disabled'}>⬆ Améliorer (🪙${cout.drachmes})</button>` : ''}
+        ${c.prouesse ? '' : `<button id="ficheEq" style="flex:1">${equipee ? 'Retirer' : 'Équiper'}</button>`}
+      </div><div class="small" id="ficheMsg"></div>`;
+    $('modale').classList.add('visible');
+    if ($('ficheAm')) $('ficheAm').onclick = () => { if (P.ameliorer(profil, id)) { sauver(); ouvrirFiche(id); ouvrirCollection(modePreparation); $('modale').classList.add('visible'); rejouer(document.querySelector('#lexiqueCorps .tuile'), 'monte'); } };
+    if ($('ficheEq')) $('ficheEq').onclick = () => { if (!P.basculerEquipement(profil, h.id, id)) { $('ficheMsg').textContent = '4 cartes déjà équipées pour ce héros : retire-en une d\'abord.'; return; } sauver(); ouvrirCollection(modePreparation); ouvrirFiche(id); };
+  }
   $('btnCollection').onclick = () => ouvrirCollection(false);
+
+  // ---------- Arrivée d'un compagnon ----------
+  function presenterCompagnon(id, suite) {
+    const h = D.HEROS.find(x => x.id === id);
+    const cartes = h.competences.filter(c => c.type !== 'garde' && profil.cartes[c.id] && !c.prouesse);
+    $('compCorps').innerHTML = `<div class="compHalo"><div class="compEmoji">${h.emoji}</div></div>
+      <div class="compNom">${h.nom}</div><div class="compTitre">${h.titre || h.role}</div>
+      <div class="compTags"><span class="tag">${aff(h.affinite).icone} ${aff(h.affinite).nom}</span><span class="tag">${h.role}</span><span class="tag">❤️ ${h.pvMax} PV</span><span class="tag">💨 ${h.vitesse}</span></div>
+      <p class="compBio">${h.bio}</p><p class="compApport">${h.apport || ''}</p>
+      <div class="sousTitre">Ses cartes</div><div class="grille">${cartes.map(c => tuileCarte(c.id)).join('')}</div>
+      <button class="principal" id="compOk">Accueillir ${h.nom}</button>`;
+    ecran('compagnon');
+    const halo = document.querySelector('.compHalo');
+    for (let i = 0; i < 14; i++) particules(halo, '✨', 1);
+    $('compOk').onclick = () => { profil.compagnons.push(id); sauver(); suite(); };
+  }
   $('btnColOk').onclick = () => { if (modePreparation) presenterEnnemis(); else accueil(); };
+
 
   // ---------- Conseils ----------
   function conseiller(etat, acteur) {
@@ -637,7 +743,7 @@
       try {
         const p = JSON.parse(decodeURIComponent(escape(atob($('syncCode').value.trim()))));
         if (!p || !Array.isArray(p.rangs)) throw new Error('format');
-        profil = P.initialiser(Object.assign(profilVide(), p)); sauver(); $('syncMsg').textContent = '✅ Partie chargée.'; accueil();
+        profil = migrer(Object.assign(profilVide(), p)); sauver(); $('syncMsg').textContent = '✅ Partie chargée.'; accueil();
       } catch (e) { $('syncMsg').textContent = '❌ Ce code n\'est pas valide.'; }
     };
     $('modale').classList.add('visible');
@@ -651,7 +757,7 @@
   $('btnSync').onclick = ouvrirSync;
   $('btnVitesse').onclick = () => { vitesse = vitesse === 1 ? 0.5 : 1; $('btnVitesse').textContent = 'Vitesse x' + (vitesse === 1 ? 1 : 2); };
   $('btnJourSuivant').onclick = () => { profil.derniereDate = null; sauver(); accueil(); };
-  $('btnReset').onclick = () => { profil = P.initialiser(profilVide()); sauver(); toursJoueur = 0; accueil(); };
+  $('btnReset').onclick = () => { profil = migrer(profilVide()); sauver(); toursJoueur = 0; accueil(); };
 
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claude')) {
     try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* rien */ }

@@ -127,13 +127,13 @@
   #banniere .qui { font-size: 13px; color: var(--doux); } #banniere .quoi { font-size: 19px; font-weight: bold; } #banniere .eff { font-size: 14px; margin-top: 2px; color: #ffe7a8; }
 
   /* Clotho */
-  #clotho { position: fixed; inset: auto 0 0 0; display: none; justify-content: center; z-index: 20; padding: 10px; padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
+  #clotho { position: fixed; inset: auto 0 0 0; display: none; justify-content: center; z-index: 40; padding: 10px; padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
   #clotho.visible { display: flex; }
   #clotho .bulle { max-width: 460px; width: 100%; background: #efe2c6; color: #3a2a1e; border-radius: 14px; padding: 12px 14px; box-shadow: 0 -4px 30px rgba(0,0,0,.6); display: flex; gap: 10px; align-items: flex-start; }
   #clotho .portrait { font-size: 36px; } #clotho .qui { font-weight: bold; font-variant: small-caps; }
   #clotho p { margin: 4px 0 8px; line-height: 1.4; font-size: 15px; }
   #clotho button { background: #3a2a1e; color: #efe2c6; padding: 8px 14px; font-size: 14px; }
-  .voile { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 19; }
+  .voile { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 39; }
   .voile.visible { display: block; }
 
   /* Modale */
@@ -188,6 +188,64 @@
   .don button { text-align: left; }
   .don button small { display: block; color: var(--doux); font-size: 12px; margin-top: 2px; }
   .menace { font-size: 13px; color: var(--doux); }
+
+  /* Tuiles de cartes */
+  .grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .grille.un { grid-template-columns: minmax(0, 170px); justify-content: center; }
+  .tuile { position: relative; background: var(--carte); border: 2px solid var(--r); border-radius: 12px; padding: 5px 5px 6px; text-align: center; cursor: pointer; transition: transform .15s; }
+  .tuile:active { transform: scale(.96); }
+  .tuile .art { position: relative; height: 74px; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+    background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.35), transparent 60%), repeating-linear-gradient(45deg, rgba(0,0,0,.08) 0 6px, transparent 6px 12px), var(--a); }
+  .tuile .art span { font-size: 40px; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
+  .tuile.grande .art { height: 130px; } .tuile.grande .art span { font-size: 70px; }
+  .tuile .affb { position: absolute; top: 3px; right: 4px; font-size: 14px; background: rgba(0,0,0,.45); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+  .tuile .nv { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); font-size: 10px; background: rgba(0,0,0,.6); padding: 1px 6px; border-radius: 8px; color: #fff; }
+  .tuile .cout { position: absolute; top: -8px; left: -8px; z-index: 2; background: #1d4f73; border: 2px solid var(--energie); border-radius: 50%; width: 30px; height: 30px; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+  .tuile .nom { font-size: 12px; margin-top: 4px; line-height: 1.15; min-height: 28px; display: flex; align-items: center; justify-content: center; }
+  .tuile .sous { font-size: 10px; color: var(--doux); }
+  .tuile.inconnue { opacity: .55; cursor: default; }
+  .tuile.equipee { box-shadow: 0 0 0 2px var(--or), 0 0 10px rgba(224,176,79,.4); }
+  .tuile .coche { position: absolute; top: -8px; right: -8px; background: var(--or); color: #1b1410; border-radius: 50%; width: 22px; height: 22px; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .tuile .gain { position: absolute; top: 56px; right: -10px; box-shadow: 0 2px 6px rgba(0,0,0,.5); font-size: 15px !important; background: #2e8b57; color: #fff; font-weight: bold; border-radius: 10px; padding: 2px 7px; font-size: 13px; z-index: 3; }
+  .tuile .neuf { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); background: #c8643b; color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 8px; z-index: 3; letter-spacing: .5px; }
+  .tuile.monte { animation: monte2 .8s; } @keyframes monte2 { 40% { transform: scale(1.12) rotate(-2deg); box-shadow: 0 0 25px var(--or); } }
+  .barreD { position: relative; height: 17px; background: #120d0a; border-radius: 7px; margin-top: 5px; overflow: hidden; border: 1px solid #000; }
+  .barreD i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#5fd17a, #2e8b57); transition: width .9s ease-out; }
+  .barreD i.ajout { background: #b6ffc8; transition: width .5s ease-out; }
+  .barreD.prete i:not(.ajout) { background: linear-gradient(#ffd34d, #d39a3a); }
+  .barreD.prete { animation: pulse 1.4s infinite; }
+  .barreD.max i { background: linear-gradient(#b07be0, #6a4fc2); }
+  .barreD span { position: relative; display: block; text-align: center; font-size: 11px; color: #fff; text-shadow: 0 1px 2px #000; line-height: 17px; font-weight: bold; }
+  .sousTitre { color: var(--or); font-variant: small-caps; font-size: 15px; margin-top: 4px; }
+  .btnCollection { font-size: 16px; padding: 12px; border: 1px solid var(--or); background: linear-gradient(#3a2a1e, #2a1f18); color: var(--or); }
+  .pastille { background: #2e8b57; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 13px; margin-left: 6px; }
+  /* Don des Moires */
+  #donVoile { position: fixed; inset: 0; z-index: 22; background: rgba(10,6,4,.88); display: none; align-items: center; justify-content: center; padding: 14px; overflow-y: auto; }
+  #donVoile.visible { display: flex; }
+  .donCorps { max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 12px; animation: apparait .4s; }
+  @keyframes apparait { from { transform: scale(.9); opacity: 0; } }
+  .donCorps .titreDon { font-size: 24px; color: var(--or); font-variant: small-caps; text-align: center; }
+  .donCorps .consigne { text-align: center; color: var(--doux); font-size: 14px; }
+  .optionsDon { display: flex; flex-direction: column; gap: 10px; }
+  .optDon { display: flex; gap: 12px; align-items: center; background: var(--carte); border: 2px solid var(--bord); border-radius: 14px; padding: 10px; cursor: pointer; transition: border-color .2s, transform .15s; }
+  .optDon .tuile { width: 108px; flex: none; }
+  .optDon.choisi { border-color: var(--or); background: #3b2b1b; transform: scale(1.02); box-shadow: 0 0 18px rgba(224,176,79,.35); }
+  .txtDon { font-size: 13px; color: var(--doux); line-height: 1.4; }
+  .txtDon b { display: block; color: var(--texte); font-size: 16px; margin-bottom: 2px; }
+  .txtDon .pour { display: block; color: var(--or); margin-bottom: 3px; }
+  .txtDon .prete { display: block; color: #ffd34d; margin-top: 3px; }
+  /* Compagnon */
+  .compCorps { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding-top: 10px; }
+  .compHalo { position: relative; width: 160px; height: 160px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle, rgba(224,176,79,.45), rgba(224,176,79,0) 70%); animation: halo 2.5s ease-in-out infinite; }
+  @keyframes halo { 50% { box-shadow: 0 0 60px rgba(224,176,79,.5); } }
+  .compEmoji { font-size: 96px; animation: arrivee 1.2s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes arrivee { from { transform: scale(0) rotate(-30deg); opacity: 0; } }
+  .compNom { font-size: 30px; color: var(--or); font-variant: small-caps; animation: apparait .8s .4s both; }
+  .compTitre { font-style: italic; color: var(--doux); animation: apparait .8s .6s both; }
+  .compTags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; } .compTags .tag { font-size: 12px; padding: 3px 9px; border-radius: 10px; background: var(--carte2); }
+  .compBio { line-height: 1.5; margin: 4px 0; } .compApport { color: #f0c27a; font-size: 14px; margin: 0; }
+  .compCorps .grille { width: 100%; } .compCorps .principal { width: 100%; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -205,7 +263,7 @@
       <canvas id="tapisAccueil" width="440" height="200"></canvas>
       <div class="legende" id="tapisLegende">Touche un rang pour revoir ta journée.</div>
     </div>
-    <div class="bourse"><span>Niveau <b id="niveauEquipe">1</b></span><div class="xpbarre"><i id="xpAccueil"></i></div><span>🪙 <b id="drachmesAccueil">0</b></span><button class="lien" id="btnCollection">📜 Collection</button></div>
+    <div class="bourse"><span>Niveau <b id="niveauEquipe">1</b></span><div class="xpbarre"><i id="xpAccueil"></i></div><span>🪙 <b id="drachmesAccueil">0</b></span></div>
     <div class="parchemin">
       <h2 id="titreEpreuve"></h2>
       <div style="font-size:13px;color:#6b5440" id="dateJour"></div>
@@ -215,6 +273,7 @@
     <div class="info" id="etatJour"></div>
     <button class="principal" id="btnJouer">Commencer l'épreuve</button>
     <button id="btnEcho">Rejouer en Écho (sans récompense)</button>
+    <button class="btnCollection" id="btnCollection">📜 Collection de cartes</button>
     <div style="flex:1"></div>
     <div style="display:flex;justify-content:center;align-items:center;gap:8px;font-size:13px;color:var(--doux)">
       Clotho : <select id="reglageClotho">
@@ -240,6 +299,9 @@
     <div style="flex:1"></div>
     <button class="principal" id="btnColOk">Retour</button>
   </section>
+
+  <!-- Arrivée d'un compagnon -->
+  <section class="ecran" id="compagnon"><div id="compCorps" class="compCorps"></div></section>
 
   <!-- Présentation des ennemis -->
   <section class="ecran" id="intro">
@@ -279,7 +341,6 @@
       <div class="legende" id="finResume"></div>
     </div>
     <div class="gains" id="finGains"></div>
-    <div class="don" id="don"></div>
     <div class="parchemin"><b>Clotho :</b> <span id="finClotho"></span></div>
     <button class="principal" id="btnRetour">Retour</button>
   </section>
@@ -287,6 +348,7 @@
 
 <div id="banniere"></div>
 <div class="voile" id="voile"></div>
+<div id="donVoile"><div class="donCorps" id="donCorps"></div></div>
 <div id="clotho"><div class="bulle"><div class="portrait">🧶</div><div>
   <div class="qui">Clotho, la Fileuse</div><p id="clothoTexte"></p><button id="clothoOk">Compris</button>
 </div></div></div>

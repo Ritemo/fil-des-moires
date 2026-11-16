@@ -2,46 +2,53 @@
 (function (racine) {
   'use strict';
 
-  const garde = { id: 'garde', nom: 'Garde', type: 'garde', cible: 'autreAllie', cout: 0, poids: 'leger', affinite: 'airain',
+  const garde = { id: 'garde', art: '🛡️', nom: 'Garde', type: 'garde', cible: 'autreAllie', cout: 0, poids: 'leger', affinite: 'airain',
     desc: "Protège un allié jusqu'à ton prochain tour : tu encaisses à sa place la moitié du coup." };
 
   const HEROS = [
     {
       id: 'errant', nom: "L'Errant", emoji: '🧔🏻', role: 'Hoplite', affinite: 'airain',
+      bio: "Un mortel sans nom, éveillé dans une clairière avec un glaive trop beau pour un vagabond. Son fil est vierge : Atropos ne peut pas le voir.",
       pvMax: 170, attaque: 30, defense: 20, vitesse: 100, energieDepart: 2,
       competences: [
-        { id: 'frappe', nom: 'Frappe', type: 'attaque', cible: 'ennemi', puissance: 40, cout: 0, poids: 'normal', affinite: 'airain', desc: 'Un coup de glaive simple.' },
-        { id: 'torche', nom: 'Coup de torche', type: 'attaque', cible: 'ennemi', puissance: 34, cout: 1, poids: 'normal', affinite: 'flamme', brulure: { tours: 2, degats: 8 }, desc: 'Flamme. Brûle la cible 2 tours. Cautérise les plaies de l\'Hydre.' },
-        { id: 'charge', nom: 'Charge lourde', type: 'attaque', cible: 'ennemi', puissance: 72, cout: 2, poids: 'lourd', affinite: 'airain', etourdit: 0.3, desc: 'Lourd : frappe fort mais te recule dans la file. 30 % d\'étourdir.' },
-        { id: 'ares', nom: "Colère d'Arès", type: 'attaque', cible: 'ennemi', puissance: 115, cout: 3, poids: 'lourd', affinite: 'airain', desc: 'Le coup le plus puissant de l\'Errant. Lourd et coûteux.' },
-        { id: 'pommeau', nom: 'Coup de pommeau', type: 'attaque', cible: 'ennemi', puissance: 22, cout: 0, poids: 'leger', affinite: 'airain', etourdit: 0.5, desc: 'Léger. 50 % d\'étourdir la cible.' },
-        { id: 'ralliement', nom: 'Cri de ralliement', type: 'ralliement', cible: 'aucune', zone: true, puissance: 20, gloire: 25, cout: 2, poids: 'normal', affinite: 'airain', desc: '+25 Gloire et environ 20 PV pour toute l\'équipe.' },
+        { id: 'frappe', art: '🗡️', nom: 'Frappe', type: 'attaque', cible: 'ennemi', puissance: 40, cout: 0, poids: 'normal', affinite: 'airain', desc: 'Un coup de glaive simple.' },
+        { id: 'torche', art: '🔥', nom: 'Coup de torche', type: 'attaque', cible: 'ennemi', puissance: 34, cout: 1, poids: 'normal', affinite: 'flamme', brulure: { tours: 2, degats: 8 }, desc: 'Flamme. Brûle la cible 2 tours. Cautérise les plaies de l\'Hydre.' },
+        { id: 'charge', art: '🐂', nom: 'Charge lourde', type: 'attaque', cible: 'ennemi', puissance: 72, cout: 2, poids: 'lourd', affinite: 'airain', etourdit: 0.3, desc: 'Lourd : frappe fort mais te recule dans la file. 30 % d\'étourdir.' },
+        { id: 'ares', art: '⚔️', nom: "Colère d'Arès", type: 'attaque', cible: 'ennemi', puissance: 115, cout: 3, poids: 'lourd', affinite: 'airain', desc: 'Le coup le plus puissant de l\'Errant. Lourd et coûteux.' },
+        { id: 'pommeau', art: '🔨', nom: 'Coup de pommeau', type: 'attaque', cible: 'ennemi', puissance: 22, cout: 0, poids: 'leger', affinite: 'airain', etourdit: 0.5, desc: 'Léger. 50 % d\'étourdir la cible.' },
+        { id: 'ralliement', art: '📯', nom: 'Cri de ralliement', type: 'ralliement', cible: 'aucune', zone: true, puissance: 20, gloire: 25, cout: 2, poids: 'normal', affinite: 'airain', desc: '+25 Gloire et environ 20 PV pour toute l\'équipe.' },
         garde,
-        { id: 'prouesse', nom: 'Phalange des Moires', type: 'attaque', cible: 'ennemi', zone: true, puissance: 85, cout: 0, poids: 'normal', affinite: 'airain', prouesse: true, desc: 'Prouesse (Gloire pleine) : toute l\'équipe frappe tous les ennemis.' }
+        { id: 'prouesse', art: '🏛️', nom: 'Phalange des Moires', type: 'attaque', cible: 'ennemi', zone: true, puissance: 85, cout: 0, poids: 'normal', affinite: 'airain', prouesse: true, desc: 'Prouesse (Gloire pleine) : toute l\'équipe frappe tous les ennemis.' }
       ]
     },
     {
       id: 'phaena', nom: 'Phaéna', emoji: '🧝🏻‍♀️', role: 'Oracle', affinite: 'lumiere',
+      titre: "l'oracle aux yeux d'or",
+      bio: "Elle voit le fil de chaque être, sauf le tien. Elle a quitté le sanctuaire d'Apollon quand ses visions ont commencé à se contredire. Derrière toi, dit-elle, il y a un nœud.",
+      apport: "Elle soigne, protège et manipule la File : avec son Présage, un allié rejoue juste après elle.",
       pvMax: 115, attaque: 27, defense: 14, vitesse: 115, energieDepart: 2,
       competences: [
-        { id: 'rayon', nom: 'Rayon', type: 'attaque', cible: 'ennemi', puissance: 36, cout: 0, poids: 'normal', affinite: 'lumiere', desc: 'Lumière. Fort contre l\'Ombre.' },
-        { id: 'ronces', nom: 'Ronces de Déméter', type: 'attaque', cible: 'ennemi', puissance: 46, cout: 2, poids: 'normal', affinite: 'sylve', recul: 40, desc: 'Sylve, fort contre l\'Onde. Recule la cible dans la file.' },
-        { id: 'soin', nom: 'Baume de Déméter', type: 'soin', cible: 'allie', puissance: 48, cout: 2, poids: 'normal', affinite: 'sylve', desc: 'Rend environ 48 PV à un allié.' },
-        { id: 'aube', nom: "Aube d'Apollon", type: 'soin', cible: 'allie', zone: true, puissance: 30, cout: 3, poids: 'normal', affinite: 'lumiere', desc: 'Soigne toute l\'équipe (environ 30 PV chacun).' },
-        { id: 'oeil', nom: "Œil d'Apollon", type: 'oeil', cible: 'autreAllie', cout: 1, poids: 'leger', affinite: 'lumiere', desc: 'Léger. Le prochain coup de l\'allié choisi sera critique.' },
-        { id: 'presage', nom: 'Présage', type: 'presage', cible: 'autreAllie', cout: 2, poids: 'leger', affinite: 'lumiere', desc: 'Léger. L\'allié choisi joue juste après toi.' },
+        { id: 'rayon', art: '☀️', nom: 'Rayon', type: 'attaque', cible: 'ennemi', puissance: 36, cout: 0, poids: 'normal', affinite: 'lumiere', desc: 'Lumière. Fort contre l\'Ombre.' },
+        { id: 'ronces', art: '🌿', nom: 'Ronces de Déméter', type: 'attaque', cible: 'ennemi', puissance: 46, cout: 2, poids: 'normal', affinite: 'sylve', recul: 40, desc: 'Sylve, fort contre l\'Onde. Recule la cible dans la file.' },
+        { id: 'soin', art: '🍯', nom: 'Baume de Déméter', type: 'soin', cible: 'allie', puissance: 48, cout: 2, poids: 'normal', affinite: 'sylve', desc: 'Rend environ 48 PV à un allié.' },
+        { id: 'aube', art: '🌅', nom: "Aube d'Apollon", type: 'soin', cible: 'allie', zone: true, puissance: 30, cout: 3, poids: 'normal', affinite: 'lumiere', desc: 'Soigne toute l\'équipe (environ 30 PV chacun).' },
+        { id: 'oeil', art: '👁️', nom: "Œil d'Apollon", type: 'oeil', cible: 'autreAllie', cout: 1, poids: 'leger', affinite: 'lumiere', desc: 'Léger. Le prochain coup de l\'allié choisi sera critique.' },
+        { id: 'presage', art: '🔮', nom: 'Présage', type: 'presage', cible: 'autreAllie', cout: 2, poids: 'leger', affinite: 'lumiere', desc: 'Léger. L\'allié choisi joue juste après toi.' },
         garde
       ]
     },
     {
-      id: 'griffon', nom: 'Griffon', emoji: '🦅', role: 'Créature liée', affinite: 'foudre',
+      id: 'griffon', nom: 'Kelos', emoji: '🦅', role: 'Griffon d\'orage', affinite: 'foudre',
+      titre: "le griffon d'orage",
+      bio: "Un griffon à demi effiloché, que tu as trouvé pris dans les ronces au bord de l'Étang. Tu as noué ton fil au sien : il ne te quittera plus. Il ne parle pas, mais ses plumes disent tout.",
+      apport: "Très rapide, il frappe souvent avec des attaques légères, et foudroie les créatures du Vent.",
       pvMax: 125, attaque: 32, defense: 15, vitesse: 130, energieDepart: 2,
       competences: [
-        { id: 'serres', nom: 'Serres', type: 'attaque', cible: 'ennemi', puissance: 30, cout: 0, poids: 'leger', affinite: 'airain', desc: 'Léger : tu rejoues vite.' },
-        { id: 'eclair', nom: 'Éclair', type: 'attaque', cible: 'ennemi', puissance: 52, cout: 2, poids: 'normal', affinite: 'foudre', desc: 'Foudre, fort contre le Vent.' },
-        { id: 'cri', nom: 'Cri perçant', type: 'attaque', cible: 'ennemi', puissance: 20, cout: 0, poids: 'leger', affinite: 'airain', recul: 50, desc: 'Léger. Fait reculer la cible dans la File.' },
-        { id: 'rafale', nom: 'Rafale', type: 'attaque', cible: 'ennemi', zone: true, puissance: 34, cout: 3, poids: 'normal', affinite: 'vent', desc: 'Vent. Touche tous les ennemis.' },
-        { id: 'pique', nom: 'Piqué orageux', type: 'attaque', cible: 'ennemi', puissance: 88, cout: 3, poids: 'lourd', affinite: 'foudre', desc: 'Lourd : un plongeon dévastateur.' },
+        { id: 'serres', art: '🦅', nom: 'Serres', type: 'attaque', cible: 'ennemi', puissance: 30, cout: 0, poids: 'leger', affinite: 'airain', desc: 'Léger : tu rejoues vite.' },
+        { id: 'eclair', art: '⚡', nom: 'Éclair', type: 'attaque', cible: 'ennemi', puissance: 52, cout: 2, poids: 'normal', affinite: 'foudre', desc: 'Foudre, fort contre le Vent.' },
+        { id: 'cri', art: '📢', nom: 'Cri perçant', type: 'attaque', cible: 'ennemi', puissance: 20, cout: 0, poids: 'leger', affinite: 'airain', recul: 50, desc: 'Léger. Fait reculer la cible dans la File.' },
+        { id: 'rafale', art: '🌪️', nom: 'Rafale', type: 'attaque', cible: 'ennemi', zone: true, puissance: 34, cout: 3, poids: 'normal', affinite: 'vent', desc: 'Vent. Touche tous les ennemis.' },
+        { id: 'pique', art: '🌩️', nom: 'Piqué orageux', type: 'attaque', cible: 'ennemi', puissance: 88, cout: 3, poids: 'lourd', affinite: 'foudre', desc: 'Lourd : un plongeon dévastateur.' },
         garde
       ]
     }
@@ -114,7 +121,7 @@
     {
       titre: "L'Étang des Sept Têtes",
       presage: "« Le fil se noue près d'un étang noir. Un chant de flûte, des ailes, puis une bête qui ne meurt pas comme les autres. »",
-      nouveau: 'Le Griffon se lie à toi. La Gloire et la Prouesse s\'éveillent. Premier Gardien.',
+      nouveau: 'Kelos, le griffon d\'orage, se lie à toi. La Gloire et la Prouesse s\'éveillent. Premier Gardien.',
       equipe: { errant: 'tout', phaena: 'tout', griffon: 'tout' },
       gloire: true,
       rencontres: [
