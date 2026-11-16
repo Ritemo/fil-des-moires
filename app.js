@@ -83,7 +83,7 @@
     p.push(M.NOM_POIDS[c.poids || 'normal']);
     return p.join(' · ');
   }
-  function ecran(id) { document.querySelectorAll('.ecran').forEach(e => e.classList.toggle('actif', e.id === id)); }
+  function ecran(id) { document.querySelectorAll('.ecran').forEach(e => e.classList.toggle('actif', e.id === id)); document.body.classList.toggle('fixe', id === 'accueil'); $('chipsAccueil').style.display = id === 'accueil' ? 'flex' : 'none'; }
 
   // ---------- Accueil ----------
   function accueil() {
@@ -95,7 +95,6 @@
     $('mode').textContent = '';
     $('tapisCompte').textContent = profil.rangs.length + ' / 30 rangs';
     T.dessiner($('tapisAccueil'), profil.rangs);
-    $('tapisLegende').textContent = profil.rangs.length ? 'Touche un rang pour revoir ta journée.' : 'Ta tapisserie est vierge. Ta première épreuve y tissera un rang.';
     $('titreEpreuve').textContent = 'Jour ' + jour + ' · ' + ep.titre;
     $('dateJour').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     $('presage').textContent = ep.presage;
@@ -114,21 +113,32 @@
     // Route de la Tapisserie
     const pal = P.prochainPalier(profil);
     const LIB = { carte: '🆕 une carte inédite', fil: '🧵 un Fil de réserve', amphore: '🏆 une amphore dorée' };
-    $('route').textContent = pal ? `Route de la Tapisserie : au rang ${pal.rang}, ${LIB[pal.type]} (encore ${pal.rang - profil.rangs.length}).` : 'Route de la Tapisserie terminée pour ce Chant.';
+    $('route').dataset.texte = pal ? `Route de la Tapisserie : au rang ${pal.rang}, ${LIB[pal.type]} (encore ${pal.rang - profil.rangs.length}).` : 'Route de la Tapisserie terminée pour ce Chant.';
+    $('route').textContent = profil.rangs.length ? $('route').dataset.texte : 'Ta tapisserie est vierge. Ta première épreuve y tissera un rang.';
     afficherOffrande();
     const ch = P.choixEnAttente(profil);
     $('choixAttente').style.display = ch ? 'flex' : 'none';
-    if (ch) $('choixAttente').innerHTML = `<div class="amph">✨</div><div class="txt"><b>Un choix t'attend</b><span>${ch.type === 'voie' ? 'Choisis la Voie de l\'Errant' : ch.type === 'voie2' ? 'Choisis une Voie secondaire' : 'Prête un Serment (niveau ' + ch.niveau + ')'}</span></div><div class="ouvrir">Choisir</div>`;
+    if (ch) $('choixAttente').innerHTML = `<div class="amph">✨</div><div class="txt"><b>Un choix t'attend</b><span>${ch.type === 'voie' ? 'La Voie de l\'Errant' : ch.type === 'voie2' ? 'Une Voie secondaire' : 'Un Serment (niv. ' + ch.niveau + ')'}</span></div><div class="ouvrir">Choisir</div>`;
+    $('choixAttente').parentNode.style.display = ch || profil.joursJoues >= 1 ? 'flex' : 'none';
     $('niveauEquipe').textContent = profil.niveau;
     $('xpAccueil').style.width = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau)) + '%';
     $('drachmesAccueil').textContent = profil.drachmes;
-    $('btnCollection').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
-    $('btnCodex').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
-    $('btnChronique').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
+    $('btnCollection').style.display = profil.joursJoues >= 1 ? '' : 'none';
+    $('btnCodex').style.display = profil.joursJoues >= 1 ? '' : 'none';
+    $('btnChronique').style.display = profil.joursJoues >= 1 ? '' : 'none';
     const n = nbAmeliorables();
-    $('btnCollection').innerHTML = '📜 Collection de cartes' + (n ? ` <span class="pastille">⬆ ${n}</span>` : '');
+    $('btnCollection').innerHTML = '<span class="ic">🃏</span>Cartes' + (n ? `<span class="pastille">⬆ ${n}</span>` : '');
   }
-  $('tapisAccueil').onclick = e => { const r = T.rangTouche($('tapisAccueil'), profil.rangs, e); if (r) $('tapisLegende').textContent = 'Jour ' + r.jour + ' : ' + r.resume; };
+  // Toucher un rang affiche son récit quelques secondes à la place de la Route
+  let minuteurRang = null;
+  $('tapisAccueil').onclick = e => {
+    const r = T.rangTouche($('tapisAccueil'), profil.rangs, e);
+    if (!r) return;
+    $('route').textContent = 'Jour ' + r.jour + ' : ' + (r.recit || r.resume);
+    clearTimeout(minuteurRang); minuteurRang = setTimeout(() => { $('route').textContent = $('route').dataset.texte || ''; }, 5000);
+  };
+  $('btnReglages').onclick = () => ecran('reglages');
+  $('reglagesOk').onclick = accueil;
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
   function demarrer(echo) {

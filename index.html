@@ -285,56 +285,92 @@
   .chroJour .t { font-weight: bold; }
   .chroJour .c { color: #e8c27a; margin-top: 4px; }
   .chroVide { color: var(--doux); font-style: italic; font-size: 14px; margin-bottom: 6px; }
+  /* Accueil sur un seul écran */
+  body.fixe #app { height: 100dvh; min-height: 0; overflow: hidden; }
+  body.fixe #accueil { min-height: 0; gap: 8px; }
+  body.fixe #accueil > * { flex-shrink: 0; }
+  body.fixe #accueil > #parchAccueil { flex: 1 1 0; }
+  .chips { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--doux); }
+  .chips b { color: var(--or); font-weight: normal; }
+  .chips .xpbarre { flex: 0 0 34px; width: 34px; height: 6px; }
+  .tapis.compact { padding: 8px 10px; }
+  .tapis.compact .tete { margin-bottom: 4px; }
+  .alertes { display: flex; gap: 8px; }
+  .alertes .offrande { flex: 1 1 0; min-width: 0; padding: 7px 9px; gap: 8px; }
+  .alertes .offrande .amph { font-size: 26px; }
+  .alertes .offrande .txt { min-width: 0; }
+  .alertes .offrande .txt b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alertes .offrande .txt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alertes .offrande .ouvrir, .alertes .offrande .lien { display: none; }
+  #parchAccueil { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  #parchAccueil h2 { margin-top: 2px; }
+  #parchAccueil .precedemment { margin: 8px 0 0; }
+  nav.navBas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  nav.navBas button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 12px; color: var(--or); border-color: rgba(224,176,79,.45); background: linear-gradient(#3a2a1e, #2a1f18); position: relative; }
+  nav.navBas .ic { font-size: 20px; }
+  nav.navBas .pastille { position: absolute; top: -6px; right: 4px; margin: 0; font-size: 11px; padding: 0 6px; }
+  .carteReglage { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
+  .carteReglage b { color: var(--or); font-weight: normal; font-variant: small-caps; font-size: 16px; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <h1>🧵 Le Fil des Moires</h1>
-    <span style="display:flex;align-items:center;gap:8px"><span class="mode" id="mode"></span><button class="rond" id="btnLexique" title="Lexique">📖</button></span>
+    <span style="display:flex;align-items:center;gap:8px"><span class="mode" id="mode"></span><span class="chips" id="chipsAccueil"><span>Nv <b id="niveauEquipe">1</b></span><span class="xpbarre"><i id="xpAccueil"></i></span><span>🪙 <b id="drachmesAccueil">0</b></span></span><button class="rond" id="btnLexique" title="Lexique">📖</button></span>
   </header>
   <div class="frise"></div>
 
-  <!-- Accueil -->
+  <!-- Accueil : tient sur un écran, sans défilement -->
   <section class="ecran actif" id="accueil">
-    <div class="tapis">
+    <div class="tapis compact">
       <div class="tete"><b>Ta tapisserie</b><span id="tapisCompte"></span></div>
-      <canvas id="tapisAccueil" width="440" height="200"></canvas>
-      <div class="legende" id="tapisLegende">Touche un rang pour revoir ta journée.</div>
+      <canvas id="tapisAccueil" width="440" height="132" data-rangs="4"></canvas>
       <div class="route" id="route"></div>
     </div>
-    <div class="offrande dispo" id="choixAttente" style="display:none"></div>
-    <div class="offrande" id="offrande"></div>
-    <div class="bourse"><span>Niveau <b id="niveauEquipe">1</b></span><div class="xpbarre"><i id="xpAccueil"></i></div><span>🪙 <b id="drachmesAccueil">0</b></span></div>
-    <div class="parchemin">
+    <div class="alertes">
+      <div class="offrande dispo" id="choixAttente" style="display:none"></div>
+      <div class="offrande" id="offrande"></div>
+    </div>
+    <div class="parchemin" id="parchAccueil">
       <div class="chapitre" id="chapitreAccueil"></div>
-      <div class="precedemment" id="precedemment"></div>
       <h2 id="titreEpreuve"></h2>
       <div style="font-size:13px;color:#6b5440" id="dateJour"></div>
       <p class="presage" id="presage"></p>
       <div class="nouveau" id="nouveau"></div>
+      <div class="precedemment" id="precedemment"></div>
     </div>
     <div class="info" id="etatJour"></div>
     <button class="principal" id="btnJouer">Commencer l'épreuve</button>
     <button id="btnEcho">Rejouer en Écho (sans récompense)</button>
-    <button class="btnCollection" id="btnCollection">📜 Collection de cartes</button>
-    <button class="btnCollection" id="btnCodex">📖 Codex des créatures</button>
-    <button class="btnCollection" id="btnChronique">📜 Chronique du Chant</button>
-    <div style="flex:1"></div>
-    <div style="display:flex;justify-content:center;align-items:center;gap:8px;font-size:13px;color:var(--doux)">
-      Clotho : <select id="reglageClotho">
+    <nav class="navBas">
+      <button id="btnCollection"><span class="ic">🃏</span>Cartes</button>
+      <button id="btnCodex"><span class="ic">🐾</span>Codex</button>
+      <button id="btnChronique"><span class="ic">📜</span>Chronique</button>
+      <button id="btnReglages"><span class="ic">⚙️</span>Réglages</button>
+    </nav>
+  </section>
+
+  <!-- Réglages -->
+  <section class="ecran" id="reglages">
+    <div class="bourse"><span>⚙️ Réglages</span></div>
+    <div class="carteReglage">
+      <b>Clotho</b>
+      <select id="reglageClotho">
         <option value="auto">s'efface avec le temps</option>
         <option value="bavarde">bavarde</option>
         <option value="discrete">discrète</option>
         <option value="muette">muette</option>
       </select>
     </div>
-    <div style="display:flex;justify-content:center;align-items:center;gap:6px"><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
-    <div class="info">Phase 1 · graphismes provisoires</div>
+    <div class="carteReglage"><b>Sauvegarde</b><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
+    <div class="info">Phase 2 · graphismes provisoires</div>
     <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px">
       <button class="lien" id="btnJourSuivant">Passer au jour suivant (test)</button>
       <button class="lien" id="btnReset">Tout réinitialiser (test)</button>
     </div>
+    <div style="flex:1"></div>
+    <button class="principal" id="reglagesOk">Retour</button>
   </section>
 
   <!-- Collection / Préparation -->

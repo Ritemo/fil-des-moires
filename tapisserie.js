@@ -7,7 +7,9 @@
     foudre: ['#c9a417', '#ecd04f'], vent: ['#3f9c8c', '#7fd0c0'], roc: ['#8a6446', '#b38a68'],
     lumiere: ['#d8c58a', '#f3e6b8'], ombre: ['#5b4380', '#8a6fb3'], airain: ['#8f7a55', '#b9a37a']
   };
-  const RANGS_VISIBLES = 6;
+  const RANGS_DEFAUT = 6;
+  // Nombre de rangs visibles : attribut data-rangs du canvas (6 par défaut)
+  const nbRangs = canvas => +(canvas.dataset && canvas.dataset.rangs) || RANGS_DEFAUT;
 
   function couleurs(rang) {
     if (!rang.victoire) return COULEURS.gris;
@@ -18,7 +20,7 @@
   // Dessine la tapisserie. progression (0 à 1) anime le dernier rang.
   function dessiner(canvas, rangs, progression) {
     const x = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
+    const W = canvas.width, H = canvas.height, RANGS_VISIBLES = nbRangs(canvas);
     const marge = 14, haut = 14, hRang = (H - 2 * haut) / RANGS_VISIBLES;
     const debut = Math.max(0, rangs.length - RANGS_VISIBLES);
     const visibles = rangs.slice(debut);
@@ -86,6 +88,7 @@
   function rangTouche(canvas, rangs, evenement) {
     const r = canvas.getBoundingClientRect();
     const y = (evenement.clientY - r.top) * canvas.height / r.height;
+    const RANGS_VISIBLES = nbRangs(canvas);
     const haut = 14, hRang = (canvas.height - 2 * haut) / RANGS_VISIBLES;
     const k = Math.floor((y - haut) / hRang);
     const debut = Math.max(0, rangs.length - RANGS_VISIBLES);
