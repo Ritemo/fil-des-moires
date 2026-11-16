@@ -1,0 +1,26 @@
+name: Rappel
+# Chaque matin, envoie à chaque joueur sa quête du jour (notification ntfy).
+# 7 h 37 UTC = 8 h 37 à Paris en hiver (9 h 37 en été). Lancement manuel possible (Run workflow) pour tester.
+on:
+  schedule:
+    - cron: '37 7 * * *'
+  workflow_dispatch:
+jobs:
+  rappel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Envoyer les rappels
+        env:
+          SAUVEGARDE_URL: ${{ secrets.SAUVEGARDE_URL }}
+          SAUVEGARDE_CLE: ${{ secrets.SAUVEGARDE_CLE }}
+        run: node outils/rappels.js
+      - name: Alerte en cas d'échec
+        if: failure()
+        env:
+          SUJET: ${{ secrets.NTFY_ALERTE }}
+        run: |
+          if [ -n "$SUJET" ]; then curl -s -d "Le Fil des Moires : le rappel quotidien a échoué" "https://ntfy.sh/$SUJET"; fi

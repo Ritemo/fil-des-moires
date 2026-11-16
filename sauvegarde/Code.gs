@@ -12,7 +12,19 @@ function doGet(e) {
   const joueur = nettoyer(e.parameter.joueur);
   if (joueur === false || !cleValide(joueur, e.parameter.cle)) return reponse({ ok: false, erreur: 'cle' });
   if (e.parameter.classement) return reponse({ ok: true, classement: classement() });
+  if (e.parameter.rappels && !joueur) return reponse({ ok: true, rappels: rappels() }); // réservé au joueur principal (robot de rappel)
   return reponse({ ok: true, donnees: lire(joueur) });
+}
+
+// Rappels quotidiens : pour chaque joueur qui les a activés, de quoi annoncer sa prochaine épreuve
+function rappels() {
+  return PropertiesService.getScriptProperties().getKeys()
+    .filter(function (k) { return k === 'CLE' || k.indexOf('CLE_') === 0; })
+    .map(function (k) { const j = k === 'CLE' ? '' : k.slice(4).toLowerCase(); const p = lire(j);
+      if (!p || !p.ntfy) return null;
+      return { nom: p.pseudo || j || 'Joueur principal', ntfy: p.ntfy, jour: p.joursJoues || 0, derniereDate: p.derniereDate || null,
+        choix: (p.histoire || {}).choix || {}, sceaux: (p.histoire || {}).sceaux || [] }; })
+    .filter(function (x) { return x; });
 }
 
 // Classement : un résumé de la progression de chaque joueur (jamais les clés ni les sauvegardes complètes)

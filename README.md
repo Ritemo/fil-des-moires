@@ -85,3 +85,7 @@ Les personnages, créatures et cartes utilisent les émoticônes 3D **Fluent Emo
 ## Voix de l'histoire
 
 Le robot **Voix** (GitHub Actions, `.github/workflows/voix.yml`) enregistre chaque réplique de l'histoire avec une voix neuronale par personnage (service de lecture à voix haute de Microsoft Edge, via `edge-tts`, gratuit et sans clé). Il se lance tout seul quand `chant1.js` change, ou à la main : onglet *Actions* > *Voix* > *Run workflow*. Les fichiers vont dans `art/voix/` ; seules les répliques nouvelles ou modifiées sont enregistrées. Les voix de chaque personnage se règlent dans `outils/voix.py`. Si un fichier manque, le jeu utilise la voix de l'appareil.
+
+## Rappel du matin
+
+Le robot **Rappel** (`.github/workflows/rappel.yml`) envoie chaque matin (8 h 37 à Paris en hiver) à chaque joueur qui l'a activé le titre et le Présage de sa prochaine épreuve, par l'appli gratuite **ntfy**. Chaque joueur l'active dans *Réglages* > *Rappel du matin* (le jeu lui donne son sujet ntfy). Le robot lit les sauvegardes via le script Google : secrets `SAUVEGARDE_URL` (adresse /exec) et `SAUVEGARDE_CLE` (la clé `CLE` du joueur principal). Si tu changes ta clé, change aussi ce secret.

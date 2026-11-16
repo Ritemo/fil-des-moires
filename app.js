@@ -29,7 +29,20 @@
   const aujourdhui = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const profilVide = () => ({ joursJoues: 0, rangs: [], derniereDate: null, clotho: 'auto', vus: {}, compagnons: ['errant'] });
   // Complète un profil ancien (compagnons déjà rencontrés d'après les jours joués)
+  // Calage du 16 novembre 2026 : la phase de test est finie. Une partie avancée au-delà du jour 3 est ramenée
+  // à « Hydre vaincue le 16 novembre » : le jour 4 commence le lendemain. Les cartes et niveaux gagnés sont gardés.
+  let recalee = false;
+  function caler(p) {
+    if (p.calage1 || !(p.joursJoues > 3)) return;
+    p.calage1 = true; recalee = true;
+    p.rangs = (p.rangs || []).filter(r => !r.echo && r.jour <= 3);
+    p.joursJoues = 3; p.derniereDate = '2026-11-16';
+    if (p.histoire) { Object.keys(p.histoire.choix || {}).forEach(k => { if (+k.slice(1) > 3) delete p.histoire.choix[k]; }); p.histoire.sceaux = []; }
+    if (p.route) Object.keys(p.route).forEach(k => { if (+k > 3) delete p.route[k]; });
+    p.maj = Date.now();
+  }
   function migrer(p) {
+    caler(p);
     P.initialiser(p);
     if (!p.compagnons || (p.compagnons.length === 1 && p.joursJoues >= 2)) p.compagnons = ['errant'].concat(p.joursJoues >= 2 ? ['phaena'] : [], p.joursJoues >= 3 ? ['griffon'] : []);
     return p;
@@ -45,6 +58,7 @@
     if (distant && distant.maj && distant.maj > (profil.maj || 0)) {
       profil = migrer(Object.assign(profilVide(), distant));
       stock.ecrire('profil', profil);
+      if (recalee) { recalee = false; S.envoyer(profil, true); }
       if (!partie && $('accueil').classList.contains('actif')) accueil();
     } else if (S.conf() && (!distant || (profil.maj || 0) > (distant.maj || 0))) {
       if (profil.maj) S.envoyer(profil, true);
@@ -328,7 +342,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.14.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.15.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1255,6 +1269,25 @@
     $('lexiqueCorps').querySelectorAll('canvas').forEach(cv => T.dessiner(cv, liste[+cv.dataset.k].rangs));
   };
 
+  // ---------- Rappel du matin : une notification ntfy avec la quête du jour (envoyée par le robot « Rappel ») ----------
+  $('btnRappel').onclick = () => {
+    $('titreModale').textContent = '🔔 Rappel du matin'; $('onglets').innerHTML = '';
+    if (!S.conf()) { $('lexiqueCorps').innerHTML = '<p>Le rappel lit ta progression dans la sauvegarde en ligne : configure d\'abord la sauvegarde commune (Réglages, Sauvegarde), ou rejoins le jeu par un lien d\'invitation.</p>'; return $('modale').classList.add('visible'); }
+    const afficher = () => {
+      const t = profil.ntfy;
+      $('lexiqueCorps').innerHTML = t ? `<p>Chaque matin vers 8 h 30, tu reçois le titre et le Présage de ta prochaine épreuve (sauf si tu as déjà joué).</p>
+        <p><b>1.</b> Installe l'appli gratuite <b>ntfy</b> (Play Store ou App Store).</p>
+        <p><b>2.</b> Dans ntfy, touche <b>+</b> et abonne-toi au sujet :</p><div class="lienInvit">${t}</div>
+        <a href="ntfy://ntfy.sh/${t}" style="display:block;margin-top:6px"><button style="width:100%">📲 Ouvrir dans l'appli ntfy</button></a>
+        <p class="small">Sans l'appli, tu peux aussi ouvrir <a href="https://ntfy.sh/${t}" target="_blank" style="color:var(--or)">ntfy.sh/${t}</a> et autoriser les notifications du navigateur.</p>
+        <button id="rappelOff" style="width:100%;margin-top:6px">Désactiver le rappel</button>`
+        : `<p>Reçois chaque matin le titre et le Présage de ta quête du jour, comme une notification d'appli.</p><button class="principal" id="rappelOn" style="width:100%">Activer le rappel</button>`;
+      if ($('rappelOn')) $('rappelOn').onclick = () => { profil.ntfy = 'fdm-' + Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8); sauver(); afficher(); };
+      if ($('rappelOff')) $('rappelOff').onclick = () => { delete profil.ntfy; sauver(); afficher(); };
+    };
+    afficher(); $('modale').classList.add('visible');
+  };
+
   const revoirIntro = () => window.Cinematique && Cinematique.jouer(() => { profil.vus.intro = true; sauver(); });
   $('btnIntro').onclick = revoirIntro;
   $('btnTapisInfo').onclick = revoirIntro;
@@ -1272,7 +1305,6 @@
   $('btnLexique').onclick = () => ouvrirLexique();
   $('btnSync').onclick = ouvrirSync;
   $('btnVitesse').onclick = () => { vitesse = vitesse === 1 ? 0.5 : 1; $('btnVitesse').textContent = 'Vitesse x' + (vitesse === 1 ? 1 : 2); };
-  $('btnJourSuivant').onclick = () => { profil.derniereDate = null; sauver(); accueil(); };
   $('btnReset').onclick = () => { profil = migrer(profilVide()); sauver(); toursJoueur = 0; accueil(); };
 
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claude')) {
@@ -1280,5 +1312,6 @@
   }
   accueil();
   $('etatSync').textContent = LIBELLES_SYNC[S.conf() ? 'envoi' : 'local'];
+  if (recalee) { recalee = false; sauver(); }
   if (!rejoindre()) synchroniser();
 })();
