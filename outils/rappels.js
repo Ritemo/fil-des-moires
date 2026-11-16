@@ -12,6 +12,7 @@ const aujourdhui = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }
   const r = await fetch(url + '?cle=' + encodeURIComponent(cle) + '&rappels=1');
   const j = await r.json();
   if (!j.ok) throw new Error('Script de sauvegarde : ' + (j.erreur || 'réponse inattendue') + (j.rappels ? '' : ' (le script est-il à jour ?)'));
+  console.log('Script de sauvegarde joint : ' + (j.rappels || []).length + ' rappel(s) activé(s).');
   for (const joueur of j.rappels || []) {
     if (joueur.derniereDate === aujourdhui) { console.log(joueur.nom + ' a déjà joué aujourd\'hui.'); continue; }
     const jour = joueur.jour + 1;
