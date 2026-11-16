@@ -1,0 +1,23 @@
+name: Tests
+# Lance les tests du moteur et la simulation d'équilibrage à chaque push.
+# Alerte ntfy facultative : créer le secret NTFY_ALERTE (nom du sujet) pour être prévenu en cas d'échec.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Tests et simulation
+        run: node tests/simulation.js
+      - name: Alerte en cas d'échec
+        if: failure()
+        env:
+          SUJET: ${{ secrets.NTFY_ALERTE }}
+        run: |
+          if [ -n "$SUJET" ]; then curl -s -d "Le Fil des Moires : les tests ont échoué" "https://ntfy.sh/$SUJET"; fi
