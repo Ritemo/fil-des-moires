@@ -27,6 +27,7 @@
     if (!profil.creatures) profil.creatures = [];
     if (!profil.creature) profil.creature = 'griffon';
     if (!profil.codex) profil.codex = {};
+    if (!profil.histoire) profil.histoire = { choix: {}, jauges: { honneur: 0, ruse: 0, piete: 0 }, sceaux: [] };
     return profil;
   }
 
@@ -207,6 +208,25 @@
     Object.keys(profil.codex || {}).forEach(id => { b[id] = Math.min(0.3, 0.05 * profil.codex[id].vaincus); });
     return b;
   }
+  // ---------- Récit : choix du Chant ----------
+  // option : { id, jauge, effet: { drachmes, xp, fil } }. Renvoie le nombre de niveaux gagnés.
+  function appliquerChoix(profil, cle, option) {
+    const h = profil.histoire;
+    if (h.choix[cle]) return 0;
+    h.choix[cle] = option.id;
+    if (option.jauge) h.jauges[option.jauge] = (h.jauges[option.jauge] || 0) + 1;
+    const e = option.effet || {};
+    if (e.drachmes) profil.drachmes += e.drachmes;
+    if (e.fil) profil.filsReserve = Math.min(3, (profil.filsReserve || 0) + e.fil);
+    return e.xp ? ajouterXp(profil, e.xp) : 0;
+  }
+  // Applique les bonus du jour (fêtes, dieux, finale) aux gains
+  function bonusDuJour(g, ep) {
+    const b = ep && ep.bonus;
+    if (!b || !g) return g;
+    return { xp: Math.round(g.xp * (b.xp || 1)), drachmes: Math.round(g.drachmes * (b.drachmes || 1)) };
+  }
+
   function genererDon(profil, graine) {
     const hasard = M.creerHasard(graine);
     const heros = herosDisponibles(profil);
@@ -317,7 +337,7 @@
   }
 
   const Progression = {
-    lierCreature, liable, noterCodex, lienBonus,
+    lierCreature, liable, noterCodex, lienBonus, appliquerChoix, bonusDuJour,
     choixEnAttente, choisirVoie, choisirSerment, gloireDepart, secondSouffle, appliquerPassifs,
     QUALITES, ROUTE, offrandeDisponible, ouvrirOffrande, remplirAmphore, qualiteSerie, prochainPalier, reclamerRoute, ecartJours,
     NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, NOMS_RARETE, COULEURS_RARETE,

@@ -8,10 +8,10 @@ const assert = require('assert');
 const { choisirAction } = require('./ia.js');
 
 function jouerJour(profil, jour, graine) {
-  const ep = E.epreuve(jour, dateDu(graine, jour));
+  const ep = E.epreuve(jour, dateDu(graine, jour), profil.histoire);
   let reprise = null, gloire = 0, etat;
   for (const [k, r] of ep.rencontres.entries()) {
-    etat = M.creerCombat({ graine: graine + k * 101, allies: P.equipeDuJoueur(ep, profil, jour), ennemis: P.ennemisPourJoueur(r, profil, jour), reprise, gloire: k === 0 ? P.gloireDepart(profil) : gloire, gloireActive: ep.gloire, secondSouffle: P.secondSouffle(profil) });
+    etat = M.creerCombat({ graine: graine + k * 101, allies: P.equipeDuJoueur(ep, profil, jour), ennemis: P.ennemisPourJoueur(r, profil, jour), reprise, gloire: k === 0 ? P.gloireDepart(profil) + (ep.gloireBonus || 0) : gloire, gloireActive: ep.gloire, secondSouffle: P.secondSouffle(profil) });
     let n = 0;
     while (!etat.fini && n++ < 600) {
       const d = M.debutTour(etat);
@@ -20,12 +20,12 @@ function jouerJour(profil, jour, graine) {
       if (d.acteur.camp === 'ennemi') M.tourEnnemi(etat, d.acteur);
       else { const c = choisirAction(etat, d.acteur); M.agir(etat, d.acteur.uid, c.comp.id, c.cible ? c.cible.uid : null); }
     }
-    if (etat.fini !== 'victoire') return { victoire: false, etoiles: 0 };
+    if (etat.fini !== 'victoire') return { victoire: false, etoiles: 0, ep };
     reprise = {};
     etat.unites.filter(u => u.camp === 'allie').forEach(u => { reprise[u.id] = { pv: u.ko ? Math.round(u.pvMax * .25) : Math.min(u.pvMax, u.pv + Math.round(u.pvMax * D.SOIN_ENTRE)), energie: u.energie }; });
     gloire = etat.gloire;
   }
-  return { victoire: true, etoiles: M.etoiles(etat) };
+  return { victoire: true, etoiles: M.etoiles(etat), ep };
 }
 
 // Offrande et série douce
@@ -46,7 +46,10 @@ function campagne(graineBase, jours) {
   const journal = [];
   for (let jour = 1; jour <= jours; jour++) {
     const r = jouerJour(profil, jour, graineBase + jour * 7919);
-    const g = P.gains(r.victoire, r.etoiles);
+    const g = P.bonusDuJour(P.gains(r.victoire, r.etoiles), r.ep);
+    // Choix du récit au hasard ; la finale gagnée scelle le Sceau de Maïa
+    if (r.ep.choix && (r.victoire || !r.ep.choix.seulementVictoire)) P.appliquerChoix(profil, 'j' + jour, r.ep.choix.options[Math.floor(M.creerHasard(graineBase + jour)() * r.ep.choix.options.length)]);
+    if (r.ep.final && r.victoire && !profil.histoire.sceaux.includes('maia')) profil.histoire.sceaux.push('maia');
     P.ajouterXp(profil, g.xp); profil.drachmes += g.drachmes; profil.joursJoues = jour;
     if (r.victoire) {
       P.butin(profil, graineBase + jour * 3, r.etoiles);
@@ -75,7 +78,7 @@ assert(P.ameliorer(p, 'frappe') && p.cartes.frappe.niveau === 2 && p.drachmes ==
 assert.strictEqual(P.ajouterXp(P.initialiser({}), 50), 1);
 assert.strictEqual(P.genererDon(P.initialiser({ joursJoues: 3 }), 5).length, 3);
 
-const N = 120, JOURS = 21;
+const N = 120, JOURS = 32;
 const vict = Array(JOURS + 1).fill(0); let niv7 = 0, niv14 = 0, cartes7 = 0, max7 = 0;
 for (let i = 0; i < N; i++) {
   const { journal } = campagne(1000 + i * 31, JOURS);
@@ -85,6 +88,6 @@ for (let i = 0; i < N; i++) {
 const pct = j => Math.round(100 * vict[j] / N);
 console.log('Victoires par jour (%) :', Array.from({ length: JOURS }, (_, i) => 'J' + (i + 1) + ' ' + pct(i + 1)).join(' · '));
 const moy = (a, b) => Math.round(Array.from({ length: b - a + 1 }, (_, i) => pct(a + i)).reduce((x, y) => x + y) / (b - a + 1));
-console.log('Moyenne jours 4 à 14 :', moy(4, 14) + ' %', '· jours 15 à 21 :', moy(15, 21) + ' %');
+console.log('Moyenne jours 4 à 14 :', moy(4, 14) + ' %', '· jours 15 à 21 :', moy(15, 21) + ' %', '· jours 22 à 30 :', moy(22, 30) + ' %');
 console.log('Jour 7 : niveau moyen ' + (niv7 / N).toFixed(1) + ', cartes possédées ' + (cartes7 / N).toFixed(1) + ', meilleure carte niveau ' + (max7 / N).toFixed(1) + ' · Jour 14 : niveau ' + (niv14 / N).toFixed(1));
 console.log('Tests progression OK');

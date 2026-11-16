@@ -124,6 +124,61 @@
         { id: 'jet', nom: "Jet d'eau", type: 'attaque', cible: 'ennemi', puissance: 36, poids: 'normal', affinite: 'onde' },
         { id: 'deluge', nom: 'Déluge', type: 'attaque', cible: 'ennemi', zone: true, puissance: 44, poids: 'lourd', affinite: 'onde', chaque: 3 }
       ]
+    },
+    // ---------- Chant I : les Vals d'Aelwen ----------
+    dryade: {
+      id: 'dryade', nom: 'Dryade effilochée', emoji: '🧚‍♀️', affinite: 'sylve', pvMax: 115, attaque: 24, defense: 14, vitesse: 100,
+      comportement: 'aleatoire',
+      desc: "Gardienne d'un arbre, elle ne reconnaît plus personne. Sa sève est devenue grise.",
+      special: 'Tous les 3 tours, Sève grise : soigne un de ses alliés (ou elle-même). Abats-la en premier.',
+      competences: [
+        { id: 'branche', nom: 'Coup de branche', type: 'attaque', cible: 'ennemi', puissance: 30, poids: 'normal', affinite: 'airain' },
+        { id: 'epines', nom: 'Épines', type: 'attaque', cible: 'ennemi', puissance: 34, poids: 'normal', affinite: 'sylve' },
+        { id: 'sevegrise', nom: 'Sève grise', type: 'soin', cible: 'allie', puissance: 40, poids: 'normal', affinite: 'sylve', chaque: 3 }
+      ]
+    },
+    effile: {
+      id: 'effile', nom: 'Effilé', emoji: '🥷', affinite: 'ombre', pvMax: 115, attaque: 25, defense: 13, vitesse: 112,
+      comportement: 'agressif', mortel: true,
+      desc: "Un fidèle d'Atropos. Il s'est coupé ses propres souvenirs et sourit comme quelqu'un qui n'a plus peur de rien.",
+      special: "Son Coupe-souvenir peut te faire oublier ton prochain tour (25 %). C'est un mortel : on ne lie pas un fil humain.",
+      competences: [
+        { id: 'dague', nom: 'Dague grise', type: 'attaque', cible: 'ennemi', puissance: 28, poids: 'leger', affinite: 'airain' },
+        { id: 'coupesouvenir', nom: 'Coupe-souvenir', type: 'attaque', cible: 'ennemi', puissance: 26, etourdit: 0.25, poids: 'normal', affinite: 'ombre' }
+      ]
+    },
+    sanglier: {
+      id: 'sanglier', nom: "Sanglier d'Érymanthe", emoji: '🐗', affinite: 'roc', pvMax: 900, attaque: 50, defense: 26, vitesse: 95,
+      comportement: 'aleatoire', gardien: true,
+      desc: "Une bête de légende, aux défenses de pierre. L'Effilochage l'a rendue folle de rage.",
+      special: "Roc : la Foudre glisse sur lui, le Vent l'ébranle. Tous les 3 tours, Piétinement sur toute l'équipe.",
+      competences: [
+        { id: 'defenses', nom: 'Défenses', type: 'attaque', cible: 'ennemi', puissance: 40, poids: 'normal', affinite: 'airain' },
+        { id: 'charge_s', nom: 'Charge de pierre', type: 'attaque', cible: 'ennemi', puissance: 56, poids: 'lourd', affinite: 'roc' },
+        { id: 'pietinement', nom: 'Piétinement', type: 'attaque', cible: 'ennemi', zone: true, puissance: 38, poids: 'lourd', affinite: 'roc', chaque: 3 }
+      ]
+    },
+    lysandre: {
+      id: 'lysandre', nom: 'Lysandre la Coupeuse', emoji: '✂️', affinite: 'ombre', pvMax: 720, attaque: 42, defense: 20, vitesse: 118,
+      comportement: 'agressif', gardien: true, mortel: true,
+      desc: "La prêtresse des Effilés. Elle s'est coupé tous ses souvenirs, sauf sa promesse à Atropos.",
+      special: "Ombre : la Lumière la blesse. Ses Ciseaux frappent deux fois. Tous les 3 tours, Grande Coupe sur toute l'équipe (20 % d'oublier son tour).",
+      competences: [
+        { id: 'ciseaux', nom: 'Ciseaux', type: 'attaque', cible: 'ennemi', puissance: 22, coups: 2, poids: 'normal', affinite: 'ombre' },
+        { id: 'oubli', nom: 'Oubli', type: 'attaque', cible: 'ennemi', puissance: 30, etourdit: 0.3, poids: 'normal', affinite: 'ombre' },
+        { id: 'grandecoupe', nom: 'Grande Coupe', type: 'attaque', cible: 'ennemi', zone: true, puissance: 32, etourdit: 0.2, poids: 'lourd', affinite: 'ombre', chaque: 3 }
+      ]
+    },
+    hydre_eveillee: {
+      id: 'hydre_eveillee', nom: "L'Hydre éveillée", emoji: '🐲', affinite: 'onde', pvMax: 600, attaque: 31, defense: 22, vitesse: 92,
+      mecanique: 'hydre', tetes: 1, tetesMax: 5, comportement: 'aleatoire', gardien: true,
+      desc: "Mille ans qu'elle garde la pierre d'étoile sous l'étang. Cette fois, elle ne replongera pas.",
+      special: "Comme l'Hydre de l'Étang, en plus terrible : jusqu'à 5 têtes au lieu de 4. Chaque coup de 30 ou plus qui n'est pas de Flamme fait repousser une tête. La Flamme cautérise. Tous les 3 tours : Déluge sur toute l'équipe.",
+      competences: [
+        { id: 'morsure', nom: 'Morsure', type: 'attaque', cible: 'ennemi', puissance: 30, poids: 'normal', affinite: 'airain' },
+        { id: 'jet', nom: "Jet d'eau", type: 'attaque', cible: 'ennemi', puissance: 38, poids: 'normal', affinite: 'onde' },
+        { id: 'deluge', nom: 'Déluge', type: 'attaque', cible: 'ennemi', zone: true, puissance: 46, poids: 'lourd', affinite: 'onde', chaque: 3 }
+      ]
     }
   };
 
@@ -157,12 +212,21 @@
         { id: 'vague_l', art: '🌊', nom: 'Vague', type: 'attaque', cible: 'ennemi', puissance: 44, cout: 1, poids: 'normal', affinite: 'onde', desc: 'Onde, forte contre la Flamme.' },
         { id: 'chant_l', art: '🎶', nom: 'Chant des abysses', type: 'attaque', cible: 'ennemi', zone: true, puissance: 18, cout: 3, poids: 'normal', affinite: 'onde', etourdit: 0.3, desc: 'Onde. Touche tous les ennemis, 30 % d\'étourdir chacun.' },
         { id: 'ecume_l', art: '🫧', nom: 'Écume', type: 'soin', cible: 'allie', puissance: 36, cout: 2, poids: 'leger', affinite: 'onde', desc: 'Légère. Rend environ 36 PV à un allié.' }
+      ] },
+    { id: 'dryade', nom: 'Dryade', emoji: '🧚‍♀️', role: 'Créature liée', titre: 'la sève retrouvée', affinite: 'sylve',
+      pvMax: 120, attaque: 26, defense: 14, vitesse: 104, energieDepart: 2,
+      bio: "Ton fil a rendu sa sève verte. Elle ne retrouvera pas son arbre, alors elle a choisi de te suivre.",
+      apport: 'La soigneuse de la nature : soins puissants, épines de Sylve contre l\'Onde, et des racines qui étourdissent.',
+      competences: [
+        { id: 'epines_l', art: '🌵', nom: 'Épines', type: 'attaque', cible: 'ennemi', puissance: 42, cout: 1, poids: 'normal', affinite: 'sylve', desc: 'Sylve, forte contre l\'Onde (et l\'Hydre).' },
+        { id: 'seve_l', art: '🌿', nom: 'Sève verte', type: 'soin', cible: 'allie', puissance: 46, cout: 2, poids: 'normal', affinite: 'sylve', desc: 'Rend environ 46 PV à un allié.' },
+        { id: 'racines_l', art: '🌳', nom: 'Racines', type: 'attaque', cible: 'ennemi', zone: true, puissance: 20, cout: 3, poids: 'normal', affinite: 'sylve', etourdit: 0.25, desc: 'Sylve. Touche tous les ennemis, 25 % d\'étourdir chacun.' }
       ] }
   ];
 
   // Rareté de chaque carte (la Garde n'est pas une carte : toujours disponible)
   const RARETES = {
-    corne_l: 'commune', flute_l: 'epique', vin_l: 'rare', griffes_l: 'commune', bourrasque_l: 'rare', cristrident_l: 'rare', vague_l: 'rare', chant_l: 'epique', ecume_l: 'rare',
+    epines_l: 'commune', seve_l: 'rare', racines_l: 'epique', corne_l: 'commune', flute_l: 'epique', vin_l: 'rare', griffes_l: 'commune', bourrasque_l: 'rare', cristrident_l: 'rare', vague_l: 'rare', chant_l: 'epique', ecume_l: 'rare',
     mur: 'epique', coupbouclier: 'rare', fleche: 'rare', pluie: 'epique', lameombre: 'rare', benediction: 'epique',
     frappe: 'commune', torche: 'commune', pommeau: 'commune', charge: 'rare', ralliement: 'rare', ares: 'epique', prouesse: 'legendaire',
     rayon: 'commune', ronces: 'rare', soin: 'rare', aube: 'rare', presage: 'epique', oeil: 'epique',
@@ -283,6 +347,10 @@
 
   // Lexique consultable à tout moment
   const LEXIQUE = [
+    { cat: 'Récit', icone: '📜', terme: 'Chant', texte: "Une saison de 30 jours, dans une région, autour d'un Sceau. Le Chant I se passe dans les Vals d'Aelwen, en quatre chapitres. La Chronique (sur l'accueil) garde tout ce que tu y as vécu." },
+    { cat: 'Récit', icone: '🔀', terme: 'Choix', texte: "Certains jours se terminent par un choix. Il est définitif : il change des répliques, des combats et parfois la fin du Chant." },
+    { cat: 'Récit', icone: '✨', terme: 'Sceau', texte: "Une des sept pierres d'étoile qui enchaînent Kronar, le Titan qui dévore. Elles se fissurent. Celui du Chant I, le Sceau de Maïa, dort sous l'étang noir." },
+    { cat: 'Récit', icone: '🥷', terme: 'Effilés', texte: "Le culte d'Atropos. Ces mortels se coupent eux-mêmes leurs souvenirs et veulent briser les Sceaux. On ne lie pas un fil humain." },
     { cat: 'Combat', icone: '⏳', terme: 'File', texte: "La rangée en haut de l'écran : l'ordre des 8 prochains tours. Le plus grand jeton joue maintenant." },
     { cat: 'Combat', icone: '🔹', terme: 'Énergie', texte: "Les points bleus sous chaque héros. +1 au début de chaque tour (max 5). Les compétences fortes en coûtent (🔹🔹 = 2 points). Les compétences gratuites n'en coûtent pas." },
     { cat: 'Combat', icone: '💥', terme: 'Puissance', texte: "La force de base d'une attaque (Puiss. 40). Les dégâts réels dépendent aussi de l'attaque du lanceur, de la défense de la cible, de l'affinité et d'un peu de hasard." },

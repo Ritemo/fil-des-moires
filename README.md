@@ -14,7 +14,8 @@ index.html  la page, avec son style
 sync.js     la sauvegarde commune entre appareils
 tapisserie.js le dessin de la Tapisserie
 progression.js cartes, niveaux, XP, drachmes, Don des Moires, Offrande, série, Route, Voies, Serments, créatures liées, Codex
-epreuves.js  l'épreuve du jour (prologue écrit, puis générée selon la date)
+chant1.js    le Chant I écrit : 30 jours, scènes, répliques de fin, choix et leurs conséquences
+epreuves.js  l'épreuve du jour (le Chant I, puis des épreuves générées en attendant le Chant II)
 sauvegarde/ le script Google Apps Script de sauvegarde
 sw.js       le cache hors ligne (changer VERSION à chaque modification)
 tests/      les tests et la simulation d'équilibrage
@@ -22,7 +23,9 @@ tests/      les tests et la simulation d'équilibrage
 
 Le hasard de l'épreuve du jour dépend de la date : recharger la page ne change rien. Une seule tentative compte par jour. Le mode Écho permet ensuite de rejouer sans récompense.
 
-À partir du jour 4, l'Errant peut **Lier** une créature affaiblie (moins de 35 % de PV, hors Gardien). Une créature liée rejoint la Collection et peut remplacer Kelos dans la Préparation. Le **Codex** liste les créatures croisées, vaincues et liées ; chaque spécimen vaincu rend le lien suivant un peu plus facile.
+À partir du jour 4, l'Errant peut **Lier** une créature affaiblie (moins de 35 % de PV, hors Gardien). Une créature liée rejoint la Collection et peut remplacer Kelos dans la Préparation. Le **Chant I** (« Les Vals d'Aelwen ») dure 30 jours en quatre chapitres. Chaque jour commence par une courte scène et se termine par une réplique ; certains jours se terminent par un choix définitif qui change la suite. La **Chronique** (sur l'accueil) garde le récit de chaque jour. Si l'Hydre éveillée n'est pas vaincue au jour 30, la finale revient le lendemain.
+
+Le **Codex** liste les créatures croisées, vaincues et liées ; chaque spécimen vaincu rend le lien suivant un peu plus facile.
 
 ## Mise en ligne (sans savoir coder)
 

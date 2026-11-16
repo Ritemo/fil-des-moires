@@ -262,6 +262,29 @@
   .avert { color: #f0c27a !important; }
   .passif { display: block; color: var(--texte); margin-bottom: 4px; }
   #choix .compHalo { margin: 0 auto; } #choix .compNom { text-align: center; }
+  /* Récit : scènes, choix, Chronique */
+  .chapitre { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #8a5a20; margin-bottom: 6px; }
+  #scene { gap: 12px; }
+  .sceneTete { text-align: center; padding-top: 6px; }
+  #sceneChap { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--or); opacity: .85; }
+  #sceneTitre { margin: 4px 0 0; font-variant: small-caps; color: var(--or); font-size: 24px; }
+  #sceneLignes { display: flex; flex-direction: column; gap: 10px; }
+  .replique { display: flex; gap: 10px; align-items: flex-start; opacity: 0; transform: translateY(8px); transition: opacity .45s, transform .45s; }
+  .replique.vue { opacity: 1; transform: none; }
+  .replique .por { font-size: 30px; width: 44px; height: 44px; flex: 0 0 44px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.06); border: 2px solid rgba(232,180,80,.4); border-radius: 50%; }
+  .replique .bul { background: #efe2c6; color: #3a2a1e; border-radius: 4px 14px 14px 14px; padding: 8px 12px; line-height: 1.45; font-size: 15.5px; box-shadow: inset 0 0 20px rgba(120,80,30,.3); }
+  .replique .bul b { display: block; font-size: 12px; font-variant: small-caps; color: #8a5a20; letter-spacing: .04em; }
+  .replique.recit .bul, .replique.muet .bul { background: transparent; color: var(--texte); box-shadow: none; font-style: italic; border: 1px dashed rgba(232,180,80,.35); }
+  .replique.recit .por { border-color: transparent; background: none; }
+  #sceneChoix { display: flex; flex-direction: column; gap: 10px; }
+  #sceneChoix .question { text-align: center; font-size: 16px; line-height: 1.45; color: var(--or); margin: 4px 6px; }
+  #sceneChoix button.option { text-align: left; padding: 12px 14px; border-radius: 12px; border: 2px solid rgba(232,180,80,.5); background: rgba(232,180,80,.08); color: var(--texte); font-size: 16px; }
+  #sceneChoix button.option:active { background: rgba(232,180,80,.25); }
+  .chroChap { margin: 12px 0 4px; font-variant: small-caps; color: var(--or); font-size: 18px; }
+  .chroJour { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; font-size: 14px; line-height: 1.45; }
+  .chroJour .t { font-weight: bold; }
+  .chroJour .c { color: #e8c27a; margin-top: 4px; }
+  .chroVide { color: var(--doux); font-style: italic; font-size: 14px; margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -284,6 +307,7 @@
     <div class="offrande" id="offrande"></div>
     <div class="bourse"><span>Niveau <b id="niveauEquipe">1</b></span><div class="xpbarre"><i id="xpAccueil"></i></div><span>🪙 <b id="drachmesAccueil">0</b></span></div>
     <div class="parchemin">
+      <div class="chapitre" id="chapitreAccueil"></div>
       <div class="precedemment" id="precedemment"></div>
       <h2 id="titreEpreuve"></h2>
       <div style="font-size:13px;color:#6b5440" id="dateJour"></div>
@@ -295,6 +319,7 @@
     <button id="btnEcho">Rejouer en Écho (sans récompense)</button>
     <button class="btnCollection" id="btnCollection">📜 Collection de cartes</button>
     <button class="btnCollection" id="btnCodex">📖 Codex des créatures</button>
+    <button class="btnCollection" id="btnChronique">📜 Chronique du Chant</button>
     <div style="flex:1"></div>
     <div style="display:flex;justify-content:center;align-items:center;gap:8px;font-size:13px;color:var(--doux)">
       Clotho : <select id="reglageClotho">
@@ -323,6 +348,17 @@
 
   <!-- Codex -->
   <section class="ecran" id="codex"><div class="collection" id="codexCorps"></div></section>
+
+  <!-- Scène du récit (avant le combat) et choix (après) -->
+  <section class="ecran" id="scene">
+    <div class="sceneTete"><div id="sceneChap"></div><h2 id="sceneTitre"></h2></div>
+    <div id="sceneLignes"></div>
+    <div id="sceneChoix"></div>
+    <button class="principal" id="sceneOk">Continuer</button>
+  </section>
+
+  <!-- Chronique du Chant -->
+  <section class="ecran" id="chronique"><div class="collection" id="chroniqueCorps"></div></section>
 
   <!-- Choix de Voie et de Serment -->
   <section class="ecran" id="choix"><div class="donCorps" id="choixCorps"></div></section>
@@ -368,7 +404,7 @@
       <div class="legende" id="finResume"></div>
     </div>
     <div class="gains" id="finGains"></div>
-    <div class="parchemin"><b>Clotho :</b> <span id="finClotho"></span></div>
+    <div class="parchemin"><b id="finQui">Clotho :</b> <span id="finClotho"></span></div>
     <button class="principal" id="btnRetour">Retour</button>
   </section>
 </div>
@@ -390,6 +426,7 @@
 <script src="data.js"></script>
 <script src="tapisserie.js"></script>
 <script src="progression.js"></script>
+<script src="chant1.js"></script>
 <script src="epreuves.js"></script>
 <script src="sync.js"></script>
 <script src="app.js"></script>

@@ -1,7 +1,7 @@
 /* Le Fil des Moires : interface (phase 0 bis). */
 (function () {
   'use strict';
-  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves;
+  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves, C = window.Chant1;
   const $ = id => document.getElementById(id);
 
   // ---------- Stockage (protégé : peut être indisponible) ----------
@@ -91,7 +91,7 @@
     partie = null;
     const fait = profil.derniereDate === aujourdhui();
     const jour = fait ? Math.max(1, profil.joursJoues) : profil.joursJoues + 1;
-    const ep = E.epreuve(jour, aujourdhui());
+    const ep = E.epreuve(jour, aujourdhui(), profil.histoire);
     $('mode').textContent = '';
     $('tapisCompte').textContent = profil.rangs.length + ' / 30 rangs';
     T.dessiner($('tapisAccueil'), profil.rangs);
@@ -99,8 +99,9 @@
     $('titreEpreuve').textContent = 'Jour ' + jour + ' · ' + ep.titre;
     $('dateJour').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     $('presage').textContent = ep.presage;
-    $('nouveau').textContent = '✨ ' + ep.nouveau;
-    $('nouveau').style.display = fait ? 'none' : 'block';
+    $('nouveau').textContent = '✨ ' + (ep.nouveau || '');
+    $('nouveau').style.display = fait || !ep.nouveau ? 'none' : 'block';
+    $('chapitreAccueil').textContent = nomChapitre(ep);
     $('btnJouer').style.display = fait ? 'none' : 'block';
     $('btnEcho').style.display = fait ? 'block' : 'none';
     const dernier = profil.rangs[profil.rangs.length - 1];
@@ -108,7 +109,7 @@
     $('reglageClotho').value = profil.clotho;
     // Précédemment
     const hier = profil.rangs[profil.rangs.length - (fait ? 2 : 1)];
-    $('precedemment').innerHTML = hier ? `<b>Précédemment</b> (jour ${hier.jour}) : ${hier.resume}` : '';
+    $('precedemment').innerHTML = hier ? `<b>Précédemment</b> (jour ${hier.jour}) : ${hier.recit || hier.resume}` : '';
     $('precedemment').style.display = hier ? 'block' : 'none';
     // Route de la Tapisserie
     const pal = P.prochainPalier(profil);
@@ -123,6 +124,7 @@
     $('drachmesAccueil').textContent = profil.drachmes;
     $('btnCollection').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
     $('btnCodex').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
+    $('btnChronique').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
     const n = nbAmeliorables();
     $('btnCollection').innerHTML = '📜 Collection de cartes' + (n ? ` <span class="pastille">⬆ ${n}</span>` : '');
   }
@@ -131,17 +133,92 @@
 
   function demarrer(echo) {
     const jour = echo ? Math.max(1, profil.joursJoues) : profil.joursJoues + 1;
-    const ep = E.epreuve(jour, aujourdhui());
+    const ep = E.epreuve(jour, aujourdhui(), profil.histoire);
     const graine = echo ? Math.floor(Math.random() * 1e9) : M.graineDuJour(aujourdhui() + '|' + jour);
     const totalEnnemis = ep.rencontres.reduce((n, r) => n + r.ennemis.length, 0);
-    partie = { lies: [], echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? P.gloireDepart(profil) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
+    partie = { lies: [], echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? Math.min(100, P.gloireDepart(profil) + (ep.gloireBonus || 0)) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
     $('mode').textContent = echo ? 'Écho' : 'Jour ' + jour;
     if (jour === 4 && !echo) clotho('discret');
     const suite = () => { if (jour > 3) ouvrirCollection(true); else presenterEnnemis(); };
     const nouveaux = echo ? [] : Object.keys(ep.equipe).filter(id => !profil.compagnons.includes(id));
     const enchainer = () => { const id = nouveaux.shift(); if (id) presenterCompagnon(id, enchainer); else suite(); };
-    ensuite(enchainer, 0);
+    if (!echo && ep.scene && ep.scene.length) montrerScene(ep, () => ensuite(enchainer, 0));
+    else ensuite(enchainer, 0);
   }
+
+  // ---------- Récit : scènes, choix, Chronique ----------
+  function nomChapitre(ep) {
+    if (ep.chapitre) return 'Chant ' + ep.chant + ' · Chapitre ' + ep.chapitre.num + ' : ' + ep.chapitre.titre;
+    return ep.interlude ? 'Entre deux Chants' : '';
+  }
+  function repliqueHtml(l) {
+    const p = C.PERSOS[l[0]] || C.PERSOS.narrateur;
+    const classe = l[0] === 'narrateur' ? 'recit' : l[0] === 'kelos' ? 'muet' : '';
+    return `<div class="replique ${classe}"><div class="por">${p.emoji}</div><div class="bul">${p.nom && !classe ? '<b>' + p.nom + '</b>' : ''}${l[1]}</div></div>`;
+  }
+  // Affiche les répliques une à une. Le bouton révèle tout d'un coup, puis continue.
+  function montrerScene(ep, suite) {
+    $('sceneChap').textContent = nomChapitre(ep);
+    $('sceneTitre').textContent = 'Jour ' + ep.jour + ' · ' + ep.titre.replace(/^Le Prologue : /, '');
+    $('sceneLignes').innerHTML = ep.scene.map(repliqueHtml).join('');
+    $('sceneChoix').innerHTML = '';
+    const lignes = [...$('sceneLignes').children];
+    let i = 0, minuteur = null;
+    const fin = () => { $('sceneOk').textContent = 'Au combat !'; };
+    const suivante = () => { if (i < lignes.length) { lignes[i++].classList.add('vue'); if (i === lignes.length) fin(); else minuteur = setTimeout(suivante, T_(1300)); } };
+    $('sceneOk').textContent = 'Passer'; $('sceneOk').style.display = 'block';
+    $('sceneOk').onclick = () => {
+      if (i < lignes.length) { clearTimeout(minuteur); while (i < lignes.length) lignes[i++].classList.add('vue'); fin(); return; }
+      suite();
+    };
+    ecran('scene');
+    minuteur = setTimeout(suivante, T_(250));
+  }
+  // Choix de fin d'épreuve : enregistré dans profil.histoire, avec son effet
+  function montrerChoix(ep, suite) {
+    const ch = ep.choix, cle = 'j' + ep.jour;
+    $('sceneChap').textContent = nomChapitre(ep);
+    $('sceneTitre').textContent = 'Un choix';
+    const f = partie.ep.fin && partie.ep.fin[partie.etat.fini === 'victoire' ? 'victoire' : 'defaite'];
+    $('sceneLignes').innerHTML = f ? repliqueHtml(f) : '';
+    [...$('sceneLignes').children].forEach(e => e.classList.add('vue'));
+    $('sceneChoix').innerHTML = `<div class="question">${ch.question}</div>` + ch.options.map((o, k) => `<button class="option" data-k="${k}">${o.texte}</button>`).join('');
+    $('sceneOk').style.display = 'none';
+    $('sceneChoix').querySelectorAll('.option').forEach(b => b.onclick = () => {
+      const o = ch.options[+b.dataset.k];
+      const niveaux = P.appliquerChoix(profil, cle, o);
+      // Le « Précédemment » et la Chronique racontent la conséquence du choix
+      const rang = profil.rangs.filter(r => !r.echo && r.jour === ep.jour).pop();
+      if (rang) rang.recit = o.resultat.replace(/\s*\([^)]*\)/g, '');
+      sauver();
+      $('sceneChoix').innerHTML = '';
+      $('sceneLignes').insertAdjacentHTML('beforeend', repliqueHtml(['narrateur', o.resultat]));
+      setTimeout(() => $('sceneLignes').lastElementChild.classList.add('vue'), 30);
+      $('sceneOk').textContent = 'Continuer'; $('sceneOk').style.display = 'block';
+      $('sceneOk').onclick = () => { if (niveaux) clotho('niveau'); suite(); };
+    });
+    ecran('scene');
+  }
+  function ouvrirChronique() {
+    const h = profil.histoire;
+    const rangs = profil.rangs.filter(r => !r.echo);
+    const ligneJour = r => {
+      const j = C.JOURS[r.jour], ch = j && j.choix, pris = h.choix['j' + r.jour];
+      const opt = ch && ch.options.find(o => o.id === pris);
+      return `<div class="chroJour"><div class="t">Jour ${r.jour} · ${r.titre} ${r.victoire ? '★'.repeat(r.etoiles) : '✕'}</div>${r.recit || r.resume}${opt ? `<div class="c">🔀 Ton choix : ${opt.texte}.</div>` : ''}</div>`;
+    };
+    let html = `<div class="bourse"><span>📜 Chant I : les Vals d'Aelwen</span><span>${h.sceaux.includes('maia') ? '✨ Sceau de Maïa : tenu' : '🌑 Sceau de Maïa : menacé'}</span></div>`;
+    C.CHAPITRES.forEach(c => {
+      const liste = rangs.filter(r => r.jour >= c.debut && r.jour <= c.fin);
+      html += `<div class="chroChap">Chapitre ${c.num} : ${c.titre}</div>` + (liste.length ? liste.map(ligneJour).join('') : '<div class="chroVide">Pas encore tissé.</div>');
+    });
+    const apres = rangs.filter(r => r.jour > C.DERNIER_JOUR);
+    if (apres.length) html += '<div class="chroChap">Après le Chant</div>' + apres.map(ligneJour).join('');
+    $('chroniqueCorps').innerHTML = html + '<button class="principal" id="chroniqueOk">Retour</button>';
+    $('chroniqueOk').onclick = accueil;
+    ecran('chronique');
+  }
+  $('btnChronique').onclick = ouvrirChronique;
 
   // ---------- Présentation des ennemis ----------
   function ficheEnnemi(e) {
@@ -162,10 +239,15 @@
   }
   $('btnCombat').onclick = () => { ecran('combat'); lancerRencontre(); };
 
+  function lienDuJour() {
+    const b = P.lienBonus(profil);
+    if (partie.ep.lienBonus) D.CREATURES.forEach(c => { b[c.id] = (b[c.id] || 0) + partie.ep.lienBonus; });
+    return b;
+  }
   function lancerRencontre() {
     const r = partie.ep.rencontres[partie.rencontre];
     partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101, allies: P.equipeDuJoueur(partie.ep, profil, partie.jour),
-      ennemis: P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire, secondSouffle: P.secondSouffle(profil), lienBonus: P.lienBonus(profil) });
+      ennemis: P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire, secondSouffle: P.secondSouffle(profil), lienBonus: lienDuJour() });
     partie.etat.unites.filter(u => u.camp === 'ennemi').forEach(u => { u.liable = P.liable(u.id); P.noterCodex(profil, u.id, 'vu'); });
     partie.pvAff = {};
     $('nomRencontre').textContent = r.nom;
@@ -241,12 +323,15 @@
     morceaux.push(partie.kos ? partie.kos + ' héros tombé' + (partie.kos > 1 ? 's' : '') : 'aucun héros tombé');
     const rang = { jour: partie.jour, date: aujourdhui(), titre: partie.ep.titre.replace(/^Le Prologue : /, ''), victoire, etoiles,
       couleur, motif: (etat.unites.find(u => u.gardien) || cible).emoji, resume: morceaux.join(', ') + '.', echo: partie.echo || undefined };
+    const parole = partie.ep.fin && partie.ep.fin[victoire ? 'victoire' : 'defaite'];
+    if (parole) rang.recit = parole[1];
     const rangs = profil.rangs.concat([rang]);
     let g = null, niveaux = 0, butin = {}, dons = null, niveauAvant = profil.niveau;
     if (!partie.echo) {
       profil.rangs = rangs; profil.joursJoues = partie.jour; profil.derniereDate = aujourdhui();
       g = P.gains(victoire, etoiles);
-      if (partie.ep.dimanche) { g.xp = Math.round(g.xp * 1.5); g.drachmes = Math.round(g.drachmes * 1.5); }
+      g = P.bonusDuJour(g, partie.ep);
+      if (victoire && partie.ep.final && !profil.histoire.sceaux.includes('maia')) profil.histoire.sceaux.push('maia');
       niveaux = P.ajouterXp(profil, g.xp);
       profil.drachmes += g.drachmes;
       if (victoire) { butin = P.butin(profil, partie.graine + 17, etoiles); dons = P.genererDon(profil, partie.graine + 29); }
@@ -261,7 +346,9 @@
     $('finXp').textContent = partie.echo ? 'Écho : rang non tissé' : '';
     afficherGains(g, niveaux, niveauAvant, butin);
     $('finResume').textContent = rang.resume;
-    $('finClotho').textContent = D.CLOTHO[victoire ? 'victoire' : 'defaite'];
+    const pers = parole && (C.PERSOS[parole[0]] || C.PERSOS.narrateur);
+    $('finQui').textContent = pers ? (pers.emoji + ' ' + (pers.nom || '')).trim() + ' :' : 'Clotho :';
+    $('finClotho').textContent = parole ? parole[1] : D.CLOTHO[victoire ? 'victoire' : 'defaite'];
     $('btnRetour').disabled = true;
     T.tisser($('tapisFin'), rangs, T_(2400), () => {
       if (!partie.echo) clotho('tapisserie');
@@ -528,10 +615,10 @@
     const vus = ids.filter(id => profil.codex[id] && profil.codex[id].vu).length;
     const lies = profil.creatures.length, liables = D.CREATURES.length;
     $('codexCorps').innerHTML = `<div class="bourse"><span>📖 Codex · ${vus}/${ids.length} vus · 🧵 ${lies}/${liables} liées</span></div>
-      <div class="menace">Les créatures marquées 🧵 peuvent être liées. Les Gardiens 👑 ne se lient pas (pour l'instant...).</div>
+      <div class="menace">Les créatures marquées 🧵 peuvent être liées. Les Gardiens 👑 ne se lient pas (pour l'instant...), ni les mortels 🥷.</div>
       <div class="grille">${ids.map(id => { const e = D.ENNEMIS[id], c = profil.codex[id];
         if (!c || !c.vu) return `<div class="tuile inconnue" style="--r:#4a382b"><div class="art" style="--a:#2a1f18"><span style="filter:brightness(0) opacity(.6)">${e.emoji}</span></div><div class="nom">???</div><div class="sous">Pas encore croisé</div></div>`;
-        const statut = c.lie ? '🧵 Liée' : e.gardien ? '👑 Gardien' : P.liable(id) ? '🧵 Liable' : '';
+        const statut = c.lie ? '🧵 Liée' : e.gardien ? '👑 Gardien' : e.mortel ? '🥷 Mortel' : P.liable(id) ? '🧵 Liable' : '';
         return `<div class="tuile" data-ennemi="${id}" style="--r:${aff(e.affinite).couleur}"><div class="art" style="--a:${aff(e.affinite).couleur}"><span>${e.emoji}</span><div class="affb">${aff(e.affinite).icone}</div><div class="nv">⚔️ ${c.vaincus}</div></div><div class="nom">${e.nom}</div><div class="sous">${statut}</div>${c.lie ? '<div class="coche">🧵</div>' : ''}</div>`; }).join('')}</div>
       <button class="principal" id="codexOk">Retour</button>`;
     $('codexCorps').querySelectorAll('[data-ennemi]').forEach(t => t.onclick = () => {
@@ -853,7 +940,7 @@
   let ongletLexique = 'Combat';
   function ouvrirLexique(onglet) {
     if (onglet) ongletLexique = onglet;
-    const onglets = ['Combat', 'Affinités', 'États', 'Cartes', 'Héros', 'Ennemis', 'Épreuve'];
+    const onglets = ['Combat', 'Affinités', 'États', 'Cartes', 'Héros', 'Ennemis', 'Épreuve', 'Récit'];
     $('onglets').innerHTML = onglets.map(o => `<button class="${o === ongletLexique ? 'on' : ''}" data-o="${o}">${o}</button>`).join('');
     $('onglets').querySelectorAll('button').forEach(b => b.onclick = () => ouvrirLexique(b.dataset.o));
     let h = '';
@@ -865,8 +952,8 @@
       h = D.HEROS.map(hh => `<div class="ligne"><b>${hh.emoji} ${hh.nom}</b> · ${hh.role} · ${aff(hh.affinite).icone} ${aff(hh.affinite).nom} · ❤️ ${hh.pvMax}<br>` +
         hh.competences.map(c => `${aff(c.affinite).icone} <b>${c.nom}</b> (${resume(c).replace(/<\/?b>/g, '')}) : ${c.desc}`).join('<br>') + '</div>').join('');
     } else if (ongletLexique === 'Ennemis') {
-      h = Object.values(D.ENNEMIS).map(e => `<div class="ligne"><b>${e.emoji} ${e.nom}</b> · ${aff(e.affinite).icone} ${aff(e.affinite).nom} · ❤️ ${e.pvMax}<br>
-        Faible contre : ${listeAff(faiblesses(e.affinite))}. Résiste à : ${listeAff(forces(e.affinite))}.<br><span class="small">${e.special}</span></div>`).join('');
+      h = Object.values(D.ENNEMIS).filter(e => profil.codex[e.id] && profil.codex[e.id].vu).map(e => `<div class="ligne"><b>${e.emoji} ${e.nom}</b> · ${aff(e.affinite).icone} ${aff(e.affinite).nom} · ❤️ ${e.pvMax}<br>
+        Faible contre : ${listeAff(faiblesses(e.affinite))}. Résiste à : ${listeAff(forces(e.affinite))}.<br><span class="small">${e.special}</span></div>`).join('') + '<p class="small">Les ennemis apparaissent ici une fois croisés.</p>';
     } else {
       h = D.LEXIQUE.filter(l => l.cat === ongletLexique).map(l => `<div class="ligne">${l.icone} <b>${l.terme}</b> : ${l.texte}</div>`).join('');
     }
@@ -918,6 +1005,11 @@
   $('btnEcho').onclick = () => demarrer(true);
   $('btnRetour').onclick = () => {
     const suivante = () => { const id = partie && partie.aPresenter && partie.aPresenter.shift(); if (id) presenterCompagnon(id, suivante, true); else accueil(); };
+    const ch = partie && !partie.echo && partie.ep.choix, cle = partie && 'j' + partie.ep.jour;
+    if (ch && !profil.histoire.choix[cle]) {
+      if (partie.etat.fini === 'victoire' || !ch.seulementVictoire) return montrerChoix(partie.ep, suivante);
+      profil.histoire.choix[cle] = ch.defaut; sauver();
+    }
     suivante();
   };
   $('btnLexique').onclick = () => ouvrirLexique();
