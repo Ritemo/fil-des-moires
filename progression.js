@@ -24,13 +24,16 @@
     if (profil.niveau == null) profil.niveau = 1;
     if (profil.xp == null) profil.xp = 0;
     if (profil.drachmes == null) profil.drachmes = 0;
+    if (!profil.creatures) profil.creatures = [];
+    if (!profil.creature) profil.creature = 'griffon';
+    if (!profil.codex) profil.codex = {};
     return profil;
   }
 
   // ---------- Cartes ----------
   const rarete = id => D.RARETES[id] || 'commune';
   function carteInfo(id) {
-    for (const h of D.HEROS) { const c = h.competences.find(x => x.id === id); if (c) return { carte: c, heros: h }; }
+    for (const h of D.HEROS.concat(D.CREATURES)) { const c = h.competences.find(x => x.id === id); if (c) return { carte: c, heros: h }; }
     return null;
   }
   function coutAmelioration(profil, id) {
@@ -64,14 +67,21 @@
 
   // Équipe pour une épreuve. Jours 1 à 3 : le tutoriel impose les compétences. Ensuite : l'équipement du joueur.
   function equipeDuJoueur(ep, profil, jour) {
-    const base = D.equipeDuJour(ep);
+    let base = D.equipeDuJour(ep);
+    // Créature d'équipe : remplace Kelos à partir du jour 4
+    if (jour > 3 && profil.creature && profil.creature !== 'griffon' && profil.creatures.includes(profil.creature)) {
+      const cr = JSON.parse(JSON.stringify(D.CREATURES.find(c => c.id === profil.creature)));
+      base = base.map(h => h.id === 'griffon' ? cr : h);
+    }
     return base.map(h => {
-      const modele = D.HEROS.find(x => x.id === h.id);
+      const modele = D.HEROS.concat(D.CREATURES).find(x => x.id === h.id);
       let comps;
       if (jour > 3) {
         const equipees = (profil.equipement[h.id] || []).filter(id => profil.cartes[id]);
         comps = modele.competences.filter(c => equipees.includes(c.id) || c.type === 'garde' || (c.prouesse && ep.gloire));
         comps = JSON.parse(JSON.stringify(comps));
+        if (!comps.some(c => c.type === 'garde')) comps.push(JSON.parse(JSON.stringify(D.HEROS[0].competences.find(c => c.type === 'garde'))));
+        if (h.id === 'errant') comps.push(JSON.parse(JSON.stringify(D.LIER)));
       } else comps = h.competences.filter(c => profil.cartes[c.id] || c.type === 'garde');
       comps.forEach(c => {
         const carte = profil.cartes[c.id];
@@ -168,7 +178,35 @@
   }
 
   // ---------- Don des Moires : 1 récompense parmi 3 ----------
-  function herosDisponibles(profil) { return D.HEROS.filter((h, i) => (profil.joursJoues || 0) >= i).map(h => h.id); }
+  function herosDisponibles(profil) { return D.HEROS.filter((h, i) => (profil.joursJoues || 0) >= i).map(h => h.id).concat(profil.creatures || []); }
+
+  // ---------- Créatures liées et Codex ----------
+  function lierCreature(profil, id) {
+    const cr = D.CREATURES.find(c => c.id === id);
+    if (!cr) return null;
+    if (!profil.creatures.includes(id)) {
+      profil.creatures.push(id);
+      cr.competences.forEach(c => { if (!profil.cartes[c.id]) profil.cartes[c.id] = { niveau: 1, doublons: 0 }; });
+      profil.equipement[id] = cr.competences.map(c => c.id);
+      return { id, nouvelle: true };
+    }
+    // Déjà liée : son fil se renforce (1 exemplaire de chacune de ses cartes)
+    cr.competences.forEach(c => { profil.cartes[c.id].doublons++; });
+    return { id, nouvelle: false };
+  }
+  const liable = id => D.CREATURES.some(c => c.id === id);
+  function noterCodex(profil, id, champ) {
+    const e = profil.codex[id] || (profil.codex[id] = { vu: false, vaincus: 0, lie: false });
+    if (champ === 'vu') e.vu = true;
+    if (champ === 'vaincu') { e.vu = true; e.vaincus++; }
+    if (champ === 'lie') { e.vu = true; e.lie = true; }
+  }
+  // Chaque spécimen déjà vaincu facilite le lien (+5 %, jusqu'à +30 %)
+  function lienBonus(profil) {
+    const b = {};
+    Object.keys(profil.codex || {}).forEach(id => { b[id] = Math.min(0.3, 0.05 * profil.codex[id].vaincus); });
+    return b;
+  }
   function genererDon(profil, graine) {
     const hasard = M.creerHasard(graine);
     const heros = herosDisponibles(profil);
@@ -279,6 +317,7 @@
   }
 
   const Progression = {
+    lierCreature, liable, noterCodex, lienBonus,
     choixEnAttente, choisirVoie, choisirSerment, gloireDepart, secondSouffle, appliquerPassifs,
     QUALITES, ROUTE, offrandeDisponible, ouvrirOffrande, remplirAmphore, qualiteSerie, prochainPalier, reclamerRoute, ecartJours,
     NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, NOMS_RARETE, COULEURS_RARETE,

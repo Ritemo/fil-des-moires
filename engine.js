@@ -78,6 +78,7 @@
       gloire: options.gloire || 0,
       gloireActive: options.gloireActive !== false,
       secondSouffle: !!options.secondSouffle,
+      lienBonus: options.lienBonus || {},
       unites: [],
       journal: [],
       premieresFois: options.premieresFois || {},
@@ -206,6 +207,7 @@
     if (comp.cible === 'ennemi') return vivants(etat, acteur.camp === 'allie' ? 'ennemi' : 'allie');
     if (comp.cible === 'allie') return vivants(etat, acteur.camp);
     if (comp.cible === 'autreAllie') return vivants(etat, acteur.camp).filter(u => u.uid !== acteur.uid);
+    if (comp.cible === 'liable') return vivants(etat, 'ennemi').filter(u => !u.gardien && u.liable !== false && u.pv / u.pvMax <= 0.35);
     return [];
   }
 
@@ -309,6 +311,13 @@
         evenements.push({ type: 'soin', source: acteur.uid, cible: c.uid, soin: c.pv - avant });
       });
       gagnerGloire(etat, comp.gloire || 0, evenements);
+    } else if (comp.type === 'lier') {
+      const chance = chanceLien(etat, cible);
+      if (etat.hasard() < chance) {
+        cible.ko = true; cible.lie = true; cible.pv = 0; cible.etats = {};
+        evenements.push({ type: 'lie', source: acteur.uid, cible: cible.uid, chance });
+        gagnerGloire(etat, 20, evenements);
+      } else evenements.push({ type: 'lienRate', source: acteur.uid, cible: cible.uid, chance });
     } else if (comp.type === 'bouclier') {
       vivants(etat, acteur.camp).forEach(c => { c.etats.bouclier = true; evenements.push({ type: 'bouclier', cible: c.uid }); });
     } else if (comp.type === 'benediction') {
@@ -395,6 +404,14 @@
     return { min: Math.max(1, Math.round(base * 0.9)), max: Math.max(1, Math.round(base * 1.1)), mult };
   }
 
+  // Chance de lier une créature : 40 % à 35 % de PV, jusqu'à 100 % près de 0, + bonus (spécimens déjà vaincus)
+  function chanceLien(etat, cible) {
+    const ratio = cible.pv / cible.pvMax;
+    const base = 0.4 + 0.6 * Math.max(0, (0.35 - ratio) / 0.35);
+    const bonus = (etat.lienBonus && etat.lienBonus[cible.id]) || 0;
+    return Math.min(0.98, base + bonus);
+  }
+
   // ---------- Résultat ----------
   function etoiles(etat) {
     if (etat.fini !== 'victoire') return 0;
@@ -406,7 +423,7 @@
     AFFINITES, FORT_CONTRE, POIDS, NOM_POIDS,
     creerHasard, graineDuJour, multiplicateur, creerCombat, vivants, unite,
     acteurSuivant, prevision, debutTour, competencesDisponibles, ciblesPossibles,
-    agir, tourEnnemi, verifierFin, etoiles, calculerDegats, estimer, delai, planifier
+    agir, tourEnnemi, verifierFin, chanceLien, etoiles, calculerDegats, estimer, delai, planifier
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Moteur;
   else racine.Moteur = Moteur;

@@ -122,6 +122,7 @@
     $('xpAccueil').style.width = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau)) + '%';
     $('drachmesAccueil').textContent = profil.drachmes;
     $('btnCollection').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
+    $('btnCodex').style.display = profil.joursJoues >= 1 ? 'block' : 'none';
     const n = nbAmeliorables();
     $('btnCollection').innerHTML = '📜 Collection de cartes' + (n ? ` <span class="pastille">⬆ ${n}</span>` : '');
   }
@@ -133,7 +134,7 @@
     const ep = E.epreuve(jour, aujourdhui());
     const graine = echo ? Math.floor(Math.random() * 1e9) : M.graineDuJour(aujourdhui() + '|' + jour);
     const totalEnnemis = ep.rencontres.reduce((n, r) => n + r.ennemis.length, 0);
-    partie = { echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? P.gloireDepart(profil) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
+    partie = { lies: [], echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? P.gloireDepart(profil) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
     $('mode').textContent = echo ? 'Écho' : 'Jour ' + jour;
     if (jour === 4 && !echo) clotho('discret');
     const suite = () => { if (jour > 3) ouvrirCollection(true); else presenterEnnemis(); };
@@ -164,7 +165,8 @@
   function lancerRencontre() {
     const r = partie.ep.rencontres[partie.rencontre];
     partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101, allies: P.equipeDuJoueur(partie.ep, profil, partie.jour),
-      ennemis: P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire, secondSouffle: P.secondSouffle(profil) });
+      ennemis: P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire, secondSouffle: P.secondSouffle(profil), lienBonus: P.lienBonus(profil) });
+    partie.etat.unites.filter(u => u.camp === 'ennemi').forEach(u => { u.liable = P.liable(u.id); P.noterCodex(profil, u.id, 'vu'); });
     partie.pvAff = {};
     $('nomRencontre').textContent = r.nom;
     $('journal').innerHTML = '';
@@ -201,6 +203,8 @@
         if (toursJoueur === 1) clotho('energie');
         if (toursJoueur === 3) clotho('poids');
         if (d.acteur.competences.some(c => c.type === 'garde')) clotho('garde');
+        const lier = d.acteur.competences.find(c => c.type === 'lier');
+        if (lier && M.ciblesPossibles(etat, d.acteur, lier).length) clotho('lier');
         occupe = false;
         montrerActions(d.acteur);
       }
@@ -246,6 +250,8 @@
       profil.drachmes += g.drachmes;
       if (victoire) { butin = P.butin(profil, partie.graine + 17, etoiles); dons = P.genererDon(profil, partie.graine + 29); }
       partie.route = P.reclamerRoute(profil, partie.graine + 41);
+      partie.liens = partie.lies.map(id => { P.noterCodex(profil, id, 'lie'); return P.lierCreature(profil, id); }).filter(Boolean);
+      partie.aPresenter = partie.liens.filter(l => l.nouvelle).map(l => l.id);
       sauver();
     }
     ecran('fin');
@@ -355,6 +361,7 @@
     $('finGains').innerHTML = `<div class="bourse"><span>Niveau <b>${profil.niveau}</b></span><div class="xpbarre"><i id="xpFin" style="width:0%"></i></div><span>+${g.xp} XP</span></div>
       <div class="bourse"><span>🪙 +${g.drachmes} drachmes (total <b>${profil.drachmes}</b>)</span></div>
       ${ids.length ? `<div class="sousTitre">🃏 Butin : des doublons pour tes cartes</div><div class="grille">${ids.map(id => tuileCarte(id, { ajout: butin[id] }).replace('</div></div>', `</div><div class="gain">+${butin[id]}</div></div>`)).join('')}</div>` : ''}
+      ${(partie.liens || []).map(l => { const c = D.CREATURES.find(x => x.id === l.id); return `<div class="niveauPlus">🧵 ${c.emoji} ${c.nom} ${l.nouvelle ? 'est liée à toi : nouvelle créature !' : 'déjà liée : son fil se renforce (+1 exemplaire de chaque carte)'}</div>`; }).join('')}
       ${partie.route ? `<div class="niveauPlus">🧵 Route de la Tapisserie, rang ${partie.route.rang} : ${partie.route.type === 'carte' ? 'nouvelle carte ' + nomCarte(partie.route.id) : partie.route.type === 'fil' ? 'un Fil de réserve' : partie.route.type === 'amphore' ? 'une amphore dorée, déjà ouverte pour toi' : '100 drachmes'}</div>` : ''}
       ${niveaux ? `<div class="niveauPlus">✨ Niveau ${niveauAvant} → ${profil.niveau} : +4 % PV et attaque par niveau</div>` : ''}`;
     setTimeout(() => { const x = $('xpFin'); if (x) x.style.width = pct + '%'; }, 100);
@@ -414,7 +421,7 @@
   let modePreparation = false;
   function ouvrirCollection(preparation) {
     modePreparation = !!preparation;
-    $('colTitre').textContent = preparation ? '⚔️ Préparation : 4 cartes par héros' : '📜 Collection';
+    $('colTitre').textContent = preparation ? '⚔️ Préparation : ta créature et 4 cartes par héros' : '📜 Collection';
     $('drachmesCol').textContent = profil.drachmes;
     $('btnColOk').textContent = preparation ? 'Partir' : 'Retour';
     if (preparation) {
@@ -422,12 +429,17 @@
       $('colMenace').textContent = 'Ce qui t\'attend : ' + noms.join(' · ') + '. Touche une carte pour l\'équiper ou la retirer.';
     } else $('colMenace').textContent = 'Touche une carte pour voir son détail, l\'améliorer ou l\'équiper. ✓ = équipée.';
     const heros = P.herosDisponibles(profil);
-    $('colListe').innerHTML = D.HEROS.filter(h => heros.includes(h.id)).map(h => {
+    const creaturesDispo = ['griffon'].concat(profil.creatures).filter(id => heros.includes(id));
+    const blocCreature = (preparation && creaturesDispo.length > 1) ? `<h3>🐾 Créature de l'équipe</h3><div class="grille">${creaturesDispo.map(id => { const c = D.HEROS.concat(D.CREATURES).find(x => x.id === id);
+      return `<div class="tuile choixCrea ${profil.creature === id ? 'equipee' : ''}" data-crea="${id}" style="--r:${aff(c.affinite).couleur}"><div class="art" style="--a:${aff(c.affinite).couleur}"><span>${c.emoji}</span><div class="affb">${aff(c.affinite).icone}</div></div><div class="nom">${c.nom}</div><div class="sous">${aff(c.affinite).nom}</div>${profil.creature === id ? '<div class="coche">✓</div>' : ''}</div>`; }).join('')}</div>` : '';
+    const groupes = D.HEROS.filter(h => heros.includes(h.id)).concat(D.CREATURES.filter(c => profil.creatures.includes(c.id)));
+    $('colListe').innerHTML = blocCreature + groupes.map(h => {
       const ids = h.competences.filter(c => c.type !== 'garde').map(c => c.id);
       const eq = profil.equipement[h.id] || [];
       return `<h3>${h.emoji} ${h.nom} <span class="small">${eq.length}/${P.SLOTS} équipées</span></h3><div class="grille">` + ids.map(id => tuileCarte(id, { montrerEquipe: true })).join('') + '</div>';
     }).join('');
-    $('colListe').querySelectorAll('.tuile').forEach(t => t.onclick = () => {
+    $('colListe').querySelectorAll('.choixCrea').forEach(t => t.onclick = () => { profil.creature = t.dataset.crea; sauver(); ouvrirCollection(true); });
+    $('colListe').querySelectorAll('.tuile:not(.choixCrea)').forEach(t => t.onclick = () => {
       const id = t.dataset.id;
       if (!profil.cartes[id]) return;
       if (modePreparation && !P.carteInfo(id).carte.prouesse) {
@@ -507,20 +519,44 @@
   }
   $('choixAttente').onclick = ouvrirChoix;
 
+  // ---------- Codex ----------
+  function ouvrirCodex() {
+    const ids = Object.keys(D.ENNEMIS);
+    const vus = ids.filter(id => profil.codex[id] && profil.codex[id].vu).length;
+    const lies = profil.creatures.length, liables = D.CREATURES.length;
+    $('codexCorps').innerHTML = `<div class="bourse"><span>📖 Codex · ${vus}/${ids.length} vus · 🧵 ${lies}/${liables} liées</span></div>
+      <div class="menace">Les créatures marquées 🧵 peuvent être liées. Les Gardiens 👑 ne se lient pas (pour l'instant...).</div>
+      <div class="grille">${ids.map(id => { const e = D.ENNEMIS[id], c = profil.codex[id];
+        if (!c || !c.vu) return `<div class="tuile inconnue" style="--r:#4a382b"><div class="art" style="--a:#2a1f18"><span style="filter:brightness(0) opacity(.6)">${e.emoji}</span></div><div class="nom">???</div><div class="sous">Pas encore croisé</div></div>`;
+        const statut = c.lie ? '🧵 Liée' : e.gardien ? '👑 Gardien' : P.liable(id) ? '🧵 Liable' : '';
+        return `<div class="tuile" data-ennemi="${id}" style="--r:${aff(e.affinite).couleur}"><div class="art" style="--a:${aff(e.affinite).couleur}"><span>${e.emoji}</span><div class="affb">${aff(e.affinite).icone}</div><div class="nv">⚔️ ${c.vaincus}</div></div><div class="nom">${e.nom}</div><div class="sous">${statut}</div>${c.lie ? '<div class="coche">🧵</div>' : ''}</div>`; }).join('')}</div>
+      <button class="principal" id="codexOk">Retour</button>`;
+    $('codexCorps').querySelectorAll('[data-ennemi]').forEach(t => t.onclick = () => {
+      const id = t.dataset.ennemi, c = profil.codex[id];
+      $('titreModale').textContent = D.ENNEMIS[id].nom; $('onglets').innerHTML = '';
+      $('lexiqueCorps').innerHTML = ficheEnnemi(D.ENNEMIS[id]) + `<div class="ligne">Vaincus : ${c.vaincus}${P.liable(id) ? ' · chance de lien bonus : +' + Math.round(100 * (P.lienBonus(profil)[id] || 0)) + ' %' : ''}${c.lie ? ' · 🧵 liée à toi' : ''}</div>`;
+      $('modale').classList.add('visible');
+    });
+    $('codexOk').onclick = accueil;
+    ecran('codex');
+  }
+  $('btnCodex').onclick = ouvrirCodex;
+
   // ---------- Arrivée d'un compagnon ----------
-  function presenterCompagnon(id, suite) {
-    const h = D.HEROS.find(x => x.id === id);
+  function presenterCompagnon(id, suite, creature) {
+    const h = D.HEROS.concat(D.CREATURES).find(x => x.id === id);
     const cartes = h.competences.filter(c => c.type !== 'garde' && profil.cartes[c.id] && !c.prouesse);
     $('compCorps').innerHTML = `<div class="compHalo"><div class="compEmoji">${h.emoji}</div></div>
       <div class="compNom">${h.nom}</div><div class="compTitre">${h.titre || h.role}</div>
       <div class="compTags"><span class="tag">${aff(h.affinite).icone} ${aff(h.affinite).nom}</span><span class="tag">${h.role}</span><span class="tag">❤️ ${h.pvMax} PV</span><span class="tag">💨 ${h.vitesse}</span></div>
       <p class="compBio">${h.bio}</p><p class="compApport">${h.apport || ''}</p>
       <div class="sousTitre">Ses cartes</div><div class="grille">${cartes.map(c => tuileCarte(c.id)).join('')}</div>
+      ${creature ? '<p class="compApport">Choisis-la dans la Préparation pour l\'emmener à la place de Kelos.</p>' : ''}
       <button class="principal" id="compOk">Accueillir ${h.nom}</button>`;
     ecran('compagnon');
     const halo = document.querySelector('.compHalo');
     for (let i = 0; i < 14; i++) particules(halo, '✨', 1);
-    $('compOk').onclick = () => { profil.compagnons.push(id); sauver(); suite(); };
+    $('compOk').onclick = () => { if (!creature) profil.compagnons.push(id); sauver(); if (creature) clotho('lie'); suite(); };
   }
   $('btnColOk').onclick = () => { if (modePreparation) presenterEnnemis(); else accueil(); };
 
@@ -612,6 +648,7 @@
     } else if (comp.type === 'soin') div.textContent = '+≈ ' + comp.puissance + ' PV';
     else if (comp.type === 'garde') div.textContent = '🛡️ protéger';
     else if (comp.type === 'presage') div.textContent = '⏩ jouera ensuite';
+    else if (comp.type === 'lier') div.textContent = '🧵 lien ≈ ' + Math.round(100 * M.chanceLien(partie.etat, u)) + ' %';
     el.appendChild(div);
   }
   function nettoyerCibles() {
@@ -775,6 +812,17 @@
         case 'presage': plus(350, () => { flotter(carteEl(e.cible), '⏩ joue ensuite', 'info'); ajouterEffet(N(e.cible) + ' joue juste après'); }); break;
         case 'bouclier': plus(220, () => { flotter(carteEl(e.cible), '🔰', 'info'); ajouterEffet('Bouclier levé'); }); break;
         case 'bouclierUse': plus(200, () => { flotter(carteEl(e.cible), '🔰 amorti', 'info'); }); break;
+        case 'lie': plus(1300, () => {
+          const u = M.unite(etat, e.cible);
+          banniere('🧵 Le nœud tient !', u.emoji + ' ' + u.nom + ' se lie à toi', partie.echo ? 'Écho : le lien ne sera pas gardé' : 'Elle rejoindra ta Collection');
+          $('banniere').classList.add('fort');
+          particules(carteEl(e.cible), '🧵', 10);
+          rejouer(carteEl(e.cible), 'effiloche');
+          journal('🧵 ' + u.nom + ' est liée !');
+          partie.lies.push(u.id); partie.vaincus++;
+          $('filProgres').style.width = Math.round(100 * partie.vaincus / partie.totalEnnemis) + '%';
+        }); break;
+        case 'lienRate': plus(700, () => { const u = M.unite(etat, e.cible); banniere('🧵 Le fil glisse...', u.nom + ' résiste', 'Chance : ' + Math.round(100 * e.chance) + ' %'); flotter(carteEl(e.cible), 'Lien raté', 'faible'); journal('Le lien a glissé.'); }); break;
         case 'releve': plus(900, () => { banniere('💨 Second Souffle', N(e.cible) + ' se relève !', '25 % des PV'); particules(carteEl(e.cible), '✨', 8); journal(N(e.cible) + ' se relève grâce au Second Souffle.'); }); break;
         case 'aveugle': plus(450, () => { flotter(carteEl(e.cible), '🙈 aveuglé', 'info'); ajouterEffet('Le Cyclope est aveuglé', true); journal('Le Cyclope est aveuglé : sa prochaine attaque risque de rater.'); }); break;
         case 'oeil': plus(350, () => { flotter(carteEl(e.cible), '👁️ prochain coup critique', 'info'); ajouterEffet(N(e.cible) + ' : prochain coup critique'); }); break;
@@ -784,7 +832,7 @@
           rejouer(carteEl(e.cible), 'effiloche');
           ajouterEffet(N(e.cible) + ' tombe');
           journal(N(e.cible) + ' tombe.');
-          if (u.camp === 'allie') { partie.kos++; clotho('ko'); } else { partie.vaincus++; $('filProgres').style.width = Math.round(100 * partie.vaincus / partie.totalEnnemis) + '%'; }
+          if (u.camp === 'allie') { partie.kos++; clotho('ko'); } else { P.noterCodex(profil, u.id, 'vaincu'); partie.vaincus++; $('filProgres').style.width = Math.round(100 * partie.vaincus / partie.totalEnnemis) + '%'; }
         }); break;
         case 'gloirePleine': plus(300, () => { journal('🏆 La Gloire est pleine !'); clotho('gloire'); }); break;
         case 'cauterise': plus(400, () => { flotter(carteEl(e.cible), '♨️ cautérisé', 'info'); ajouterEffet('Plaie cautérisée'); }); break;
@@ -865,7 +913,10 @@
   // ---------- Boutons ----------
   $('btnJouer').onclick = () => demarrer(false);
   $('btnEcho').onclick = () => demarrer(true);
-  $('btnRetour').onclick = accueil;
+  $('btnRetour').onclick = () => {
+    const suivante = () => { const id = partie && partie.aPresenter && partie.aPresenter.shift(); if (id) presenterCompagnon(id, suivante, true); else accueil(); };
+    suivante();
+  };
   $('btnLexique').onclick = () => ouvrirLexique();
   $('btnSync').onclick = ouvrirSync;
   $('btnVitesse').onclick = () => { vitesse = vitesse === 1 ? 0.5 : 1; $('btnVitesse').textContent = 'Vitesse x' + (vitesse === 1 ? 1 : 2); };

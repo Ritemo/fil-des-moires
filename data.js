@@ -127,8 +127,42 @@
     }
   };
 
+  // Créatures qu'on peut lier après les avoir affaiblies (elles remplacent Kelos dans l'équipe, au choix)
+  const LIER = { id: 'lier', art: '🧵', nom: 'Lier', type: 'lier', cible: 'liable', cout: 2, poids: 'normal', affinite: 'airain',
+    desc: "Noue ton fil à celui d'une créature affaiblie (moins de 35 % de PV, hors Gardien). Plus elle est faible, plus le lien a de chances de tenir." };
+  const CREATURES = [
+    { id: 'satyre', nom: 'Satyre', emoji: '🐐', role: 'Créature liée', titre: 'le fêtard des bois', affinite: 'sylve',
+      pvMax: 135, attaque: 28, defense: 15, vitesse: 108, energieDepart: 2,
+      bio: "Il a dégrisé le jour où ton fil a touché le sien. Il en garde une reconnaissance bruyante, et une flûte.",
+      apport: 'Robuste et polyvalent : il frappe, il soigne avec son vin, et sa flûte peut étourdir tous les ennemis.',
+      competences: [
+        { id: 'corne_l', art: '🐐', nom: 'Coup de corne', type: 'attaque', cible: 'ennemi', puissance: 40, cout: 0, poids: 'normal', affinite: 'airain', desc: 'Une charge tête baissée.' },
+        { id: 'flute_l', art: '🪈', nom: 'Flûte de Pan', type: 'attaque', cible: 'ennemi', zone: true, puissance: 22, cout: 3, poids: 'normal', affinite: 'sylve', etourdit: 0.2, desc: 'Sylve. Touche tous les ennemis, 20 % d\'étourdir chacun.' },
+        { id: 'vin_l', art: '🍷', nom: 'Vin de Dionysos', type: 'soin', cible: 'allie', puissance: 42, cout: 2, poids: 'normal', affinite: 'sylve', desc: 'Rend environ 42 PV à un allié.' }
+      ] },
+    { id: 'harpie', nom: 'Harpie', emoji: '🦇', role: 'Créature liée', titre: 'l\'aile noire', affinite: 'vent',
+      pvMax: 105, attaque: 30, defense: 11, vitesse: 140, energieDepart: 2,
+      bio: "Elle a cessé de crier le jour où tu l'as épargnée. Elle vole devant toi, et revient toujours.",
+      apport: 'La plus rapide de toutes : elle joue souvent, frappe fort en Vent et repousse les ennemis dans la File.',
+      competences: [
+        { id: 'griffes_l', art: '🪶', nom: 'Griffes', type: 'attaque', cible: 'ennemi', puissance: 30, cout: 0, poids: 'leger', affinite: 'airain', desc: 'Légère : elle rejoue vite.' },
+        { id: 'bourrasque_l', art: '🌪️', nom: 'Bourrasque', type: 'attaque', cible: 'ennemi', puissance: 50, cout: 2, poids: 'normal', affinite: 'vent', desc: 'Vent, fort contre le Roc.' },
+        { id: 'cristrident_l', art: '📣', nom: 'Cri strident', type: 'attaque', cible: 'ennemi', puissance: 18, cout: 1, poids: 'leger', affinite: 'vent', recul: 60, desc: 'Légère. Repousse la cible loin dans la File.' }
+      ] },
+    { id: 'sirene', nom: 'Sirène', emoji: '🧜‍♀️', role: 'Créature liée', titre: 'la voix des récifs', affinite: 'onde',
+      pvMax: 115, attaque: 29, defense: 13, vitesse: 122, energieDepart: 2,
+      bio: "Ton fil a apaisé son chant. Elle chante encore, mais pour toi.",
+      apport: 'L\'Onde qui manquait à l\'équipe : redoutable contre la Flamme et la Chimère. Elle soigne et endort.',
+      competences: [
+        { id: 'vague_l', art: '🌊', nom: 'Vague', type: 'attaque', cible: 'ennemi', puissance: 44, cout: 1, poids: 'normal', affinite: 'onde', desc: 'Onde, forte contre la Flamme.' },
+        { id: 'chant_l', art: '🎶', nom: 'Chant des abysses', type: 'attaque', cible: 'ennemi', zone: true, puissance: 18, cout: 3, poids: 'normal', affinite: 'onde', etourdit: 0.3, desc: 'Onde. Touche tous les ennemis, 30 % d\'étourdir chacun.' },
+        { id: 'ecume_l', art: '🫧', nom: 'Écume', type: 'soin', cible: 'allie', puissance: 36, cout: 2, poids: 'leger', affinite: 'onde', desc: 'Légère. Rend environ 36 PV à un allié.' }
+      ] }
+  ];
+
   // Rareté de chaque carte (la Garde n'est pas une carte : toujours disponible)
   const RARETES = {
+    corne_l: 'commune', flute_l: 'epique', vin_l: 'rare', griffes_l: 'commune', bourrasque_l: 'rare', cristrident_l: 'rare', vague_l: 'rare', chant_l: 'epique', ecume_l: 'rare',
     mur: 'epique', coupbouclier: 'rare', fleche: 'rare', pluie: 'epique', lameombre: 'rare', benediction: 'epique',
     frappe: 'commune', torche: 'commune', pommeau: 'commune', charge: 'rare', ralliement: 'rare', ares: 'epique', prouesse: 'legendaire',
     rayon: 'commune', ronces: 'rare', soin: 'rare', aube: 'rare', presage: 'epique', oeil: 'epique',
@@ -223,6 +257,8 @@
     don: "Le Don des Moires. Une carte nouvelle, des doublons pour renforcer une carte, ou des drachmes. Choisis selon ce qui te manque.",
     collection: "Ta Collection est sur l'accueil (📜). Avec assez de doublons et de drachmes, une carte monte de niveau. À partir du jour 4, tu choisiras aussi tes 4 cartes par héros avant de partir.",
     niveau: "Ton équipe monte de niveau. Elle frappe plus fort et résiste mieux. Les ennemis, eux aussi, grandissent avec toi.",
+    lier: "Ce fil est à nu. Avec 🧵 Lier, l'Errant peut le nouer au sien : la créature ne meurt pas, elle te suit. Plus elle est faible, plus le nœud tient.",
+    lie: "Le nœud tient. Ta nouvelle créature t'attend dans la Préparation : tu pourras l'emmener à la place de Kelos.",
     tapisserie: "Voilà ton premier rang. Chaque jour en ajoutera un. Or pour une victoire parfaite, gris pour une défaite : l'histoire continue quand même.",
     discret: "Tu connais les bases. Désormais je me tais, sauf pour les nouveautés. Le bouton 💡 te donne un indice si tu en veux un.",
     poids: "Chaque action a un poids. Léger : tu rejoues vite. Lourd : tu frappes fort, mais tu recules dans la File. Le jeton en pointillés te montre où.",
@@ -259,6 +295,9 @@
     { cat: 'États', icone: '💫', terme: 'Étourdi', texte: "Perd son prochain tour." },
     { cat: 'États', icone: '♨️', terme: 'Cautérisé', texte: "Propre à l'Hydre : aucune tête ne peut repousser pendant 2 de ses tours." },
     { cat: 'États', icone: '🐍', terme: 'Têtes', texte: "Nombre de têtes de l'Hydre. Chaque tête = une attaque par tour." },
+    { cat: 'Combat', icone: '🧵', terme: 'Lier', texte: "Action de l'Errant (à partir du jour 4, 🔹2). Sur une créature à moins de 35 % de PV (hors Gardien), noue son fil au tien. Plus elle est faible, plus la chance est grande, et chaque spécimen déjà vaincu l'augmente encore. Une créature liée rejoint ta Collection." },
+    { cat: 'Cartes', icone: '🐾', terme: 'Créature d\'équipe', texte: "Le troisième membre de ton équipe : Kelos ou une créature liée. Tu la choisis dans la Préparation, avant chaque épreuve. Ses cartes s'améliorent comme les autres." },
+    { cat: 'Épreuve', icone: '📖', terme: 'Codex', texte: "Le bestiaire de tout ce que tu as croisé : vu, vaincu, lié. Les silhouettes ❔ sont les créatures qui t'attendent encore." },
     { cat: 'Cartes', icone: '🧭', terme: 'Voies', texte: "Au niveau 5, l'Errant choisit sa Voie : Hoplite (défense), Chasseur (vitesse, critiques) ou Mystique (Énergie, Ombre et Lumière). Chacune donne un passif et deux cartes exclusives. Au niveau 10, une Voie secondaire ajoute ses deux cartes (sans le passif)." },
     { cat: 'Cartes', icone: '📜', terme: 'Serments', texte: "Aux niveaux 4, 8, 12, 16 et 20, un choix définitif entre deux bénédictions pour toute l'équipe." },
     { cat: 'Cartes', icone: '🃏', terme: 'Cartes', texte: "Chaque capacité est une carte, avec une rareté (Commune, Rare, Épique, Légendaire) et un niveau de 1 à 5. Chaque niveau donne +10 % de puissance." },
@@ -279,7 +318,7 @@
     { cat: 'Épreuve', icone: '⭐', terme: 'Étoiles', texte: "3 : victoire sans perte. 2 : un héros tombé. 1 : victoire de justesse." }
   ];
 
-  const Donnees = { VOIES, SERMENTS, RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
+  const Donnees = { LIER, CREATURES, VOIES, SERMENTS, RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = Donnees;
   else racine.Donnees = Donnees;
 })(typeof window !== 'undefined' ? window : this);
