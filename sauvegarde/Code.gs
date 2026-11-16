@@ -8,7 +8,8 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 4;
+const VERSION_SCRIPT = 5;
+const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
 
 function doGet(e) {
   // Vérification sans clé : ouvrir <adresse>/exec?version=1 doit afficher la version du script
@@ -71,6 +72,7 @@ function doPost(e) {
   // On garde toujours la version la plus récente (champ maj, en millisecondes)
   if (!actuel || !actuel.maj || (recu && recu.maj >= actuel.maj)) {
     ecrire(joueur, recu);
+    try { annoncerExploit(joueur, actuel, recu); } catch (err) { console.log('Annonce impossible : ' + err); }
     return reponse({ ok: true, donnees: recu, ecrit: true });
   }
   return reponse({ ok: true, donnees: actuel, ecrit: false });
@@ -98,4 +100,40 @@ function ecrire(joueur, profil) { fichier(joueur).setContent(JSON.stringify(prof
 
 function reponse(objet) {
   return ContentService.createTextOutput(JSON.stringify(objet)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---------- Annonce aux autres joueurs : « Marion a tissé le jour 4 » (notification ntfy) ----------
+function rangsTisses(p) { return ((p && p.rangs) || []).filter(function (r) { return !r.echo; }); }
+function nomDe(joueur, p) { return (p && p.pseudo) || (joueur ? joueur.charAt(0).toUpperCase() + joueur.slice(1) : 'Joueur principal'); }
+
+function annoncerExploit(joueur, avant, apres) {
+  if (!avant || !apres) return;                        // première sauvegarde d'un joueur : rien à annoncer
+  const r0 = rangsTisses(avant), r1 = rangsTisses(apres);
+  if (r1.length <= r0.length) return;                  // pas de nouvelle épreuve tissée
+  const r = r1[r1.length - 1];
+  const nom = nomDe(joueur, apres);
+  const resultat = r.victoire ? '★'.repeat(r.etoiles || 0) + '☆'.repeat(3 - (r.etoiles || 0)) : 'le fil a cédé';
+  const titre = '🧵 ' + nom + ' a tissé le jour ' + r.jour;
+  const message = (r.titre ? r.titre + ' · ' : '') + resultat + (r.resume ? '\n' + r.resume : '');
+  PropertiesService.getScriptProperties().getKeys()
+    .filter(function (k) { return k === 'CLE' || k.indexOf('CLE_') === 0; })
+    .map(function (k) { return k === 'CLE' ? '' : k.slice(4).toLowerCase(); })
+    .filter(function (j) { return j !== joueur; })
+    .forEach(function (j) {
+      const p = lire(j);
+      if (!p || !p.ntfy || p.ntfyAutres === false) return;
+      envoyerNtfy(p.ntfy, titre, message);
+    });
+}
+
+function envoyerNtfy(sujet, titre, message) {
+  UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify({ topic: sujet, title: titre, message: message, click: ADRESSE_JEU, tags: ['crossed_swords'] }) });
+}
+
+// À lancer une fois depuis l'éditeur (bouton Exécuter) : autorise l'envoi de notifications et t'envoie un test
+function testerNotification() {
+  const p = lire('');
+  if (!p || !p.ntfy) throw new Error('Active d\'abord le Rappel du matin dans les Réglages du jeu (joueur principal).');
+  envoyerNtfy(p.ntfy, '🧵 Le Fil des Moires', 'Le script de sauvegarde peut t\'envoyer des notifications.');
 }
