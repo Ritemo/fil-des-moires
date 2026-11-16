@@ -3,6 +3,7 @@
    (adresse /exec et clé du joueur principal du script de sauvegarde). */
 const E = require('../epreuves.js');
 const url = process.env.SAUVEGARDE_URL, cle = process.env.SAUVEGARDE_CLE;
+const TEST = process.env.RAPPEL_TEST === 'true';   // lancement manuel « test » : envoie même si la quête est déjà jouée
 const JEU = 'https://ritemo.github.io/fil-des-moires/';
 // Date du jour à Paris
 const aujourdhui = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }).format(new Date());
@@ -14,14 +15,14 @@ const aujourdhui = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }
   if (!j.ok) throw new Error('Script de sauvegarde : ' + (j.erreur || 'réponse inattendue') + (j.rappels ? '' : ' (le script est-il à jour ?)'));
   console.log('Script de sauvegarde joint : ' + (j.rappels || []).length + ' rappel(s) activé(s).');
   for (const joueur of j.rappels || []) {
-    if (joueur.derniereDate === aujourdhui) { console.log(joueur.nom + ' a déjà joué aujourd\'hui.'); continue; }
+    if (joueur.derniereDate === aujourdhui && !TEST) { console.log(joueur.nom + ' a déjà joué aujourd\'hui.'); continue; }
     const jour = joueur.jour + 1;
     const ep = E.epreuve(jour, aujourdhui, { choix: joueur.choix, sceaux: joueur.sceaux });
     const titre = 'Jour ' + jour + ' : ' + ep.titre.replace(/^Le Prologue : /, '');
     const corps = ep.presage + (ep.nouveau ? '\n' + ep.nouveau : '');
     // publication JSON : accepte les accents et les emojis dans le titre
     const env = await fetch('https://ntfy.sh/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: joueur.ntfy, title: '🧵 ' + titre, message: corps, click: JEU, tags: ['crossed_swords'] }) });
+      body: JSON.stringify({ topic: joueur.ntfy, title: (TEST ? '🧪 Test · ' : '🧵 ') + titre, message: corps, click: JEU, tags: ['crossed_swords'] }) });
     console.log(joueur.nom + ' : ' + titre + ' -> ' + env.status);
   }
 })().catch(e => { console.error(e.message); process.exit(1); });

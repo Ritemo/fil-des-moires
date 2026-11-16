@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: '37 7 * * *'
   workflow_dispatch:
+    inputs:
+      test:
+        description: 'Test : envoyer à tous, même à ceux qui ont déjà joué aujourd hui'
+        type: boolean
+        default: true
 jobs:
   rappel:
     runs-on: ubuntu-latest
@@ -17,6 +22,7 @@ jobs:
         env:
           SAUVEGARDE_URL: ${{ secrets.SAUVEGARDE_URL }}
           SAUVEGARDE_CLE: ${{ secrets.SAUVEGARDE_CLE }}
+          RAPPEL_TEST: ${{ inputs.test }}
         run: node outils/rappels.js
       - name: Alerte en cas d'échec
         if: failure()

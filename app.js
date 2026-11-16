@@ -1283,9 +1283,17 @@
         <p><b>2.</b> Dans ntfy, touche <b>+</b> et abonne-toi au sujet :</p><div class="lienInvit">${t}</div>
         <a href="ntfy://ntfy.sh/${t}" style="display:block;margin-top:6px"><button style="width:100%">📲 Ouvrir dans l'appli ntfy</button></a>
         <p class="small">Sans l'appli, tu peux aussi ouvrir <a href="https://ntfy.sh/${t}" target="_blank" style="color:var(--or)">ntfy.sh/${t}</a> et autoriser les notifications du navigateur.</p>
+        <button id="rappelTest" style="width:100%;margin-top:6px">🔔 Envoyer une notification de test</button><p class="small" id="rappelTestMsg"></p>
         <button id="rappelOff" style="width:100%;margin-top:6px">Désactiver le rappel</button>`
         : `<p>Reçois chaque matin le titre et le Présage de ta quête du jour, comme une notification d'appli.</p><button class="principal" id="rappelOn" style="width:100%">Activer le rappel</button>`;
       if ($('rappelOn')) $('rappelOn').onclick = () => { profil.ntfy = 'fdm-' + Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8); sauver(); afficher(); };
+      if ($('rappelTest')) $('rappelTest').onclick = async () => {
+        const m = $('rappelTestMsg'); m.textContent = 'Envoi…';
+        try {
+          const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: profil.ntfy, title: '🧵 Le Fil des Moires', message: 'Test réussi : tu recevras ici ta quête chaque matin.', click: location.href.split('#')[0], tags: ['crossed_swords'] }) });
+          m.textContent = r.ok ? '✅ Envoyée : elle doit arriver sur ton téléphone dans quelques secondes. Sinon, vérifie que tu es bien abonné au sujet ci-dessus dans ntfy.' : '❌ ntfy a refusé l\'envoi (' + r.status + ') : réessaie dans un moment.';
+        } catch (e) { m.textContent = '❌ Pas de connexion : réessaie dans un moment.'; }
+      };
       if ($('rappelOff')) $('rappelOff').onclick = () => { delete profil.ntfy; sauver(); afficher(); };
     };
     afficher(); $('modale').classList.add('visible');
