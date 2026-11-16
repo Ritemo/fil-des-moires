@@ -14,6 +14,16 @@ const aujourdhui = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }
   const j = await r.json();
   if (!j.ok) throw new Error('Script de sauvegarde : ' + (j.erreur || 'réponse inattendue') + (j.rappels ? '' : ' (le script est-il à jour ?)'));
   console.log('Script de sauvegarde joint : ' + (j.rappels || []).length + ' rappel(s) activé(s).');
+  // Mode « annonce de test » : simule la fin d'épreuve d'un joueur et prévient les autres, comme le script le fera
+  if (process.env.ANNONCE_DE) {
+    for (const joueur of j.rappels || []) {
+      if (joueur.nom === process.env.ANNONCE_DE) continue;
+      const env = await fetch('https://ntfy.sh/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: joueur.ntfy, title: '🧪 Test · 🧵 ' + process.env.ANNONCE_DE + ' a tissé le jour 2', message: 'La forêt de Phaéna · ★★☆\nCeci est un essai : les vraies annonces arriveront ainsi quand un autre tisserand finit son épreuve.', click: JEU, tags: ['crossed_swords'] }) });
+      console.log('Annonce de test envoyée à ' + joueur.nom + ' -> ' + env.status);
+    }
+    return;
+  }
   for (const joueur of j.rappels || []) {
     if (joueur.derniereDate === aujourdhui && !TEST) { console.log(joueur.nom + ' a déjà joué aujourd\'hui.'); continue; }
     const jour = joueur.jour + 1;

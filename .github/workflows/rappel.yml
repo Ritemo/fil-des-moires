@@ -10,6 +10,10 @@ on:
         description: 'Test : envoyer à tous, même à ceux qui ont déjà joué aujourd hui'
         type: boolean
         default: true
+      annonce_de:
+        description: 'Test d annonce : prénom du joueur qui « a fini » (vide = rappel normal)'
+        type: string
+        default: ''
 jobs:
   rappel:
     runs-on: ubuntu-latest
@@ -23,6 +27,7 @@ jobs:
           SAUVEGARDE_URL: ${{ secrets.SAUVEGARDE_URL }}
           SAUVEGARDE_CLE: ${{ secrets.SAUVEGARDE_CLE }}
           RAPPEL_TEST: ${{ inputs.test }}
+          ANNONCE_DE: ${{ inputs.annonce_de }}
         run: node outils/rappels.js
       - name: Alerte en cas d'échec
         if: failure()
