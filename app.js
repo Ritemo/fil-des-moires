@@ -345,7 +345,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.15.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.15.3 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -549,6 +549,9 @@
     morceaux.push(partie.kos ? partie.kos + ' chute' + (partie.kos > 1 ? 's' : '') + ' dans l\'équipe' : 'aucun héros tombé');
     const rang = { jour: partie.jour, date: aujourdhui(), titre: partie.ep.titre.replace(/^Le Prologue : /, ''), victoire, etoiles,
       couleur, motif: (etat.unites.find(u => u.gardien) || cible).emoji, resume: morceaux.join(', ') + '.', echo: partie.echo || undefined };
+    // Équipe de l'épreuve, pour la carte de joueur du classement
+    rang.equipe = etat.unites.filter(u => u.camp === 'allie').map(u => ({ id: u.id, ko: !!u.ko,
+      cartes: (u.competences || []).filter(c => c.type !== 'garde' && c.type !== 'lier' && !c.prouesse).map(c => c.id) }));
     const parole = partie.ep.fin && partie.ep.fin[victoire ? 'victoire' : 'defaite'];
     if (parole) rang.recit = parole[1];
     const rangs = profil.rangs.concat([rang]);
@@ -1267,10 +1270,63 @@
     const liste = r.liste.sort((a, b) => b.etoiles - a.etoiles || b.jour - a.jour);
     const medaille = k => ['🥇', '🥈', '🥉'][k] || (k + 1) + '.';
     $('lexiqueCorps').innerHTML = '<p class="small">Classés par étoiles gagnées. Chacun joue à son rythme : le jour atteint compte moins que la qualité de la tapisserie.</p>' +
-      liste.map((j, k) => `<div class="classe ${j.nom === moi ? 'moi' : ''}"><div class="rangC">${medaille(k)}</div><canvas width="200" height="250" data-k="${k}"></canvas>
+      liste.map((j, k) => `<div class="classe ${j.nom === moi ? 'moi' : ''}" data-k="${k}"><div class="rangC">${medaille(k)}</div><canvas width="200" height="250" data-k="${k}"></canvas>
         <div class="infos"><b>${j.nom}</b>Jour ${j.jour} · ★ ${j.etoiles} · ${j.parfaits} parfait${j.parfaits > 1 ? 's' : ''}<br>Niveau ${j.niveau} · 🐾 ${j.creatures} liée${j.creatures > 1 ? 's' : ''}${j.sceaux ? ' · ✨ Sceau de Maïa' : ''}${j.serie > 1 ? ' · série ' + j.serie + ' j' : ''}</div></div>`).join('');
     $('lexiqueCorps').querySelectorAll('canvas').forEach(cv => T.dessiner(cv, liste[+cv.dataset.k].rangs));
+    $('lexiqueCorps').insertAdjacentHTML('beforeend', '<p class="small" style="text-align:center">Touche un tisserand pour voir sa carte.</p>');
+    $('lexiqueCorps').querySelectorAll('.classe').forEach(el => el.onclick = () => { Son.jouer('page'); ficheJoueur(liste[+el.dataset.k], k => k, medaille(+el.dataset.k)); });
+    $('lexiqueCorps').scrollTop = 0;
   };
+
+  // ---------- Carte de joueur (depuis le classement) ----------
+  function quandLe(date) {
+    if (!date) return '';
+    const auj = aujourdhui(), h = new Date(); h.setDate(h.getDate() - 1);
+    const hier = h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0');
+    if (date === auj) return 'Aujourd\'hui';
+    if (date === hier) return 'Hier';
+    const [a, m, j] = date.split('-'); return 'Le ' + j + '/' + m;
+  }
+  function ficheJoueur(j, _, medaille) {
+    const f = j.fiche;
+    const etoilesTxt = r => r.victoire ? '★'.repeat(r.etoiles || 0) + '☆'.repeat(3 - (r.etoiles || 0)) : '✕';
+    let h = `<button id="retourClassement" class="lien">← Classement</button>
+      <div class="ficheJ"><canvas width="200" height="250" id="ficheTapis"></canvas><div>
+        <div class="ficheNom">${medaille} ${j.nom}</div>
+        <div class="ficheStats"><span><b>${j.jour}</b>jour</span><span><b>★ ${j.etoiles}</b>étoiles</span><span><b>${j.niveau}</b>niveau</span>
+        <span><b>${j.parfaits}</b>parfait${j.parfaits > 1 ? 's' : ''}</span><span><b>🐾 ${j.creatures}</b>liée${j.creatures > 1 ? 's' : ''}</span><span><b>${j.serie || 0}</b>série</span></div>
+        ${j.sceaux ? '<div class="small">✨ Sceau de Maïa obtenu</div>' : ''}</div></div>`;
+    if (!f) {
+      h += '<p class="small">Pour voir sa dernière épreuve et son équipe, le script de sauvegarde doit être mis à jour (dernier Code.gs, puis Gérer les déploiements, modifier, Nouvelle version).</p>';
+    } else {
+      const r = f.recents[f.recents.length - 1];
+      if (r) {
+        h += `<h3 class="ficheT">${quandLe(r.date)} · Jour ${r.jour}</h3>
+          <div class="ficheEp ${r.victoire ? 'gagne' : 'perdu'}"><div class="ficheMotif">${r.motif || '🧵'}</div><div>
+            <b>${r.titre || 'Épreuve'}</b><div class="ficheEt">${etoilesTxt(r)}</div><div class="small">${r.resume || ''}</div></div></div>`;
+      } else h += '<p class="small">Pas encore d\'épreuve jouée.</p>';
+      // Équipe : celle de la dernière épreuve si elle est connue, sinon l'équipe actuelle
+      let equipe = r && r.equipe, actuelle = false;
+      if (!equipe) {
+        actuelle = true;
+        const ids = ['errant'].concat(f.compagnons.includes('phaena') ? ['phaena'] : [], [f.creature && f.creatures.includes(f.creature) ? f.creature : 'griffon']);
+        equipe = ids.map(id => ({ id, cartes: (f.equipement[id] || []).filter(c => f.cartes[c]) }));
+      }
+      h += `<h3 class="ficheT">${actuelle ? 'Son équipe' : 'Son équipe ce jour-là'}</h3>` + equipe.map(m => {
+        const modele = D.HEROS.concat(D.CREATURES).find(x => x.id === m.id); if (!modele) return '';
+        const cartes = m.cartes.map(id => { const i = P.carteInfo(id); if (!i) return ''; const c = f.cartes[id] || {};
+          const ev = c.evoluee && D.EVOLUTIONS[id];
+          return `<span class="puce">${(ev && ev.art) || i.carte.art || '✦'} ${ev ? ev.nom || i.carte.nom : i.carte.nom}${c.niveau ? ' <i>niv. ' + c.niveau + '</i>' : ''}${c.evoluee ? ' 🌟' : ''}</span>`; }).join('');
+        return `<div class="ficheHeros${m.ko ? ' ko' : ''}"><div class="ficheEmo">${modele.emoji}</div><div><b>${modele.nom}</b>${m.ko ? ' <span class="small">· tombé</span>' : ''}<div>${cartes || '<span class="small">aucune carte équipée</span>'}</div></div></div>`;
+      }).join('');
+      if (f.recents.length > 1) h += '<h3 class="ficheT">Ses derniers jours</h3><div class="ficheJours">' + f.recents.slice().reverse().map(x =>
+        `<div class="${x.victoire ? 'gagne' : 'perdu'}"><span>${x.motif || '🧵'}</span><b>J${x.jour}</b><i>${etoilesTxt(x)}</i></div>`).join('') + '</div>';
+    }
+    $('titreModale').textContent = '🧵 ' + j.nom;
+    $('lexiqueCorps').innerHTML = h; $('lexiqueCorps').scrollTop = 0;
+    T.dessiner($('ficheTapis'), j.rangs);
+    $('retourClassement').onclick = () => $('btnClassement').onclick();
+  }
 
   // ---------- Rappel du matin : une notification ntfy avec la quête du jour (envoyée par le robot « Rappel ») ----------
   $('btnRappel').onclick = () => {

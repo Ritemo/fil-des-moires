@@ -391,6 +391,33 @@
   .classe .rangC { font-size: 26px; width: 34px; text-align: center; flex: none; }
   .classe canvas { width: 54px; height: auto; border-radius: 4px; flex: none; }
   .classe .infos { flex: 1; min-width: 0; font-size: 13px; color: var(--doux); line-height: 1.5; }
+  .classe { cursor: pointer; }
+  .classe:active { transform: scale(.98); }
+  .lien { background: none; border: none; color: var(--or); padding: 0 0 8px; font-size: 15px; text-decoration: underline; width: auto; box-shadow: none; }
+  .ficheJ { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
+  .ficheJ canvas { width: 84px; height: auto; border-radius: 6px; flex: none; }
+  .ficheNom { color: var(--or); font-size: 20px; font-variant: small-caps; margin-bottom: 4px; }
+  .ficheStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .ficheStats span { background: var(--carte); border: 1px solid var(--bord); border-radius: 8px; text-align: center; font-size: 11px; color: var(--doux); padding: 3px 2px; }
+  .ficheStats b { display: block; color: var(--texte, #f3e6c8); font-size: 15px; font-weight: normal; }
+  .ficheT { color: var(--or); font-size: 15px; font-variant: small-caps; margin: 14px 0 6px; font-weight: normal; border-bottom: 1px solid var(--bord); padding-bottom: 3px; }
+  .ficheEp { display: flex; gap: 10px; align-items: center; background: var(--carte); border: 1px solid var(--bord); border-left: 4px solid #6a9a55; border-radius: 10px; padding: 8px 10px; }
+  .ficheEp.perdu { border-left-color: #a8483a; }
+  .ficheMotif { font-size: 38px; flex: none; }
+  .ficheMotif img.emo, .ficheEmo img.emo { width: 1em; height: 1em; }
+  .ficheEt { color: var(--or); letter-spacing: 2px; }
+  .ficheHeros { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--bord); }
+  .ficheHeros.ko { opacity: .6; }
+  .ficheEmo { font-size: 30px; flex: none; width: 40px; text-align: center; }
+  .ficheHeros b { color: var(--or); font-weight: normal; }
+  .puce { display: inline-block; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 2px 8px; margin: 3px 4px 0 0; font-size: 12px; }
+  .puce i { color: var(--doux); font-style: normal; font-size: 11px; }
+  .ficheJours { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .ficheJours div { flex: none; width: 58px; text-align: center; background: var(--carte); border: 1px solid var(--bord); border-top: 3px solid #6a9a55; border-radius: 8px; padding: 4px 2px; font-size: 11px; }
+  .ficheJours div.perdu { border-top-color: #a8483a; }
+  .ficheJours span { display: block; font-size: 22px; }
+  .ficheJours b { display: block; font-weight: normal; color: var(--doux); }
+  .ficheJours i { font-style: normal; color: var(--or); font-size: 10px; letter-spacing: 1px; }
   .classe .infos b { display: block; color: var(--or); font-size: 16px; font-weight: normal; font-variant: small-caps; }
   .carteRoute { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
   .carteRoute h3 { margin: 0 0 6px; font-variant: small-caps; color: var(--or); font-weight: normal; font-size: 17px; }

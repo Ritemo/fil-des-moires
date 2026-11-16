@@ -8,7 +8,7 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 3;
+const VERSION_SCRIPT = 4;
 
 function doGet(e) {
   // Vérification sans clé : ouvrir <adresse>/exec?version=1 doit afficher la version du script
@@ -51,7 +51,13 @@ function classement() {
       sceaux: ((p.histoire || {}).sceaux || []).length,
       serie: (p.serie || {}).jours || 0,
       derniereDate: p.derniereDate || null,
-      rangs: rangs.map(function (r) { return { jour: r.jour, victoire: r.victoire, etoiles: r.etoiles }; })
+      rangs: rangs.map(function (r) { return { jour: r.jour, victoire: r.victoire, etoiles: r.etoiles }; }),
+      // Carte de joueur : les 7 derniers rangs en détail et l'équipe actuelle (le jeu met en forme)
+      fiche: {
+        recents: rangs.slice(-7),
+        equipement: p.equipement || {}, creature: p.creature || null, compagnons: p.compagnons || [],
+        cartes: p.cartes || {}, creatures: p.creatures || [], drachmes: p.drachmes || 0
+      }
     };
   }).filter(function (x) { return x; });
 }
