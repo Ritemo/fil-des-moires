@@ -42,7 +42,10 @@
     try {
       const r = await fetch(adresse(url, cle, joueur), { cache: 'no-store' });
       const j = await r.json();
-      return j.ok ? 'ok' : (j.erreur === 'cle' ? 'cle' : 'erreur');
+      if (j.ok) return 'ok';
+      if (j.erreur === 'joueur') return 'joueur';              // propriété CLE_PRENOM absente du script
+      if (j.erreur === 'cle' && !j.version) return 'ancien';   // script pas encore mis à jour (ou ancien déploiement)
+      return j.erreur === 'cle' ? 'cle' : 'erreur';
     } catch (e) { return 'reseau'; }
   }
 

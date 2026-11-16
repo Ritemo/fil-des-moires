@@ -8,9 +8,14 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
+const VERSION_SCRIPT = 3;
+
 function doGet(e) {
+  // Vérification sans clé : ouvrir <adresse>/exec?version=1 doit afficher la version du script
+  if (e.parameter.version) return reponse({ ok: true, version: VERSION_SCRIPT, joueurs: PropertiesService.getScriptProperties().getKeys().filter(function (k) { return k.indexOf('CLE_') === 0; }).map(function (k) { return k.slice(4); }) });
   const joueur = nettoyer(e.parameter.joueur);
-  if (joueur === false || !cleValide(joueur, e.parameter.cle)) return reponse({ ok: false, erreur: 'cle' });
+  if (joueur && !PropertiesService.getScriptProperties().getProperty('CLE_' + joueur.toUpperCase())) return reponse({ ok: false, erreur: 'joueur', version: VERSION_SCRIPT });
+  if (joueur === false || !cleValide(joueur, e.parameter.cle)) return reponse({ ok: false, erreur: 'cle', version: VERSION_SCRIPT });
   if (e.parameter.classement) return reponse({ ok: true, classement: classement() });
   if (e.parameter.rappels && !joueur) return reponse({ ok: true, rappels: rappels() }); // réservé au joueur principal (robot de rappel)
   return reponse({ ok: true, donnees: lire(joueur) });

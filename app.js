@@ -333,7 +333,10 @@
     $('rejOk').onclick = async () => {
       $('rejMsg').textContent = 'Connexion à la sauvegarde...';
       const r = await S.tester(inv.u, inv.c, inv.j);
-      if (r !== 'ok') { $('rejMsg').textContent = r === 'cle' ? '❌ Ta clé n\'est pas encore active : demande à la personne qui t\'a invité de vérifier l\'étape 1.' : '❌ Pas de connexion : réessaie dans un moment.'; return; }
+      if (r !== 'ok') { $('rejMsg').textContent = ({
+        ancien: '❌ Le script de sauvegarde n\'est pas à jour : la personne qui t\'a invité doit y coller le dernier Code.gs puis, dans Gérer les déploiements, modifier le déploiement existant en « Nouvelle version ».',
+        joueur: '❌ Le script ne connaît pas encore « CLE_' + inv.j.toUpperCase() + ' » : la personne qui t\'a invité doit l\'ajouter dans les Propriétés du script.',
+        cle: '❌ La clé « CLE_' + inv.j.toUpperCase() + ' » du script ne correspond pas à « ' + inv.c + ' » : vérifie la valeur dans les Propriétés du script.' })[r] || '❌ Pas de connexion : réessaie dans un moment.'; return; }
       S.configurer({ url: inv.u, cle: inv.c, joueur: inv.j });
       if (remplace || (actuel && actuel.joueur !== inv.j)) { profil = migrer(profilVide()); stock.ecrire('profil', profil); }
       if (!profil.pseudo) profil.pseudo = Prenom;
