@@ -205,7 +205,8 @@
   // ---------- Dégâts ----------
   function calculerDegats(etat, attaquant, cible, comp) {
     const mult = multiplicateur(comp.affinite, cible.affinite);
-    const critique = etat.hasard() < (comp.critique || 0.1);
+    let critique = etat.hasard() < (comp.critique || 0.1);
+    if (attaquant.etats && attaquant.etats.critique) { critique = true; delete attaquant.etats.critique; }
     const variation = 0.9 + 0.2 * etat.hasard();
     let d = comp.puissance * attaquant.attaque / (attaquant.attaque + cible.defense) * 1.6;
     d = d * mult * (critique ? 1.5 : 1) * variation;
@@ -286,6 +287,16 @@
     } else if (comp.type === 'garde') {
       cible.gardePar = acteur.uid;
       evenements.push({ type: 'garde', source: acteur.uid, cible: cible.uid });
+    } else if (comp.type === 'ralliement') {
+      vivants(etat, acteur.camp).forEach(c => {
+        const avant = c.pv;
+        c.pv = Math.min(c.pvMax, c.pv + Math.round(comp.puissance * (0.9 + 0.2 * etat.hasard())));
+        evenements.push({ type: 'soin', source: acteur.uid, cible: c.uid, soin: c.pv - avant });
+      });
+      gagnerGloire(etat, comp.gloire || 0, evenements);
+    } else if (comp.type === 'oeil') {
+      cible.etats.critique = true;
+      evenements.push({ type: 'oeil', source: acteur.uid, cible: cible.uid });
     } else if (comp.type === 'presage') {
       // Avance un allié : il jouera juste après
       cible.prochain = etat.temps + 1;

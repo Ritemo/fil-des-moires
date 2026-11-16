@@ -1,7 +1,7 @@
 /* Le Fil des Moires : interface (phase 0 bis). */
 (function () {
   'use strict';
-  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync;
+  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression;
   const $ = id => document.getElementById(id);
 
   // ---------- Stockage (protégé : peut être indisponible) ----------
@@ -11,7 +11,7 @@
   };
   const aujourdhui = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const profilVide = () => ({ joursJoues: 0, rangs: [], derniereDate: null, clotho: 'auto', vus: {} });
-  let profil = Object.assign(profilVide(), stock.lire('profil', {}));
+  let profil = P.initialiser(Object.assign(profilVide(), stock.lire('profil', {})));
   const sauver = () => { profil.maj = Date.now(); stock.ecrire('profil', profil); S.envoyer(profil); };
 
   // ---------- Sauvegarde commune ----------
@@ -20,7 +20,7 @@
     if (partie) return;
     const distant = await S.telecharger();
     if (distant && distant.maj && distant.maj > (profil.maj || 0)) {
-      profil = Object.assign(profilVide(), distant);
+      profil = P.initialiser(Object.assign(profilVide(), distant));
       stock.ecrire('profil', profil);
       if (!partie && $('accueil').classList.contains('actif')) accueil();
     } else if (S.conf() && (!distant || (profil.maj || 0) > (distant.maj || 0))) {
@@ -44,7 +44,7 @@
     const j = partie ? partie.jour : profil.joursJoues + 1;
     return j <= 3 ? 'bavarde' : j <= 10 ? 'discrete' : 'muette';
   }
-  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'gardien', 'tapisserie', 'discret', 'intention'];
+  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'don', 'collection', 'niveau', 'gardien', 'tapisserie', 'discret', 'intention'];
   const fileClotho = [];
   function clotho(cle) {
     if (profil.vus[cle]) return;
@@ -100,6 +100,10 @@
     const dernier = profil.rangs[profil.rangs.length - 1];
     $('etatJour').textContent = fait && dernier ? 'Épreuve du jour terminée : ' + (dernier.victoire ? 'victoire ' + '★'.repeat(dernier.etoiles) : 'défaite') + '. Nouvelle épreuve demain.' : '';
     $('reglageClotho').value = profil.clotho;
+    $('niveauEquipe').textContent = profil.niveau;
+    $('xpAccueil').style.width = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau)) + '%';
+    $('drachmesAccueil').textContent = profil.drachmes;
+    $('btnCollection').style.display = profil.joursJoues >= 1 ? 'inline' : 'none';
   }
   $('tapisAccueil').onclick = e => { const r = T.rangTouche($('tapisAccueil'), profil.rangs, e); if (r) $('tapisLegende').textContent = 'Jour ' + r.jour + ' : ' + r.resume; };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
@@ -112,7 +116,8 @@
     partie = { echo, jour, ep, rencontre: 0, reprise: null, gloire: 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
     $('mode').textContent = echo ? 'Écho' : 'Jour ' + jour;
     if (jour === 4 && !echo) clotho('discret');
-    ensuite(presenterEnnemis, 0);
+    if (jour > 3) ensuite(() => ouvrirCollection(true), 0);
+    else ensuite(presenterEnnemis, 0);
   }
 
   // ---------- Présentation des ennemis ----------
@@ -129,15 +134,15 @@
   function presenterEnnemis() {
     const r = partie.ep.rencontres[partie.rencontre];
     $('introTitre').textContent = r.nom + ' · ce qui t\'attend';
-    $('introListe').innerHTML = D.ennemisDeRencontre(r).map(ficheEnnemi).join('');
+    $('introListe').innerHTML = P.ennemisPourJoueur(r, profil, partie.jour).map(ficheEnnemi).join('');
     ecran('intro');
   }
   $('btnCombat').onclick = () => { ecran('combat'); lancerRencontre(); };
 
   function lancerRencontre() {
     const r = partie.ep.rencontres[partie.rencontre];
-    partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101, allies: D.equipeDuJour(partie.ep),
-      ennemis: D.ennemisDeRencontre(r), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire });
+    partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101, allies: P.equipeDuJoueur(partie.ep, profil, partie.jour),
+      ennemis: P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire, gloireActive: partie.ep.gloire });
     partie.pvAff = {};
     $('nomRencontre').textContent = r.nom;
     $('journal').innerHTML = '';
@@ -210,18 +215,103 @@
     const rang = { jour: partie.jour, date: aujourdhui(), titre: partie.ep.titre.replace(/^Le Prologue : /, ''), victoire, etoiles,
       couleur, motif: (etat.unites.find(u => u.gardien) || cible).emoji, resume: morceaux.join(', ') + '.' };
     const rangs = profil.rangs.concat([rang]);
+    let g = null, niveaux = 0, butin = {}, dons = null, niveauAvant = profil.niveau;
     if (!partie.echo) {
-      profil.rangs = rangs; profil.joursJoues = partie.jour; profil.derniereDate = aujourdhui(); sauver();
+      profil.rangs = rangs; profil.joursJoues = partie.jour; profil.derniereDate = aujourdhui();
+      g = P.gains(victoire, etoiles);
+      niveaux = P.ajouterXp(profil, g.xp);
+      profil.drachmes += g.drachmes;
+      if (victoire) { butin = P.butin(profil, partie.graine + 17, etoiles); dons = P.genererDon(profil, partie.graine + 29); }
+      sauver();
     }
     ecran('fin');
     $('finTitre').textContent = victoire ? 'Le fil tient' : 'Le fil a cédé';
     $('finEtoiles').textContent = victoire ? '★'.repeat(etoiles) + '☆'.repeat(3 - etoiles) : '✕';
-    $('finXp').textContent = partie.echo ? 'Écho : rang non tissé' : '+' + (victoire ? 120 + 40 * etoiles : 60) + ' XP';
+    $('finXp').textContent = partie.echo ? 'Écho : rang non tissé' : '';
+    afficherGains(g, niveaux, niveauAvant, butin);
+    $('don').innerHTML = '';
     $('finResume').textContent = rang.resume;
     $('finClotho').textContent = D.CLOTHO[victoire ? 'victoire' : 'defaite'];
     $('btnRetour').disabled = true;
-    T.tisser($('tapisFin'), rangs, T_(2400), () => { $('btnRetour').disabled = false; if (!partie.echo) clotho('tapisserie'); });
+    T.tisser($('tapisFin'), rangs, T_(2400), () => {
+      if (!partie.echo) clotho('tapisserie');
+      if (dons) proposerDon(dons); else $('btnRetour').disabled = false;
+    });
   }
+
+  function nomCarte(id) { const i = P.carteInfo(id); return i ? aff(i.carte.affinite).icone + ' ' + i.carte.nom : id; }
+  function afficherGains(g, niveaux, niveauAvant, butin) {
+    if (!g) { $('finGains').innerHTML = ''; return; }
+    const pct = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau));
+    const lignes = Object.keys(butin).map(id => nomCarte(id) + ' +' + butin[id]).join(', ');
+    $('finGains').innerHTML = `<div class="bourse"><span>Niveau <b>${profil.niveau}</b></span><div class="xpbarre"><i id="xpFin" style="width:0%"></i></div><span>+${g.xp} XP</span></div>
+      <div class="bourse"><span>🪙 +${g.drachmes} drachmes (total <b>${profil.drachmes}</b>)</span></div>
+      ${lignes ? `<div class="bourse"><span>🃏 Butin : ${lignes}</span></div>` : ''}
+      ${niveaux ? `<div class="niveauPlus">✨ Niveau ${niveauAvant} → ${profil.niveau} : +4 % PV et attaque par niveau</div>` : ''}`;
+    setTimeout(() => { const x = $('xpFin'); if (x) x.style.width = pct + '%'; }, 100);
+    if (niveaux) clotho('niveau');
+  }
+  function proposerDon(options) {
+    const libelle = o => {
+      if (o.type === 'carte') { const i = P.carteInfo(o.id); return `🆕 Nouvelle carte : ${nomCarte(o.id)}<small>${P.NOMS_RARETE[P.rarete(o.id)]} · ${i.heros.nom} · ${i.carte.desc}</small>`; }
+      if (o.type === 'doublons') return `🃏 ${o.nombre} doublons : ${nomCarte(o.id)}<small>Pour améliorer cette carte (actuellement niveau ${profil.cartes[o.id].niveau}).</small>`;
+      return `🪙 Bourse de ${o.nombre} drachmes<small>Pour payer les améliorations.</small>`;
+    };
+    $('don').innerHTML = '<div class="titreDon">Le Don des Moires : choisis-en un</div>' +
+      options.map((o, i) => `<button data-i="${i}">${libelle(o)}</button>`).join('') +
+      '<button class="lien" data-i="-1">Passer (+25 🪙)</button>';
+    $('don').querySelectorAll('button').forEach(b => b.onclick = () => {
+      const i = +b.dataset.i;
+      P.appliquerDon(profil, i >= 0 ? options[i] : null);
+      sauver();
+      $('don').innerHTML = '<div class="titreDon">' + (i >= 0 ? 'Don reçu : ' + libelle(options[i]).replace(/<small>.*<\/small>/, '') : 'Tu passes : +25 🪙') + '</div>';
+      $('btnRetour').disabled = false;
+      clotho('collection');
+    });
+    clotho('don');
+  }
+
+  // ---------- Collection et Préparation ----------
+  let modePreparation = false;
+  function ouvrirCollection(preparation) {
+    modePreparation = !!preparation;
+    $('colTitre').textContent = preparation ? '⚔️ Préparation : choisis 4 cartes par héros' : '📜 Collection';
+    $('drachmesCol').textContent = profil.drachmes;
+    $('btnColOk').textContent = preparation ? 'Partir' : 'Retour';
+    if (preparation) {
+      const noms = [...new Set(partie.ep.rencontres.flatMap(r => r.ennemis))].map(id => { const e = D.ENNEMIS[id]; return e.emoji + ' ' + e.nom + ' (' + aff(e.affinite).icone + ', faible contre ' + listeAff(faiblesses(e.affinite)) + ')'; });
+      $('colMenace').textContent = 'Ce qui t\'attend : ' + noms.join(' · ');
+    } else $('colMenace').textContent = 'Améliore tes cartes avec des doublons et des drachmes. Chaque niveau donne +10 % de puissance.';
+    const heros = P.herosDisponibles(profil);
+    $('colListe').innerHTML = D.HEROS.filter(h => heros.includes(h.id)).map(h => {
+      const cartes = h.competences.filter(c => c.type !== 'garde');
+      const eq = profil.equipement[h.id] || [];
+      return `<h3>${h.emoji} ${h.nom} <span class="small">(${eq.length}/${P.SLOTS} équipées)</span></h3>` + cartes.map(c => {
+        const r = P.rarete(c.id), col = P.COULEURS_RARETE[r], possede = profil.cartes[c.id];
+        if (!possede) return `<div class="carteC inconnue" style="--r:${col}"><div class="ic">❔</div><div class="mil"><div class="nm">Carte à découvrir <small>${P.NOMS_RARETE[r]}</small></div><div class="sd">Elle viendra d'un Don des Moires.</div></div></div>`;
+        const cout = P.coutAmelioration(profil, c.id);
+        const prog = cout ? Math.min(100, Math.round(100 * possede.doublons / cout.doublons)) : 100;
+        const puiss = c.puissance ? ' · Puiss. ' + Math.round(c.puissance * P.multiplicateurCarte(possede.niveau)) : '';
+        const equipee = eq.includes(c.id);
+        const btnEq = c.prouesse ? '' : `<button class="${equipee ? 'on' : ''}" data-eq="${h.id}|${c.id}">${equipee ? '✓ Équipée' : 'Équiper'}</button>`;
+        const btnAm = cout ? `<button class="${P.peutAmeliorer(profil, c.id) ? 'pret' : ''}" data-am="${c.id}" ${P.peutAmeliorer(profil, c.id) ? '' : 'disabled'}>⬆ 🪙${cout.drachmes}</button>` : '<button disabled>Max</button>';
+        return `<div class="carteC" style="--r:${col}"><div class="ic">${aff(c.affinite).icone}</div><div class="mil">
+          <div class="nm">${c.nom} <small>${P.NOMS_RARETE[r]} · Nv ${possede.niveau}</small></div>
+          <div class="sd">${c.cout ? '🔹' + c.cout : 'Gratuit'}${puiss} · ${c.desc}</div>
+          <div class="sd">🃏 ${possede.doublons}${cout ? ' / ' + cout.doublons : ''} doublons</div><div class="prog"><i style="width:${prog}%"></i></div></div>
+          <div class="btns">${btnAm}${btnEq}</div></div>`;
+      }).join('');
+    }).join('');
+    $('colListe').querySelectorAll('[data-am]').forEach(b => b.onclick = () => { if (P.ameliorer(profil, b.dataset.am)) { sauver(); ouvrirCollection(modePreparation); } });
+    $('colListe').querySelectorAll('[data-eq]').forEach(b => b.onclick = () => {
+      const [h, c] = b.dataset.eq.split('|');
+      if (!P.basculerEquipement(profil, h, c)) { $('colMenace').textContent = 'Déjà 4 cartes équipées pour ce héros : retire-en une d\'abord.'; return; }
+      sauver(); ouvrirCollection(modePreparation);
+    });
+    ecran('collection');
+  }
+  $('btnCollection').onclick = () => ouvrirCollection(false);
+  $('btnColOk').onclick = () => { if (modePreparation) presenterEnnemis(); else accueil(); };
 
   // ---------- Conseils ----------
   function conseiller(etat, acteur) {
@@ -262,7 +352,7 @@
       if (c.prouesse && !c.possible) return;
       const b = document.createElement('button');
       b.dataset.id = c.id;
-      b.innerHTML = `${aff(c.affinite).icone} ${c.nom}<small>${resume(c)}</small>`;
+      b.innerHTML = `${aff(c.affinite).icone} ${c.nom}${c.niveau > 1 ? ' <span style="color:#b07be0">Nv ' + c.niveau + '</span>' : ''}<small>${resume(c)}</small>`;
       b.disabled = !c.possible;
       if (c.prouesse) b.classList.add('prouesse');
       b.onclick = () => choisir(acteur, c, b);
@@ -281,7 +371,7 @@
     clotho('fantome');
     if (comp.zone) {
       $('desc').textContent = (comp.desc || '') + ' Touche à nouveau pour lancer.';
-      M.vivants(partie.etat, 'ennemi').forEach(u => apercu(acteur, u, comp));
+      M.vivants(partie.etat, comp.type === 'attaque' ? 'ennemi' : 'allie').forEach(u => apercu(acteur, u, comp));
       bouton.onclick = () => executer(acteur, comp, null);
       return;
     }
@@ -468,6 +558,7 @@
         case 'interception': plus(400, () => { flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
         case 'garde': plus(350, () => { flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
         case 'presage': plus(350, () => { flotter(carteEl(e.cible), '⏩ joue ensuite', 'info'); ajouterEffet(N(e.cible) + ' joue juste après'); }); break;
+        case 'oeil': plus(350, () => { flotter(carteEl(e.cible), '👁️ prochain coup critique', 'info'); ajouterEffet(N(e.cible) + ' : prochain coup critique'); }); break;
         case 'recul': plus(300, () => { flotter(carteEl(e.cible), '⏪ recule', 'info'); ajouterEffet('Recule dans la File'); }); break;
         case 'ko': plus(800, () => {
           const u = M.unite(etat, e.cible);
@@ -492,7 +583,7 @@
   let ongletLexique = 'Combat';
   function ouvrirLexique(onglet) {
     if (onglet) ongletLexique = onglet;
-    const onglets = ['Combat', 'Affinités', 'États', 'Héros', 'Ennemis', 'Épreuve'];
+    const onglets = ['Combat', 'Affinités', 'États', 'Cartes', 'Héros', 'Ennemis', 'Épreuve'];
     $('onglets').innerHTML = onglets.map(o => `<button class="${o === ongletLexique ? 'on' : ''}" data-o="${o}">${o}</button>`).join('');
     $('onglets').querySelectorAll('button').forEach(b => b.onclick = () => ouvrirLexique(b.dataset.o));
     let h = '';
@@ -546,7 +637,7 @@
       try {
         const p = JSON.parse(decodeURIComponent(escape(atob($('syncCode').value.trim()))));
         if (!p || !Array.isArray(p.rangs)) throw new Error('format');
-        profil = Object.assign(profilVide(), p); sauver(); $('syncMsg').textContent = '✅ Partie chargée.'; accueil();
+        profil = P.initialiser(Object.assign(profilVide(), p)); sauver(); $('syncMsg').textContent = '✅ Partie chargée.'; accueil();
       } catch (e) { $('syncMsg').textContent = '❌ Ce code n\'est pas valide.'; }
     };
     $('modale').classList.add('visible');
@@ -560,7 +651,7 @@
   $('btnSync').onclick = ouvrirSync;
   $('btnVitesse').onclick = () => { vitesse = vitesse === 1 ? 0.5 : 1; $('btnVitesse').textContent = 'Vitesse x' + (vitesse === 1 ? 1 : 2); };
   $('btnJourSuivant').onclick = () => { profil.derniereDate = null; sauver(); accueil(); };
-  $('btnReset').onclick = () => { profil = profilVide(); sauver(); toursJoueur = 0; accueil(); };
+  $('btnReset').onclick = () => { profil = P.initialiser(profilVide()); sauver(); toursJoueur = 0; accueil(); };
 
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claude')) {
     try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* rien */ }

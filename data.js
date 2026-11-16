@@ -14,6 +14,8 @@
         { id: 'torche', nom: 'Coup de torche', type: 'attaque', cible: 'ennemi', puissance: 34, cout: 1, poids: 'normal', affinite: 'flamme', brulure: { tours: 2, degats: 8 }, desc: 'Flamme. Brûle la cible 2 tours. Cautérise les plaies de l\'Hydre.' },
         { id: 'charge', nom: 'Charge lourde', type: 'attaque', cible: 'ennemi', puissance: 72, cout: 2, poids: 'lourd', affinite: 'airain', etourdit: 0.3, desc: 'Lourd : frappe fort mais te recule dans la file. 30 % d\'étourdir.' },
         { id: 'ares', nom: "Colère d'Arès", type: 'attaque', cible: 'ennemi', puissance: 115, cout: 3, poids: 'lourd', affinite: 'airain', desc: 'Le coup le plus puissant de l\'Errant. Lourd et coûteux.' },
+        { id: 'pommeau', nom: 'Coup de pommeau', type: 'attaque', cible: 'ennemi', puissance: 22, cout: 0, poids: 'leger', affinite: 'airain', etourdit: 0.5, desc: 'Léger. 50 % d\'étourdir la cible.' },
+        { id: 'ralliement', nom: 'Cri de ralliement', type: 'ralliement', cible: 'aucune', zone: true, puissance: 20, gloire: 25, cout: 2, poids: 'normal', affinite: 'airain', desc: '+25 Gloire et environ 20 PV pour toute l\'équipe.' },
         garde,
         { id: 'prouesse', nom: 'Phalange des Moires', type: 'attaque', cible: 'ennemi', zone: true, puissance: 85, cout: 0, poids: 'normal', affinite: 'airain', prouesse: true, desc: 'Prouesse (Gloire pleine) : toute l\'équipe frappe tous les ennemis.' }
       ]
@@ -25,6 +27,8 @@
         { id: 'rayon', nom: 'Rayon', type: 'attaque', cible: 'ennemi', puissance: 36, cout: 0, poids: 'normal', affinite: 'lumiere', desc: 'Lumière. Fort contre l\'Ombre.' },
         { id: 'ronces', nom: 'Ronces de Déméter', type: 'attaque', cible: 'ennemi', puissance: 46, cout: 2, poids: 'normal', affinite: 'sylve', recul: 40, desc: 'Sylve, fort contre l\'Onde. Recule la cible dans la file.' },
         { id: 'soin', nom: 'Baume de Déméter', type: 'soin', cible: 'allie', puissance: 48, cout: 2, poids: 'normal', affinite: 'sylve', desc: 'Rend environ 48 PV à un allié.' },
+        { id: 'aube', nom: "Aube d'Apollon", type: 'soin', cible: 'allie', zone: true, puissance: 30, cout: 3, poids: 'normal', affinite: 'lumiere', desc: 'Soigne toute l\'équipe (environ 30 PV chacun).' },
+        { id: 'oeil', nom: "Œil d'Apollon", type: 'oeil', cible: 'autreAllie', cout: 1, poids: 'leger', affinite: 'lumiere', desc: 'Léger. Le prochain coup de l\'allié choisi sera critique.' },
         { id: 'presage', nom: 'Présage', type: 'presage', cible: 'autreAllie', cout: 2, poids: 'leger', affinite: 'lumiere', desc: 'Léger. L\'allié choisi joue juste après toi.' },
         garde
       ]
@@ -35,6 +39,8 @@
       competences: [
         { id: 'serres', nom: 'Serres', type: 'attaque', cible: 'ennemi', puissance: 30, cout: 0, poids: 'leger', affinite: 'airain', desc: 'Léger : tu rejoues vite.' },
         { id: 'eclair', nom: 'Éclair', type: 'attaque', cible: 'ennemi', puissance: 52, cout: 2, poids: 'normal', affinite: 'foudre', desc: 'Foudre, fort contre le Vent.' },
+        { id: 'cri', nom: 'Cri perçant', type: 'attaque', cible: 'ennemi', puissance: 20, cout: 0, poids: 'leger', affinite: 'airain', recul: 50, desc: 'Léger. Fait reculer la cible dans la File.' },
+        { id: 'rafale', nom: 'Rafale', type: 'attaque', cible: 'ennemi', zone: true, puissance: 34, cout: 3, poids: 'normal', affinite: 'vent', desc: 'Vent. Touche tous les ennemis.' },
         { id: 'pique', nom: 'Piqué orageux', type: 'attaque', cible: 'ennemi', puissance: 88, cout: 3, poids: 'lourd', affinite: 'foudre', desc: 'Lourd : un plongeon dévastateur.' },
         garde
       ]
@@ -74,6 +80,17 @@
       ]
     }
   };
+
+  // Rareté de chaque carte (la Garde n'est pas une carte : toujours disponible)
+  const RARETES = {
+    frappe: 'commune', torche: 'commune', pommeau: 'commune', charge: 'rare', ralliement: 'rare', ares: 'epique', prouesse: 'legendaire',
+    rayon: 'commune', ronces: 'rare', soin: 'rare', aube: 'rare', presage: 'epique', oeil: 'epique',
+    serres: 'commune', cri: 'commune', eclair: 'rare', rafale: 'rare', pique: 'epique'
+  };
+  // Cartes possédées au départ (les autres se découvrent)
+  const CARTES_DEPART = ['frappe', 'torche', 'charge', 'ares', 'prouesse', 'rayon', 'ronces', 'soin', 'presage', 'serres', 'eclair', 'pique'];
+  // Équipement par défaut (4 cartes par héros)
+  const EQUIPEMENT_DEPART = { errant: ['frappe', 'torche', 'charge', 'ares'], phaena: ['rayon', 'ronces', 'soin', 'presage'], griffon: ['serres', 'eclair', 'pique'] };
 
   // Épreuves par jour de jeu : le contenu se débloque progressivement.
   // equipe : héros présents et compétences disponibles ; gloire : jauge active ou non.
@@ -133,6 +150,9 @@
     intention: "Au-dessus de chaque ennemi, son intention : ce qu'il va faire, à qui, et à peu près combien de dégâts. Profites-en.",
     energie: "Les points bleus 🔹, c'est ton Énergie : +1 à chaque tour. Le Coup de torche en coûte 1. Les attaques gratuites n'en coûtent pas.",
     fantome: "Quand tu choisis une compétence, un jeton en pointillés apparaît dans la File : c'est là que tu rejoueras.",
+    don: "Le Don des Moires. Une carte nouvelle, des doublons pour renforcer une carte, ou des drachmes. Choisis selon ce qui te manque.",
+    collection: "Ta Collection est sur l'accueil (📜). Avec assez de doublons et de drachmes, une carte monte de niveau. À partir du jour 4, tu choisiras aussi tes 4 cartes par héros avant de partir.",
+    niveau: "Ton équipe monte de niveau. Elle frappe plus fort et résiste mieux. Les ennemis, eux aussi, grandissent avec toi.",
     tapisserie: "Voilà ton premier rang. Chaque jour en ajoutera un. Or pour une victoire parfaite, gris pour une défaite : l'histoire continue quand même.",
     discret: "Tu connais les bases. Désormais je me tais, sauf pour les nouveautés. Le bouton 💡 te donne un indice si tu en veux un.",
     poids: "Chaque action a un poids. Léger : tu rejoues vite. Lourd : tu frappes fort, mais tu recules dans la File. Le jeton en pointillés te montre où.",
@@ -169,12 +189,18 @@
     { cat: 'États', icone: '💫', terme: 'Étourdi', texte: "Perd son prochain tour." },
     { cat: 'États', icone: '♨️', terme: 'Cautérisé', texte: "Propre à l'Hydre : aucune tête ne peut repousser pendant 2 de ses tours." },
     { cat: 'États', icone: '🐍', terme: 'Têtes', texte: "Nombre de têtes de l'Hydre. Chaque tête = une attaque par tour." },
+    { cat: 'Cartes', icone: '🃏', terme: 'Cartes', texte: "Chaque capacité est une carte, avec une rareté (Commune, Rare, Épique, Légendaire) et un niveau de 1 à 5. Chaque niveau donne +10 % de puissance." },
+    { cat: 'Cartes', icone: '⬆', terme: 'Améliorer', texte: "Il faut des doublons de la carte et des drachmes. Les cartes rares demandent moins de doublons que les communes." },
+    { cat: 'Cartes', icone: '🪙', terme: 'Drachmes', texte: "La monnaie du jeu, gagnée à chaque épreuve (plus avec des étoiles). Elle sert à payer les améliorations." },
+    { cat: 'Cartes', icone: '⚔️', terme: 'Préparation', texte: "À partir du jour 4, avant chaque épreuve, tu choisis 4 cartes par héros. La Garde et la Prouesse sont toujours disponibles." },
+    { cat: 'Cartes', icone: '🎁', terme: 'Don des Moires', texte: "Après chaque victoire, choisis 1 récompense parmi 3 : une carte inédite, des doublons ou une bourse. Passer rapporte 25 drachmes." },
+    { cat: 'Cartes', icone: '✨', terme: 'Niveau d\'équipe', texte: "L'XP des épreuves fait monter le niveau de l'équipe : +4 % de PV et d'attaque par niveau pour tous tes héros. Les ennemis grandissent aussi." },
     { cat: 'Épreuve', icone: '📅', terme: 'Épreuve du jour', texte: "Une nouvelle épreuve chaque jour. Une seule tentative compte pour les récompenses." },
     { cat: 'Épreuve', icone: '🔁', terme: 'Mode Écho', texte: "Rejouer l'épreuve après ta tentative, pour t'entraîner. Aucune récompense." },
     { cat: 'Épreuve', icone: '⭐', terme: 'Étoiles', texte: "3 : victoire sans perte. 2 : un héros tombé. 1 : victoire de justesse." }
   ];
 
-  const Donnees = { HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
+  const Donnees = { RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = Donnees;
   else racine.Donnees = Donnees;
 })(typeof window !== 'undefined' ? window : this);
