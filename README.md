@@ -17,6 +17,7 @@ progression.js cartes, niveaux, XP, drachmes, Don des Moires, Offrande, série, 
 chant1.js    le Chant I écrit : 30 jours, scènes, répliques de fin, choix et leurs conséquences
 epreuves.js  l'épreuve du jour (le Chant I, puis des épreuves générées en attendant le Chant II)
 sauvegarde/ le script Google Apps Script de sauvegarde
+son.js      le son : bruitages et ambiances, synthétisés en direct (aucun fichier audio)
 emojis.js   remplace les emojis par les images 3D de art/e/ (même rendu sur tous les appareils)
 art/e/      les émoticônes 3D Fluent Emoji de Microsoft (licence MIT, voir LICENCE-fluentui-emoji.txt)
 sw.js       le cache hors ligne (changer VERSION à chaque modification)
@@ -53,6 +54,15 @@ La partie est enregistrée dans un fichier de ton Google Drive (`fil-des-moires-
 
 Le jeu garde toujours la version la plus récente. Sans réseau, il continue en local et se resynchronise au retour.
 Si un jour tu modifies le script, il faut *Déployer* > *Gérer les déploiements* > modifier > *Nouvelle version*, sinon l'ancienne version reste en ligne.
+
+### Inviter un autre joueur (partie séparée)
+
+Chaque invité a sa propre partie, sauvegardée dans le même script mais dans un fichier séparé (`fil-des-moires-<prénom>.json`). Les parties sont indépendantes : chacun joue les jours qu'il veut.
+
+1. (Une seule fois) Mettre à jour le script avec la dernière version de `sauvegarde/Code.gs`, puis *Déployer* > *Gérer les déploiements* > modifier > *Nouvelle version*. L'adresse ne change pas.
+2. Dans le jeu : *Réglages* (⚙️) > *Inviter un joueur*, saisir son prénom. Le jeu affiche une clé et un lien.
+3. Dans le script : *Propriétés du script* > *Ajouter* `CLE_PRENOM` (ex. `CLE_JULIE`) avec la clé affichée.
+4. Envoyer le lien à l'invité : il l'ouvre une fois sur chacun de ses appareils, et sa partie est sauvegardée.
 
 **Sans script** : la même fenêtre propose un transfert manuel par code à copier-coller.
 

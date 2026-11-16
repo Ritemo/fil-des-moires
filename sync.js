@@ -3,6 +3,8 @@
   'use strict';
   const lireConf = () => { try { return JSON.parse(localStorage.getItem('fdm_sync') || 'null'); } catch (e) { return null; } };
   const ecrireConf = c => { try { localStorage.setItem('fdm_sync', JSON.stringify(c)); } catch (e) { /* rien */ } };
+  // joueur : vide pour le joueur principal, sinon le prénom d'un invité (sa partie est séparée)
+  const adresse = (url, cle, joueur) => url + '?cle=' + encodeURIComponent(cle) + (joueur ? '&joueur=' + encodeURIComponent(joueur) : '');
   let etat = 'local'; // local | ok | envoi | horsligne | erreur
   let minuterie = null;
   let surEtat = () => {};
@@ -13,7 +15,7 @@
   async function telecharger() {
     const c = lireConf(); if (!c) { changer('local'); return null; }
     try {
-      const r = await fetch(c.url + '?cle=' + encodeURIComponent(c.cle), { cache: 'no-store' });
+      const r = await fetch(adresse(c.url, c.cle, c.joueur), { cache: 'no-store' });
       const j = await r.json();
       if (!j.ok) { changer('erreur'); return null; }
       changer('ok');
@@ -29,16 +31,16 @@
       changer('envoi');
       try {
         // text/plain évite la requête préalable CORS, refusée par Apps Script
-        const r = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle: c.cle, profil }) });
+        const r = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle: c.cle, joueur: c.joueur || '', profil }) });
         const j = await r.json();
         changer(j.ok ? 'ok' : 'erreur');
       } catch (e) { changer('horsligne'); }
     }, immediat ? 0 : 800);
   }
 
-  async function tester(url, cle) {
+  async function tester(url, cle, joueur) {
     try {
-      const r = await fetch(url + '?cle=' + encodeURIComponent(cle), { cache: 'no-store' });
+      const r = await fetch(adresse(url, cle, joueur), { cache: 'no-store' });
       const j = await r.json();
       return j.ok ? 'ok' : (j.erreur === 'cle' ? 'cle' : 'erreur');
     } catch (e) { return 'reseau'; }

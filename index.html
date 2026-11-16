@@ -354,6 +354,15 @@
   .palier .ic { font-size: 22px; width: 30px; text-align: center; }
   .palier.fait { opacity: .45; } .palier.prochain { color: var(--or); }
   .palier .rang { margin-left: auto; font-size: 12px; color: var(--doux); }
+  .interrupteur { position: relative; width: 46px; height: 26px; flex: none; }
+  .interrupteur input { opacity: 0; width: 0; height: 0; }
+  .interrupteur span { position: absolute; inset: 0; background: #3a2c22; border-radius: 13px; transition: .2s; border: 1px solid var(--bord); }
+  .interrupteur span::before { content: ''; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: #b9a58f; border-radius: 50%; transition: .2s; }
+  .interrupteur input:checked + span { background: #a8742a; }
+  .interrupteur input:checked + span::before { transform: translateX(20px); background: #f3e9dc; }
+  .outilsTest { font-size: 12px; color: var(--doux); text-align: center; }
+  .outilsTest summary { cursor: pointer; }
+  .lienInvit { word-break: break-all; font-size: 12px; background: #120d0a; border: 1px solid var(--bord); border-radius: 8px; padding: 6px; user-select: all; }
   .carteReglage { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
   .carteReglage b { color: var(--or); font-weight: normal; font-variant: small-caps; font-size: 16px; }
 </style>
@@ -412,12 +421,18 @@
         <option value="muette">muette</option>
       </select>
     </div>
+    <div class="carteReglage"><b>Bruitages</b><label class="interrupteur"><input type="checkbox" id="reglageSfx"><span></span></label></div>
+    <div class="carteReglage"><b>Ambiance</b><label class="interrupteur"><input type="checkbox" id="reglageAmb"><span></span></label></div>
     <div class="carteReglage"><b>Sauvegarde</b><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
+    <div class="carteReglage"><b>Inviter un joueur</b><span class="info">Sa propre partie, séparée de la tienne</span><button class="lien" id="btnInviter">Inviter</button></div>
+    <div class="info" id="joueurActuel"></div>
     <div class="info" id="versionJeu">Phase 2</div>
-    <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px">
-      <button class="lien" id="btnJourSuivant">Passer au jour suivant (test)</button>
-      <button class="lien" id="btnReset">Tout réinitialiser (test)</button>
-    </div>
+    <details class="outilsTest"><summary>Outils de test</summary>
+      <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px">
+        <button class="lien" id="btnJourSuivant">Passer au jour suivant (test)</button>
+        <button class="lien" id="btnReset">Tout réinitialiser (test)</button>
+      </div>
+    </details>
     <div style="flex:1"></div>
     <button class="principal" id="reglagesOk">Retour</button>
   </section>
@@ -521,6 +536,7 @@
 <script src="epreuves.js"></script>
 <script src="sync.js"></script>
 <script src="emojis.js"></script>
+<script src="son.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -2,6 +2,12 @@
 (function () {
   'use strict';
   if (window.Emojis) window.Emojis.activer(document.body);
+  const SON = window.Son || { coup() {}, jouer() {}, tissage() {}, ambiance() {}, regler() {}, reglages: () => ({}) };
+  const AMB = { I: 'foret', II: 'ruines', III: 'fils', IV: 'etang' };
+  let ambChapitre = 'foret';
+  const majAmbChapitre = ep => { ambChapitre = AMB[ep.chapitre ? ep.chapitre.num : 'IV'] || 'etang'; };
+  // Un petit clic sur chaque bouton
+  document.addEventListener('click', e => { if (e.target.closest('button, .tuile, .offrande, .option')) SON.jouer('clic'); }, true);
   // Au rafraîchissement, le navigateur restaure l'ancienne position de défilement : on la remet à zéro
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
@@ -98,6 +104,7 @@
     document.querySelectorAll('.ecran').forEach(e => e.classList.toggle('actif', e.id === id));
     const onglet = ONGLETS.includes(id) && !(id === 'collection' && modePreparation);
     document.body.classList.toggle('fixe', onglet); document.documentElement.classList.toggle('fixe', onglet);
+    SON.ambiance(id === 'combat' ? 'combat' : ambChapitre);
     $('chipsAccueil').style.display = onglet ? 'flex' : 'none';
     document.querySelectorAll('#ongletsBas button').forEach(b => b.classList.toggle('on', b.dataset.onglet === id));
     if (onglet) { majBandeau(); window.scrollTo(0, 0); }
@@ -133,6 +140,7 @@
     $('nouveau').textContent = '✨ ' + (ep.nouveau || '');
     $('nouveau').style.display = fait || !ep.nouveau ? 'none' : 'block';
     $('chapitreAccueil').textContent = nomChapitre(ep);
+    majAmbChapitre(ep); SON.ambiance(ambChapitre);
     $('vignette').innerHTML = vignetteSvg(ep, fait);
     $('btnJouer').style.display = fait ? 'none' : 'block';
     $('btnEcho').style.display = fait ? 'block' : 'none';
@@ -241,8 +249,75 @@
         ${r.recit ? `<div class="ligne"><i>${r.recit}</i></div>` : ''}<div class="ligne">${r.resume}</div>${opt ? `<div class="ligne">🔀 Ton choix : ${opt.texte}.</div>` : ''}`;
     $('modale').classList.add('visible');
   };
-  $('btnReglages').onclick = () => { if (!partie) ecran('reglages'); };
-  $('versionJeu').textContent = 'Version 1.9.3 · illustrations Fluent Emoji (MIT)';
+  $('btnReglages').onclick = () => {
+    if (partie) return;
+    const r = SON.reglages(); $('reglageSfx').checked = r.sfx !== false; $('reglageAmb').checked = r.amb !== false;
+    const c = S.conf(); $('joueurActuel').textContent = c && c.joueur ? 'Partie de ' + c.joueur.charAt(0).toUpperCase() + c.joueur.slice(1) : '';
+    ecran('reglages');
+  };
+  $('reglageSfx').onchange = e => SON.regler('sfx', e.target.checked);
+  $('reglageAmb').onchange = e => SON.regler('amb', e.target.checked);
+
+  // ---------- Inviter un joueur : une partie séparée, sauvegardée dans le même script Google ----------
+  const motsCle = ['olivier', 'lyre', 'amphore', 'trident', 'laurier', 'chouette', 'egide', 'nectar', 'meandre', 'colonne', 'griffon', 'sirene', 'cyprès', 'fuseau', 'navette', 'oracle'];
+  const nouvelleCle = () => [0, 1].map(() => motsCle[Math.floor(Math.random() * motsCle.length)].normalize('NFD').replace(/[\u0300-\u036f]/g, '')).join('-') + '-' + (10 + Math.floor(Math.random() * 90));
+  $('btnInviter').onclick = () => {
+    const c = S.conf();
+    $('titreModale').textContent = '👥 Inviter un joueur'; $('onglets').innerHTML = '';
+    if (!c || c.joueur) {
+      $('lexiqueCorps').innerHTML = '<p>Pour inviter quelqu\'un, la sauvegarde commune doit d\'abord être configurée sur cet appareil avec ton propre script (Réglages, Sauvegarde, Configurer).</p>';
+      return $('modale').classList.add('visible');
+    }
+    $('lexiqueCorps').innerHTML = `<p class="small">Ton invité aura <b>sa propre partie</b>, sauvegardée dans ton script Google mais dans un fichier séparé. Vous jouez chacun à votre rythme, les jours que vous voulez.</p>
+      <label class="small">Prénom de l'invité (lettres et chiffres, sans espace)</label><input id="invPrenom" placeholder="julie" maxlength="20">
+      <button id="invOk" style="width:100%;margin-top:8px">Préparer l'invitation</button><div id="invEtapes"></div>`;
+    $('modale').classList.add('visible');
+    $('invOk').onclick = () => {
+      const prenom = $('invPrenom').value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+      if (!prenom) return;
+      const cle = nouvelleCle();
+      const jeton = btoa(unescape(encodeURIComponent(JSON.stringify({ u: c.url, j: prenom, c: cle })))).replace(/=+$/, '');
+      const lien = location.origin + location.pathname + '#rejoindre=' + jeton;
+      $('invEtapes').innerHTML = `<p><b>1.</b> Dans ton script Google : <i>Paramètres du projet</i>, <i>Propriétés du script</i>, <i>Ajouter</i> :<br>nom <b>CLE_${prenom.toUpperCase()}</b>, valeur <b>${cle}</b></p>
+        <p class="small">(La toute première fois seulement : remplace aussi le code du script par la dernière version de <i>sauvegarde/Code.gs</i>, puis <i>Déployer</i>, <i>Gérer les déploiements</i>, modifier, <i>Nouvelle version</i>.)</p>
+        <p><b>2.</b> Envoie ce lien à ${prenom.charAt(0).toUpperCase() + prenom.slice(1)}. Il lui suffit de l'ouvrir sur chacun de ses appareils :</p>
+        <div class="lienInvit">${lien}</div>
+        <button id="invPartager" style="width:100%;margin-top:6px">📤 Partager le lien</button>
+        <p class="small">Ce lien donne accès à sa partie seulement, jamais à la tienne.</p>`;
+      $('invPartager').onclick = async () => {
+        try { if (navigator.share) await navigator.share({ title: 'Le Fil des Moires', text: 'Rejoins Le Fil des Moires avec ta propre partie :', url: lien }); else { await navigator.clipboard.writeText(lien); $('invPartager').textContent = '✅ Lien copié'; } } catch (e) { /* partage annulé */ }
+      };
+    };
+  };
+
+  // Ouverture d'un lien d'invitation (#rejoindre=...) : configure la sauvegarde de l'invité sur cet appareil
+  function rejoindre() {
+    const m = location.hash.match(/rejoindre=([A-Za-z0-9+/=_-]+)/);
+    if (!m) return false;
+    history.replaceState(null, '', location.pathname);
+    let inv; try { inv = JSON.parse(decodeURIComponent(escape(atob(m[1])))); } catch (e) { return false; }
+    if (!inv || !inv.u || !inv.j || !inv.c) return false;
+    const actuel = S.conf();
+    if (actuel && actuel.joueur === inv.j && actuel.url === inv.u) return false; // déjà configuré
+    const Prenom = inv.j.charAt(0).toUpperCase() + inv.j.slice(1);
+    $('titreModale').textContent = '🧵 Bienvenue, ' + Prenom; $('onglets').innerHTML = '';
+    const remplace = profil.joursJoues > 0 && !(actuel && actuel.joueur === inv.j);
+    $('lexiqueCorps').innerHTML = `<p>Tu rejoins <b>Le Fil des Moires</b> avec ta propre partie. Elle sera sauvegardée en ligne : ouvre le même lien sur ton téléphone et ton ordinateur pour retrouver ta progression partout.</p>
+      ${remplace ? '<p class="small">⚠️ Une autre partie est enregistrée sur cet appareil : elle sera remplacée par la tienne.</p>' : ''}
+      <button class="principal" id="rejOk" style="width:100%">Commencer ma partie</button><p class="small" id="rejMsg"></p>`;
+    $('modale').classList.add('visible');
+    $('rejOk').onclick = async () => {
+      $('rejMsg').textContent = 'Connexion à la sauvegarde...';
+      const r = await S.tester(inv.u, inv.c, inv.j);
+      if (r !== 'ok') { $('rejMsg').textContent = r === 'cle' ? '❌ Ta clé n\'est pas encore active : demande à la personne qui t\'a invité de vérifier l\'étape 1.' : '❌ Pas de connexion : réessaie dans un moment.'; return; }
+      S.configurer({ url: inv.u, cle: inv.c, joueur: inv.j });
+      if (remplace || (actuel && actuel.joueur !== inv.j)) { profil = migrer(profilVide()); stock.ecrire('profil', profil); }
+      $('modale').classList.remove('visible');
+      await synchroniser(); accueil();
+    };
+    return true;
+  }
+  $('versionJeu').textContent = 'Version 1.10.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = accueil;
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -253,6 +328,7 @@
     const totalEnnemis = ep.rencontres.reduce((n, r) => n + r.ennemis.length, 0);
     partie = { lies: [], echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? Math.min(100, P.gloireDepart(profil) + (ep.gloireBonus || 0)) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
     $('mode').textContent = echo ? 'Écho' : 'Jour ' + jour;
+    majAmbChapitre(ep);
     if (jour === 4 && !echo) clotho('discret');
     const suite = () => { if (jour > 3) ouvrirCollection(true); else presenterEnnemis(); };
     const nouveaux = echo ? [] : Object.keys(ep.equipe).filter(id => !profil.compagnons.includes(id));
@@ -394,6 +470,7 @@
         }, 650);
       } else {
         toursJoueur++;
+        SON.jouer('tour');
         if (toursJoueur === 1) clotho('energie');
         if (toursJoueur === 3) clotho('poids');
         if (d.acteur.competences.some(c => c.type === 'garde')) clotho('garde');
@@ -462,6 +539,8 @@
     $('finQui').textContent = pers ? (pers.emoji + ' ' + (pers.nom || '')).trim() + ' :' : 'Clotho :';
     $('finClotho').textContent = parole ? parole[1] : D.CLOTHO[victoire ? 'victoire' : 'defaite'];
     $('btnRetour').disabled = true;
+    SON.jouer(victoire ? 'victoire' : 'defaite');
+    setTimeout(() => SON.tissage(T_(2400)), 900);
     T.tisser($('tapisFin'), rangs, T_(2400), () => {
       if (!partie.echo) clotho('tapisserie');
       if (dons) proposerDon(dons); else $('btnRetour').disabled = false;
@@ -543,6 +622,7 @@
     $('donCorps').innerHTML = `<div class="titreDon">${q.nom}</div><div class="amphGrande secoue">${q.icone}</div><div class="consigne">Touche l'amphore pour l'ouvrir</div>`;
     $('donVoile').classList.add('visible');
     document.querySelector('.amphGrande').onclick = () => {
+      SON.jouer('amphore');
       $('donCorps').innerHTML = `<div class="titreDon">${q.nom}</div><div class="consigne">Série : ${r.serie} jour${r.serie > 1 ? 's' : ''}</div>
         <div class="bourse" style="justify-content:center"><span>🪙 +${bourse} drachmes</span></div>
         <div class="grille">${cartes}${doublons}</div>${notes ? `<div class="consigne">${notes}</div>` : ''}
@@ -566,7 +646,7 @@
       ${niveaux ? `<div class="niveauPlus">✨ Niveau ${niveauAvant} → ${profil.niveau} : +4 % PV et attaque par niveau</div>` : ''}`;
     setTimeout(() => { const x = $('xpFin'); if (x) x.style.width = pct + '%'; }, 100);
     animerBarres($('finGains'));
-    if (niveaux) clotho('niveau');
+    if (niveaux) { clotho('niveau'); setTimeout(() => SON.jouer('niveau'), 600); }
   }
 
   // ---------- Don des Moires (plein écran) ----------
@@ -678,8 +758,8 @@
         ${c.prouesse ? '' : `<button id="ficheEq" style="flex:1">${equipee ? 'Retirer' : 'Équiper'}</button>`}
       </div><div class="small" id="ficheMsg"></div>`;
     $('modale').classList.add('visible');
-    if ($('ficheAm')) $('ficheAm').onclick = () => { if (P.ameliorer(profil, id)) { sauver(); ouvrirFiche(id); ouvrirCollection(modePreparation); $('modale').classList.add('visible'); rejouer(document.querySelector('#lexiqueCorps .tuile'), 'monte'); } };
-    if ($('ficheEvo')) $('ficheEvo').onclick = () => { if (P.evoluer(profil, id)) { sauver(); ouvrirCollection(modePreparation); ouvrirFiche(id); rejouer(document.querySelector('#lexiqueCorps .tuile'), 'evolue'); particules(document.querySelector('#lexiqueCorps .tuile'), '✦', 14); } };
+    if ($('ficheAm')) $('ficheAm').onclick = () => { if (P.ameliorer(profil, id)) { sauver(); ouvrirFiche(id); ouvrirCollection(modePreparation); $('modale').classList.add('visible'); rejouer(document.querySelector('#lexiqueCorps .tuile'), 'monte'); SON.jouer('niveau'); } };
+    if ($('ficheEvo')) $('ficheEvo').onclick = () => { if (P.evoluer(profil, id)) { sauver(); ouvrirCollection(modePreparation); ouvrirFiche(id); rejouer(document.querySelector('#lexiqueCorps .tuile'), 'evolue'); SON.jouer('evolue'); particules(document.querySelector('#lexiqueCorps .tuile'), '✦', 14); } };
     if ($('ficheEq')) $('ficheEq').onclick = () => { if (!P.basculerEquipement(profil, h.id, id)) { $('ficheMsg').textContent = '4 cartes déjà équipées pour ce héros : retire-en une d\'abord.'; return; } sauver(); ouvrirCollection(modePreparation); ouvrirFiche(id); };
   }
 
@@ -980,6 +1060,7 @@
           const comp = src.competences.find(c => c.id === e.competence);
           plus(600, () => {
             banniere(src.emoji + ' ' + src.nom, aff(comp.affinite).icone + ' ' + comp.nom, '');
+            SON.jouer('action');
             rejouer(carteEl(e.source), src.camp === 'allie' ? 'elan-haut' : 'elan-bas');
             journal(src.nom + ' : ' + comp.nom);
             partie.actionCourante = comp.nom;
@@ -992,6 +1073,7 @@
             const c = carteEl(e.cible);
             const src = M.unite(etat, e.source);
             rejouer(c, 'touche');
+            SON.coup(e.affinite, fort, e.critique);
             particules(c, aff(e.affinite).icone, fort ? 9 : 5);
             if (e.degats >= 40 || fort) rejouer($('app'), 'tremble');
             flotter(c, '-' + e.degats + (e.critique ? ' !' : ''), e.mult > 1 ? 'fort' : e.mult < 1 ? 'faible' : '');
@@ -1009,16 +1091,16 @@
           });
           break;
         }
-        case 'rate': plus(350, () => { flotter(carteEl(e.cible), 'Raté', 'faible'); ajouterEffet('Raté'); }); break;
-        case 'soin': plus(450, () => { const c = carteEl(e.cible); flotter(c, '+' + e.soin, 'soin'); particules(c, '✨', 5); journal(N(e.cible) + ' récupère ' + e.soin + ' PV'); }); break;
-        case 'brulure': plus(550, () => { banniere('🔥 Brûlure', N(e.cible), '-' + e.degats + ' PV'); const c = carteEl(e.cible); rejouer(c, 'touche'); particules(c, '🔥', 4); flotter(c, '-' + e.degats); }); break;
+        case 'rate': plus(350, () => { SON.jouer('rate'); flotter(carteEl(e.cible), 'Raté', 'faible'); ajouterEffet('Raté'); }); break;
+        case 'soin': plus(450, () => { SON.jouer('soin'); const c = carteEl(e.cible); flotter(c, '+' + e.soin, 'soin'); particules(c, '✨', 5); journal(N(e.cible) + ' récupère ' + e.soin + ' PV'); }); break;
+        case 'brulure': plus(550, () => { SON.coup('flamme', false); banniere('🔥 Brûlure', N(e.cible), '-' + e.degats + ' PV'); const c = carteEl(e.cible); rejouer(c, 'touche'); particules(c, '🔥', 4); flotter(c, '-' + e.degats); }); break;
         case 'etat': plus(250, () => { if (e.etat === 'etourdi') { flotter(carteEl(e.cible), '💫 Étourdi', 'info'); ajouterEffet('Étourdi !'); } if (e.etat === 'brulure') ajouterEffet('Brûlure 2 tours'); }); break;
-        case 'interception': plus(400, () => { flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
-        case 'garde': plus(350, () => { flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
+        case 'interception': plus(400, () => { SON.jouer('garde'); flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
+        case 'garde': plus(350, () => { SON.jouer('garde'); flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
         case 'presage': plus(350, () => { flotter(carteEl(e.cible), '⏩ joue ensuite', 'info'); ajouterEffet(N(e.cible) + ' joue juste après'); }); break;
-        case 'bouclier': plus(220, () => { flotter(carteEl(e.cible), '🔰', 'info'); ajouterEffet('Bouclier levé'); }); break;
+        case 'bouclier': plus(220, () => { SON.jouer('garde'); flotter(carteEl(e.cible), '🔰', 'info'); ajouterEffet('Bouclier levé'); }); break;
         case 'bouclierUse': plus(200, () => { flotter(carteEl(e.cible), '🔰 amorti', 'info'); }); break;
-        case 'lie': plus(1300, () => {
+        case 'lie': plus(1300, () => { SON.jouer('lie');
           const u = M.unite(etat, e.cible);
           banniere('🧵 Le nœud tient !', u.emoji + ' ' + u.nom + ' se lie à toi', partie.echo ? 'Écho : le lien ne sera pas gardé' : 'Elle rejoindra ta Collection');
           $('banniere').classList.add('fort');
@@ -1028,23 +1110,23 @@
           partie.lies.push(u.id); partie.vaincus++;
           $('filProgres').style.width = Math.round(100 * partie.vaincus / partie.totalEnnemis) + '%';
         }); break;
-        case 'lienRate': plus(700, () => { const u = M.unite(etat, e.cible); banniere('🧵 Le fil glisse...', u.nom + ' résiste', 'Chance : ' + Math.round(100 * e.chance) + ' %'); flotter(carteEl(e.cible), 'Lien raté', 'faible'); journal('Le lien a glissé.'); clotho('lienRate'); }); break;
-        case 'releve': plus(900, () => { banniere('💨 Second Souffle', N(e.cible) + ' se relève !', '25 % des PV'); particules(carteEl(e.cible), '✨', 8); journal(N(e.cible) + ' se relève grâce au Second Souffle.'); }); break;
+        case 'lienRate': plus(700, () => { SON.jouer('lienRate'); const u = M.unite(etat, e.cible); banniere('🧵 Le fil glisse...', u.nom + ' résiste', 'Chance : ' + Math.round(100 * e.chance) + ' %'); flotter(carteEl(e.cible), 'Lien raté', 'faible'); journal('Le lien a glissé.'); clotho('lienRate'); }); break;
+        case 'releve': plus(900, () => { SON.jouer('niveau'); banniere('💨 Second Souffle', N(e.cible) + ' se relève !', '25 % des PV'); particules(carteEl(e.cible), '✨', 8); journal(N(e.cible) + ' se relève grâce au Second Souffle.'); }); break;
         case 'aveugle': plus(450, () => { flotter(carteEl(e.cible), '🙈 aveuglé', 'info'); ajouterEffet('Le Cyclope est aveuglé', true); journal('Le Cyclope est aveuglé : sa prochaine attaque risque de rater.'); }); break;
         case 'oeil': plus(350, () => { flotter(carteEl(e.cible), '👁️ prochain coup critique', 'info'); ajouterEffet(N(e.cible) + ' : prochain coup critique'); }); break;
         case 'recul': plus(300, () => { flotter(carteEl(e.cible), '⏪ recule', 'info'); ajouterEffet('Recule dans la File'); }); break;
         case 'ko': plus(800, () => {
           const u = M.unite(etat, e.cible);
-          rejouer(carteEl(e.cible), 'effiloche');
+          rejouer(carteEl(e.cible), 'effiloche'); SON.jouer('ko');
           ajouterEffet(N(e.cible) + ' tombe');
           journal(N(e.cible) + ' tombe.');
           if (u.camp === 'allie') { partie.kos++; clotho('ko'); } else { P.noterCodex(profil, u.id, 'vaincu'); partie.vaincus++; $('filProgres').style.width = Math.round(100 * partie.vaincus / partie.totalEnnemis) + '%'; }
         }); break;
-        case 'gloirePleine': plus(300, () => { journal('🏆 La Gloire est pleine !'); clotho('gloire'); }); break;
+        case 'gloirePleine': plus(300, () => { SON.jouer('gloire'); journal('🏆 La Gloire est pleine !'); clotho('gloire'); }); break;
         case 'cauterise': plus(400, () => { flotter(carteEl(e.cible), '♨️ cautérisé', 'info'); ajouterEffet('Plaie cautérisée'); }); break;
-        case 'tete': plus(600, () => { flotter(carteEl(e.cible), '🐍 +1 tête', 'faible'); ajouterEffet('Une tête repousse ! (' + e.tetes + ')', true); journal('Une tête repousse (' + e.tetes + ').'); clotho('tete'); }); break;
+        case 'tete': plus(600, () => { SON.jouer('tete'); flotter(carteEl(e.cible), '🐍 +1 tête', 'faible'); ajouterEffet('Une tête repousse ! (' + e.tetes + ')', true); journal('Une tête repousse (' + e.tetes + ').'); clotho('tete'); }); break;
         case 'teteAttaque': plus(250, () => ajouterEffet('Morsure d\'une autre tête')); break;
-        case 'etourdi': plus(650, () => { banniere('💫 Étourdi', N(e.cible) + ' perd son tour', ''); flotter(carteEl(e.cible), '💫', 'info'); }); break;
+        case 'etourdi': plus(650, () => { SON.jouer('etourdi'); banniere('💫 Étourdi', N(e.cible) + ' perd son tour', ''); flotter(carteEl(e.cible), '💫', 'info'); }); break;
       }
     });
     plus(evenements.length ? 450 : 0, () => {});
@@ -1139,5 +1221,5 @@
   }
   accueil();
   $('etatSync').textContent = LIBELLES_SYNC[S.conf() ? 'envoi' : 'local'];
-  synchroniser();
+  if (!rejoindre()) synchroniser();
 })();
