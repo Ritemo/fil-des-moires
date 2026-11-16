@@ -46,7 +46,19 @@
     } catch (e) { return 'reseau'; }
   }
 
-  racine.Sync = {
+  // Classement de tous les joueurs du même script (nécessite la dernière version de sauvegarde/Code.gs)
+  async function classement() {
+    const c = lireConf(); if (!c) return { erreur: 'local' };
+    try {
+      const r = await fetch(adresse(c.url, c.cle, c.joueur) + '&classement=1', { cache: 'no-store' });
+      const j = await r.json();
+      if (!j.ok) return { erreur: 'cle' };
+      if (!j.classement) return { erreur: 'script' }; // ancien script, pas encore mis à jour
+      return { liste: j.classement };
+    } catch (e) { return { erreur: 'reseau' }; }
+  }
+
+  racine.Sync = { classement,
     conf: lireConf, configurer: ecrireConf, telecharger, envoyer, tester,
     etat: () => etat, surChangement: f => { surEtat = f; }
   };

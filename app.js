@@ -258,10 +258,12 @@
     document.querySelector('.outilsTest').style.display = partie ? 'none' : '';
     $('btnInviter').closest('.carteReglage').style.display = partie ? 'none' : '';
     const r = SON.reglages(); $('reglageSfx').checked = r.sfx !== false; $('reglageAmb').checked = r.amb !== false;
+    $('reglagePseudo').value = profil.pseudo || '';
     $('reglageVoix').checked = VOIX.actif(); $('reglageVoix').disabled = !VOIX.disponible();
     const c = S.conf(); $('joueurActuel').textContent = c && c.joueur ? 'Partie de ' + c.joueur.charAt(0).toUpperCase() + c.joueur.slice(1) : '';
     ecran('reglages');
   };
+  $('reglagePseudo').onchange = e => { profil.pseudo = e.target.value.trim().slice(0, 20); sauver(); };
   $('reglageSfx').onchange = e => SON.regler('sfx', e.target.checked);
   $('reglageAmb').onchange = e => SON.regler('amb', e.target.checked);
   $('reglageVoix').onchange = e => { VOIX.regler(e.target.checked); if (e.target.checked) VOIX.dire('clotho', 'Je te lirai les paroles de l\'histoire.'); };
@@ -320,12 +322,13 @@
       if (r !== 'ok') { $('rejMsg').textContent = r === 'cle' ? '❌ Ta clé n\'est pas encore active : demande à la personne qui t\'a invité de vérifier l\'étape 1.' : '❌ Pas de connexion : réessaie dans un moment.'; return; }
       S.configurer({ url: inv.u, cle: inv.c, joueur: inv.j });
       if (remplace || (actuel && actuel.joueur !== inv.j)) { profil = migrer(profilVide()); stock.ecrire('profil', profil); }
+      if (!profil.pseudo) profil.pseudo = Prenom;
       $('modale').classList.remove('visible');
       await synchroniser(); accueil();
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.13.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.14.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1232,6 +1235,26 @@
     if (!profil.vus.intro && window.Cinematique) return Cinematique.jouer(() => { profil.vus.intro = true; sauver(); demarrer(false); });
     demarrer(false);
   };
+  // ---------- Classement des tisserands (tous les joueurs du même script) ----------
+  $('btnClassement').onclick = async () => {
+    $('titreModale').textContent = '🏆 Les tisserands'; $('onglets').innerHTML = '';
+    $('lexiqueCorps').innerHTML = '<p class="small">Chargement...</p>'; $('modale').classList.add('visible');
+    const r = await S.classement();
+    if (r.erreur) {
+      $('lexiqueCorps').innerHTML = '<p>' + ({ local: 'Le classement réunit les joueurs qui sauvegardent sur le même script Google. Configure d\'abord la sauvegarde commune (Réglages, Sauvegarde).',
+        script: 'Le script de sauvegarde doit être mis à jour pour afficher le classement : remplace son code par la dernière version de sauvegarde/Code.gs, puis Déployer, Gérer les déploiements, modifier, Nouvelle version.',
+        cle: 'La sauvegarde commune refuse la clé de cet appareil.', reseau: 'Pas de connexion : réessaie dans un moment.' })[r.erreur] + '</p>';
+      return;
+    }
+    const moi = profil.pseudo || (S.conf() && S.conf().joueur ? S.conf().joueur.charAt(0).toUpperCase() + S.conf().joueur.slice(1) : 'Joueur principal');
+    const liste = r.liste.sort((a, b) => b.etoiles - a.etoiles || b.jour - a.jour);
+    const medaille = k => ['🥇', '🥈', '🥉'][k] || (k + 1) + '.';
+    $('lexiqueCorps').innerHTML = '<p class="small">Classés par étoiles gagnées. Chacun joue à son rythme : le jour atteint compte moins que la qualité de la tapisserie.</p>' +
+      liste.map((j, k) => `<div class="classe ${j.nom === moi ? 'moi' : ''}"><div class="rangC">${medaille(k)}</div><canvas width="200" height="250" data-k="${k}"></canvas>
+        <div class="infos"><b>${j.nom}</b>Jour ${j.jour} · ★ ${j.etoiles} · ${j.parfaits} parfait${j.parfaits > 1 ? 's' : ''}<br>Niveau ${j.niveau} · 🐾 ${j.creatures} liée${j.creatures > 1 ? 's' : ''}${j.sceaux ? ' · ✨ Sceau de Maïa' : ''}${j.serie > 1 ? ' · série ' + j.serie + ' j' : ''}</div></div>`).join('');
+    $('lexiqueCorps').querySelectorAll('canvas').forEach(cv => T.dessiner(cv, liste[+cv.dataset.k].rangs));
+  };
+
   const revoirIntro = () => window.Cinematique && Cinematique.jouer(() => { profil.vus.intro = true; sauver(); });
   $('btnIntro').onclick = revoirIntro;
   $('btnTapisInfo').onclick = revoirIntro;

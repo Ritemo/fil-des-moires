@@ -11,7 +11,32 @@ const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 function doGet(e) {
   const joueur = nettoyer(e.parameter.joueur);
   if (joueur === false || !cleValide(joueur, e.parameter.cle)) return reponse({ ok: false, erreur: 'cle' });
+  if (e.parameter.classement) return reponse({ ok: true, classement: classement() });
   return reponse({ ok: true, donnees: lire(joueur) });
+}
+
+// Classement : un résumé de la progression de chaque joueur (jamais les clés ni les sauvegardes complètes)
+function classement() {
+  const props = PropertiesService.getScriptProperties().getKeys();
+  const joueurs = props.filter(function (k) { return k === 'CLE' || k.indexOf('CLE_') === 0; })
+    .map(function (k) { return k === 'CLE' ? '' : k.slice(4).toLowerCase(); });
+  return joueurs.map(function (j) {
+    const p = lire(j);
+    if (!p) return null;
+    const rangs = (p.rangs || []).filter(function (r) { return !r.echo; });
+    return {
+      nom: p.pseudo || (j ? j.charAt(0).toUpperCase() + j.slice(1) : 'Joueur principal'),
+      jour: p.joursJoues || 0, niveau: p.niveau || 1,
+      etoiles: rangs.reduce(function (n, r) { return n + (r.victoire ? r.etoiles || 0 : 0); }, 0),
+      victoires: rangs.filter(function (r) { return r.victoire; }).length,
+      parfaits: rangs.filter(function (r) { return r.victoire && r.etoiles === 3; }).length,
+      creatures: (p.creatures || []).length,
+      sceaux: ((p.histoire || {}).sceaux || []).length,
+      serie: (p.serie || {}).jours || 0,
+      derniereDate: p.derniereDate || null,
+      rangs: rangs.map(function (r) { return { jour: r.jour, victoire: r.victoire, etoiles: r.etoiles }; })
+    };
+  }).filter(function (x) { return x; });
 }
 
 function doPost(e) {

@@ -66,6 +66,10 @@ Chaque invité a sa propre partie, sauvegardée dans le même script mais dans u
 3. Dans le script : *Propriétés du script* > *Ajouter* `CLE_PRENOM` (ex. `CLE_JULIE`) avec la clé affichée.
 4. Envoyer le lien à l'invité : il l'ouvre une fois sur chacun de ses appareils, et sa partie est sauvegardée.
 
+### Classement
+
+Onglet *Tapisserie* > 🏆 : la progression de tous les joueurs du même script (nom, jour, étoiles, victoires parfaites, mini-tapisserie). Chacun choisit son nom dans les *Réglages*. Nécessite la dernière version de `sauvegarde/Code.gs` (Nouvelle version du déploiement).
+
 **Sans script** : la même fenêtre propose un transfert manuel par code à copier-coller.
 
 ## Gestes courants

@@ -386,6 +386,12 @@
   #cine .halo { opacity: 0; animation: apparaitSvg 1.2s 2s forwards; }
   #cine .ciseaux { animation: claque 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; } @keyframes claque { 50% { transform: rotate(-18deg) scale(1.1); } }
   #cine .scint { animation: scint 2.6s ease-in-out infinite; }
+  .classe { display: flex; gap: 10px; align-items: center; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; }
+  .classe.moi { border-color: var(--or); box-shadow: 0 0 10px rgba(224,176,79,.3); }
+  .classe .rangC { font-size: 26px; width: 34px; text-align: center; flex: none; }
+  .classe canvas { width: 54px; height: auto; border-radius: 4px; flex: none; }
+  .classe .infos { flex: 1; min-width: 0; font-size: 13px; color: var(--doux); line-height: 1.5; }
+  .classe .infos b { display: block; color: var(--or); font-size: 16px; font-weight: normal; font-variant: small-caps; }
   .carteRoute { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; }
   .carteRoute h3 { margin: 0 0 6px; font-variant: small-caps; color: var(--or); font-weight: normal; font-size: 17px; }
   .palier { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 14px; }
@@ -441,7 +447,7 @@
   <!-- Onglet Tapisserie : la tapisserie en grand et la Chronique du Chant -->
   <section class="ecran onglet" id="tapisserie">
     <div class="tapisPlein">
-      <div class="tete"><b>Tapisserie du Chant I</b><span id="tapisCompte"></span><button class="lien" id="btnTapisInfo">❔</button><button class="lien" id="btnChroniqueModale">📜 Chronique</button></div>
+      <div class="tete"><b>Tapisserie</b><span id="tapisCompte"></span><button class="rond" id="btnClassement" title="Classement">🏆</button><button class="rond" id="btnTapisInfo" title="Revoir l'introduction">❔</button><button class="rond" id="btnChroniqueModale" title="Chronique">📜</button></div>
       <canvas id="tapisAccueil" width="440" height="560"></canvas>
       <div class="legende" id="tapisLegende"></div>
     </div>
@@ -459,6 +465,7 @@
         <option value="muette">muette</option>
       </select>
     </div>
+    <div class="carteReglage"><b>Ton nom</b><input id="reglagePseudo" maxlength="20" placeholder="pour le classement" style="max-width:55%"></div>
     <div class="carteReglage"><b>Bruitages</b><label class="interrupteur"><input type="checkbox" id="reglageSfx"><span></span></label></div>
     <div class="carteReglage"><b>Ambiance</b><label class="interrupteur"><input type="checkbox" id="reglageAmb"><span></span></label></div>
     <div class="carteReglage"><b>Voix de l'histoire</b><label class="interrupteur"><input type="checkbox" id="reglageVoix"><span></span></label></div>
