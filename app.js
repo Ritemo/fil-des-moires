@@ -2,6 +2,9 @@
 (function () {
   'use strict';
   if (window.Emojis) window.Emojis.activer(document.body);
+  // Au rafraîchissement, le navigateur restaure l'ancienne position de défilement : on la remet à zéro
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
   const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves, C = window.Chant1;
   const $ = id => document.getElementById(id);
 
@@ -88,7 +91,7 @@
   function ecran(id) {
     document.querySelectorAll('.ecran').forEach(e => e.classList.toggle('actif', e.id === id));
     const onglet = ONGLETS.includes(id) && !(id === 'collection' && modePreparation);
-    document.body.classList.toggle('fixe', onglet);
+    document.body.classList.toggle('fixe', onglet); document.documentElement.classList.toggle('fixe', onglet);
     $('chipsAccueil').style.display = onglet ? 'flex' : 'none';
     document.querySelectorAll('#ongletsBas button').forEach(b => b.classList.toggle('on', b.dataset.onglet === id));
     if (onglet) { majBandeau(); window.scrollTo(0, 0); }

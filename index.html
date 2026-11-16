@@ -286,13 +286,22 @@
   .chroJour .c { color: #e8c27a; margin-top: 4px; }
   .chroVide { color: var(--doux); font-style: italic; font-size: 14px; margin-bottom: 6px; }
   /* Onglets façon Clash Royale : chaque onglet tient dans l'écran, la barre reste en bas */
-  body.fixe #app { height: 100dvh; min-height: 0; overflow: hidden; }
+  html.fixe, html.fixe body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+  body.fixe #app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
   body.fixe .ecran.onglet.actif { min-height: 0; overflow-y: auto; gap: 8px; padding-bottom: 4px; }
   body.fixe #accueil > * { flex-shrink: 0; }
   body.fixe #accueil > #parchAccueil { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
   #parchAccueil h2 { margin-top: 2px; }
   #parchAccueil .precedemment { margin: 8px 0 0; }
-  header h1 { white-space: nowrap; }
+  header h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  header > span { flex-shrink: 0; }
+  @media (max-width: 400px) {
+    body.fixe header h1 { font-size: 14px; }
+    header .rond { width: 30px; height: 30px; font-size: 15px; }
+    header > span { gap: 5px !important; }
+    .chips { gap: 5px; font-size: 12px; }
+  }
+  @media (max-width: 350px) { body.fixe header h1 { font-size: 0; } body.fixe header h1 img.emo { width: 22px; height: 22px; } }
   body.fixe header h1 { font-size: 16px; }
   .chips { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--doux); white-space: nowrap; }
   .chips b { color: var(--or); font-weight: normal; }
