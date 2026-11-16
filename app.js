@@ -3,6 +3,7 @@
   'use strict';
   if (window.Emojis) window.Emojis.activer(document.body);
   const SON = window.Son || { coup() {}, jouer() {}, tissage() {}, ambiance() {}, regler() {}, reglages: () => ({}) };
+  const VOIX = window.Voix || { dire: () => Promise.resolve(), stop() {}, regler() {}, actif: () => false, disponible: () => false };
   const AMB = { I: 'foret', II: 'ruines', III: 'fils', IV: 'etang' };
   let ambChapitre = 'foret';
   const majAmbChapitre = ep => { ambChapitre = AMB[ep.chapitre ? ep.chapitre.num : 'IV'] || 'etang'; };
@@ -66,7 +67,7 @@
     const j = partie ? partie.jour : profil.joursJoues + 1;
     return j <= 3 ? 'bavarde' : j <= 10 ? 'discrete' : 'muette';
   }
-  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'don', 'collection', 'niveau', 'gardien', 'tapisserie', 'discret', 'intention', 'lierCarte', 'lier', 'lienRate', 'lie', 'choixCrea', 'codex', 'evolution'];
+  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'don', 'collection', 'niveau', 'gardien', 'tapisserie', 'discret', 'intention', 'lierCarte', 'lier', 'lienRate', 'lie', 'choixCrea', 'codex', 'evolution', 'energie', 'prouesseDispo'];
   const fileClotho = [];
   function clotho(cle) {
     if (profil.vus[cle]) return;
@@ -252,11 +253,13 @@
   $('btnReglages').onclick = () => {
     if (partie) return;
     const r = SON.reglages(); $('reglageSfx').checked = r.sfx !== false; $('reglageAmb').checked = r.amb !== false;
+    $('reglageVoix').checked = VOIX.actif(); $('reglageVoix').disabled = !VOIX.disponible();
     const c = S.conf(); $('joueurActuel').textContent = c && c.joueur ? 'Partie de ' + c.joueur.charAt(0).toUpperCase() + c.joueur.slice(1) : '';
     ecran('reglages');
   };
   $('reglageSfx').onchange = e => SON.regler('sfx', e.target.checked);
   $('reglageAmb').onchange = e => SON.regler('amb', e.target.checked);
+  $('reglageVoix').onchange = e => { VOIX.regler(e.target.checked); if (e.target.checked) VOIX.dire('clotho', 'Je te lirai les paroles de l\'histoire.'); };
 
   // ---------- Inviter un joueur : une partie séparée, sauvegardée dans le même script Google ----------
   const motsCle = ['olivier', 'lyre', 'amphore', 'trident', 'laurier', 'chouette', 'egide', 'nectar', 'meandre', 'colonne', 'griffon', 'sirene', 'cyprès', 'fuseau', 'navette', 'oracle'];
@@ -317,7 +320,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.10.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.11.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = accueil;
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -354,13 +357,21 @@
     $('sceneLignes').innerHTML = ep.scene.map(repliqueHtml).join('');
     $('sceneChoix').innerHTML = '';
     const lignes = [...$('sceneLignes').children];
-    let i = 0, minuteur = null;
+    let i = 0, minuteur = null, coupe = false;
     const fin = () => { $('sceneOk').textContent = 'Au combat !'; };
-    const suivante = () => { if (i < lignes.length) { lignes[i++].classList.add('vue'); if (i === lignes.length) fin(); else minuteur = setTimeout(suivante, T_(1300)); } };
+    // Avec les voix : chaque réplique s'affiche puis est lue, la suivante attend la fin de la lecture
+    const suivante = () => {
+      if (coupe || i >= lignes.length) return;
+      const k = i++; lignes[k].classList.add('vue');
+      const apres = () => { if (i === lignes.length) fin(); else minuteur = setTimeout(suivante, T_(VOIX.actif() ? 350 : 1300)); };
+      // si la voix échoue ou s'arrête trop tôt, on laisse quand même le temps de lire
+      const t0 = Date.now(), lecture = T_(Math.min(1300, 25 * ep.scene[k][1].length));
+      if (VOIX.actif()) VOIX.dire(ep.scene[k][0], ep.scene[k][1]).then(() => { if (!coupe) setTimeout(apres, Math.max(0, lecture - (Date.now() - t0))); }); else apres();
+    };
     $('sceneOk').textContent = 'Passer'; $('sceneOk').style.display = 'block';
     $('sceneOk').onclick = () => {
-      if (i < lignes.length) { clearTimeout(minuteur); while (i < lignes.length) lignes[i++].classList.add('vue'); fin(); return; }
-      suite();
+      if (i < lignes.length) { coupe = true; VOIX.stop(); clearTimeout(minuteur); while (i < lignes.length) lignes[i++].classList.add('vue'); fin(); return; }
+      coupe = true; VOIX.stop(); suite();
     };
     ecran('scene');
     minuteur = setTimeout(suivante, T_(250));
@@ -384,9 +395,10 @@
       sauver();
       $('sceneChoix').innerHTML = '';
       $('sceneLignes').insertAdjacentHTML('beforeend', repliqueHtml(['narrateur', o.resultat]));
+      VOIX.dire('narrateur', o.resultat);
       setTimeout(() => $('sceneLignes').lastElementChild.classList.add('vue'), 30);
       $('sceneOk').textContent = 'Continuer'; $('sceneOk').style.display = 'block';
-      $('sceneOk').onclick = () => { if (niveaux) clotho('niveau'); suite(); };
+      $('sceneOk').onclick = () => { VOIX.stop(); if (niveaux) clotho('niveau'); suite(); };
     });
     ecran('scene');
   }
@@ -538,6 +550,7 @@
     const pers = parole && (C.PERSOS[parole[0]] || C.PERSOS.narrateur);
     $('finQui').textContent = pers ? (pers.emoji + ' ' + (pers.nom || '')).trim() + ' :' : 'Clotho :';
     $('finClotho').textContent = parole ? parole[1] : D.CLOTHO[victoire ? 'victoire' : 'defaite'];
+    if (parole && !partie.echo) setTimeout(() => VOIX.dire(parole[0], parole[1]), T_(1800));
     $('btnRetour').disabled = true;
     SON.jouer(victoire ? 'victoire' : 'defaite');
     setTimeout(() => SON.tissage(T_(2400)), 900);
@@ -708,7 +721,7 @@
     $('btnColOk').style.display = preparation ? 'block' : 'none';
     if (preparation) {
       const noms = [...new Set(partie.ep.rencontres.flatMap(r => r.ennemis))].map(id => { const e = D.ENNEMIS[id]; return e.emoji + ' ' + e.nom + ' (' + aff(e.affinite).icone + ', faible contre ' + listeAff(faiblesses(e.affinite)) + ')'; });
-      $('colMenace').textContent = 'Ce qui t\'attend : ' + noms.join(' · ') + '. Touche une carte pour l\'équiper ou la retirer.';
+      $('colMenace').textContent = 'Ce qui t\'attend : ' + noms.join(' · ') + '. Touche une carte pour voir ce qu\'elle fait, puis l\'équiper ou la retirer.';
     } else $('colMenace').textContent = 'Touche une carte pour voir son détail, l\'améliorer ou l\'équiper. ✓ = équipée.';
     const heros = P.herosDisponibles(profil);
     const creaturesDispo = ['griffon'].concat(profil.creatures).filter(id => heros.includes(id));
@@ -725,11 +738,7 @@
     $('colListe').querySelectorAll('.tuile:not(.choixCrea)').forEach(t => t.onclick = () => {
       const id = t.dataset.id;
       if (!profil.cartes[id]) return;
-      if (modePreparation && !P.carteInfo(id).carte.prouesse) {
-        const h = P.carteInfo(id).heros.id;
-        if (!P.basculerEquipement(profil, h, id)) { $('colMenace').textContent = '4 cartes déjà équipées pour ce héros : retire-en une d\'abord.'; return; }
-        sauver(); ouvrirCollection(true);
-      } else ouvrirFiche(id);
+      ouvrirFiche(id);
     });
     ecran('collection');
   }
@@ -870,7 +879,7 @@
     const a = M.acteurSuivant(partie.etat);
     const c = conseiller(partie.etat, a);
     if (!c) return;
-    document.querySelectorAll('#actions button').forEach(b => b.classList.toggle('conseil', b.dataset.id === c.comp.id));
+    document.querySelectorAll('.btnAction').forEach(b => b.classList.toggle('conseil', b.dataset.id === c.comp.id));
     partie.conseil = c;
   }
   $('btnIndice').onclick = montrerConseil;
@@ -880,24 +889,37 @@
     $('tourDe').textContent = 'À ' + acteur.nom + ' · Énergie 🔹' + acteur.energie + '/' + acteur.energieMax;
     $('btnAnnuler').style.display = 'none';
     $('desc').textContent = 'Choisis une compétence, puis une cible.';
-    $('actions').innerHTML = '';
+    $('actions').innerHTML = ''; $('actionsUtil').innerHTML = '';
+    document.querySelectorAll('.btnProuesse').forEach(x => x.remove());
     partie.conseil = null;
+    // Trois places : les 4 cartes équipées, une rangée d'actions de base (Garde, Lier), et la Prouesse sur la jauge de Gloire
     M.competencesDisponibles(partie.etat, acteur).forEach(c => {
       if (c.prouesse && !c.possible) return;
       const b = document.createElement('button');
-      b.dataset.id = c.id;
-      b.innerHTML = `${aff(c.affinite).icone} ${c.nom}${c.niveau > 1 ? ' <span style="color:#b07be0">Nv ' + c.niveau + '</span>' : ''}<small>${resume(c)}</small>`;
-      b.disabled = !c.possible;
-      if (c.prouesse) b.classList.add('prouesse');
-      b.onclick = () => choisir(acteur, c, b);
-      $('actions').appendChild(b);
+      b.dataset.id = c.id; b.classList.add('btnAction');
+      if (c.prouesse) {
+        b.className = 'btnAction btnProuesse'; b.innerHTML = '🏆 ' + c.nom;
+        b.onclick = () => choisir(acteur, c, b);
+        $('blocGloire').appendChild(b); clotho('prouesseDispo'); return;
+      }
+      const base = c.type === 'garde' || c.type === 'lier';
+      b.innerHTML = base ? `${c.art || aff(c.affinite).icone} ${c.nom}<small>${c.cout ? '🔹' + c.cout : 'Gratuit'}</small>`
+        : `${aff(c.affinite).icone} ${c.nom}${c.niveau > 1 ? ' <span style="color:#b07be0">Nv ' + c.niveau + '</span>' : ''}<small>${resume(c)}</small>`;
+      if (!c.possible) {
+        b.classList.add('manque');
+        const manqueEnergie = (c.cout || 0) > acteur.energie;
+        b.onclick = () => { $('desc').innerHTML = manqueEnergie
+          ? `🔹 Pas assez d'Énergie : ${c.nom} en coûte ${c.cout}, ${acteur.nom} n'en a que ${acteur.energie}. L'Énergie remonte de 1 à chaque tour (5 au maximum) : joue une carte gratuite ou la Garde en attendant.`
+          : c.type === 'lier' ? '🧵 Lier : aucune créature n\'est assez affaiblie (moins de 35 % de PV, hors Gardien).' : 'Pas de cible possible pour le moment.'; };
+      } else b.onclick = () => choisir(acteur, c, b);
+      (base ? $('actionsUtil') : $('actions')).appendChild(b);
     });
     if (guidage() === 'bavarde') montrerConseil();
   }
 
   function choisir(acteur, comp, bouton) {
     if (occupe) return;
-    document.querySelectorAll('.actions button').forEach(b => b.classList.remove('choisi'));
+    document.querySelectorAll('.btnAction').forEach(b => b.classList.remove('choisi'));
     bouton.classList.add('choisi');
     $('btnAnnuler').style.display = 'inline';
     nettoyerCibles();
@@ -945,7 +967,8 @@
   function executer(acteur, comp, cibleUid) {
     if (occupe) return;
     occupe = true;
-    $('actions').innerHTML = ''; $('desc').textContent = ''; $('btnAnnuler').style.display = 'none';
+    $('actions').innerHTML = ''; $('actionsUtil').innerHTML = ''; document.querySelectorAll('.btnProuesse').forEach(x => x.remove());
+    $('desc').textContent = ''; $('btnAnnuler').style.display = 'none';
     nettoyerCibles();
     const ev = M.agir(partie.etat, acteur.uid, comp.id, cibleUid);
     const t = animer(ev);
@@ -1202,6 +1225,7 @@
   $('btnJouer').onclick = () => demarrer(false);
   $('btnEcho').onclick = () => demarrer(true);
   $('btnRetour').onclick = () => {
+    VOIX.stop();
     const suivante = () => { const id = partie && partie.aPresenter && partie.aPresenter.shift(); if (id) presenterCompagnon(id, suivante, true); else accueil(); };
     const ch = partie && !partie.echo && partie.ep.choix, cle = partie && 'j' + partie.ep.jour;
     if (ch && !profil.histoire.choix[cle]) {

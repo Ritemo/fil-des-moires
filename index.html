@@ -116,6 +116,15 @@
   .actions button small b { color: var(--energie); font-weight: normal; }
   .actions button.choisi { border-color: var(--or); background: #4a3622; }
   .actions button.prouesse { border-color: var(--or); }
+  .actions button.manque { opacity: .45; }
+  .actionsUtil { display: flex; gap: 6px; margin-top: 6px; }
+  .actionsUtil:empty { display: none; }
+  .actionsUtil button { flex: 1; padding: 6px 8px; font-size: 13px; text-align: center; background: #241a14; }
+  .actionsUtil button small { display: block; font-size: 10.5px; color: var(--doux); }
+  .actionsUtil button.choisi { border-color: var(--or); background: #4a3622; }
+  .btnProuesse { border: none; border-radius: 10px; padding: 6px 10px; font-size: 13px; font-weight: bold; color: #1b1410; background: linear-gradient(#ffd34d, #c8902e); box-shadow: 0 0 14px rgba(255,211,77,.7); animation: pulseOr 1.4s ease-in-out infinite; white-space: nowrap; }
+  .btnProuesse.choisi { outline: 2px solid #fff; }
+  @keyframes pulseOr { 50% { box-shadow: 0 0 22px rgba(255,211,77,1); transform: scale(1.04); } }
   .desc { font-size: 12px; color: var(--doux); min-height: 30px; margin-top: 6px; }
   .journal { font-size: 12px; color: var(--doux); min-height: 48px; line-height: 1.4; }
   .journal div:first-child { color: var(--texte); }
@@ -423,6 +432,7 @@
     </div>
     <div class="carteReglage"><b>Bruitages</b><label class="interrupteur"><input type="checkbox" id="reglageSfx"><span></span></label></div>
     <div class="carteReglage"><b>Ambiance</b><label class="interrupteur"><input type="checkbox" id="reglageAmb"><span></span></label></div>
+    <div class="carteReglage"><b>Voix de l'histoire</b><label class="interrupteur"><input type="checkbox" id="reglageVoix"><span></span></label></div>
     <div class="carteReglage"><b>Sauvegarde</b><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
     <div class="carteReglage"><b>Inviter un joueur</b><span class="info">Sa propre partie, séparée de la tienne</span><button class="lien" id="btnInviter">Inviter</button></div>
     <div class="info" id="joueurActuel"></div>
@@ -486,6 +496,7 @@
     <div class="panneau">
       <div class="titre"><span id="tourDe"></span><button class="lien" id="btnAnnuler" style="display:none">Annuler</button></div>
       <div class="actions" id="actions"></div>
+      <div class="actionsUtil" id="actionsUtil"></div>
       <div class="desc" id="desc"></div>
     </div>
     <div class="journal" id="journal"></div>
@@ -537,6 +548,7 @@
 <script src="sync.js"></script>
 <script src="emojis.js"></script>
 <script src="son.js"></script>
+<script src="voix.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

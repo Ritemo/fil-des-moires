@@ -357,7 +357,8 @@
   const CLOTHO = {
     debut: "Je suis Clotho, et je tisse ta tapisserie. Chaque épreuve y ajoute un rang. En haut, la File montre qui joue, et dans quel ordre. Touche une compétence, puis une cible.",
     intention: "Au-dessus de chaque ennemi, son intention : ce qu'il va faire, à qui, et à peu près combien de dégâts. Profites-en.",
-    energie: "Les points bleus 🔹, c'est ton Énergie : +1 à chaque tour. Le Coup de torche en coûte 1. Les attaques gratuites n'en coûtent pas.",
+    energie: "Les points bleus 🔹 sous chaque héros, c'est son Énergie : elle remonte de 1 à chaque tour, jusqu'à 5. Le chiffre 🔹 sur une carte, c'est ce qu'elle coûte ; les cartes gratuites ne coûtent rien. Garde de l'Énergie pour tes grosses attaques.",
+    prouesseDispo: "La Gloire est pleine : la Prouesse de l'Errant brille sur la jauge de Gloire. Touche-la quand tu veux, c'est l'attaque la plus forte de l'équipe.",
     fantome: "Quand tu choisis une compétence, un jeton en pointillés apparaît dans la File : c'est là que tu rejoueras.",
     don: "Le Don des Moires. Une carte nouvelle, des doublons pour renforcer une carte, ou des drachmes. Choisis selon ce qui te manque.",
     collection: "Ta Collection est sur l'accueil (📜). Avec assez de doublons et de drachmes, une carte monte de niveau. À partir du jour 4, tu choisiras aussi tes 4 cartes par héros avant de partir.",
