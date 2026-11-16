@@ -2,11 +2,13 @@
 const M = require('../engine.js');
 const D = require('../data.js');
 const P = require('../progression.js');
+const E = require('../epreuves.js');
+const dateDu = (base, j) => { const d = new Date(2026, 10, 16 + base % 7 + j); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const assert = require('assert');
 const { choisirAction } = require('./ia.js');
 
 function jouerJour(profil, jour, graine) {
-  const ep = D.epreuveDuJour(jour);
+  const ep = E.epreuve(jour, dateDu(graine, jour));
   let reprise = null, gloire = 0, etat;
   for (const [k, r] of ep.rencontres.entries()) {
     etat = M.creerCombat({ graine: graine + k * 101, allies: P.equipeDuJoueur(ep, profil, jour), ennemis: P.ennemisPourJoueur(r, profil, jour), reprise, gloire, gloireActive: ep.gloire });
@@ -24,6 +26,18 @@ function jouerJour(profil, jour, graine) {
     gloire = etat.gloire;
   }
   return { victoire: true, etoiles: M.etoiles(etat) };
+}
+
+// Offrande et série douce
+{
+  const q = P.initialiser({ joursJoues: 3, rangs: [] });
+  assert(P.ouvrirOffrande(q, '2026-11-16', 1).serie === 1);
+  assert(P.ouvrirOffrande(q, '2026-11-16', 1) === null, 'Une seule Offrande par jour');
+  ['2026-11-17', '2026-11-18', '2026-11-19'].forEach((d, i) => P.ouvrirOffrande(q, d, i));
+  assert.strictEqual(q.serie.jours, 4);
+  P.ouvrirOffrande(q, '2026-11-25', 9);
+  assert.strictEqual(q.serie.jours, 1, 'Recul d\'un palier (de 3+ vers 0+1)');
+  q.rangs = [{}, {}]; assert.strictEqual(P.reclamerRoute(q, 3).type, 'carte'); assert.strictEqual(P.reclamerRoute(q, 3), null);
 }
 
 // Joueur type : prend le Don « carte inédite » sinon les doublons, et améliore dès que possible

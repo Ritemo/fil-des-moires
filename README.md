@@ -2,7 +2,7 @@
 
 Jeu d'aventure au tour par tour avec **une épreuve par jour**, inspiré du *Tiers Âge*, de Pokémon et de la mythologie grecque. Projet personnel, 100 % gratuit.
 
-**Phase actuelle : 1 (première livraison) : cartes, XP, drachmes, Collection, Don des Moires.** Les graphismes sont provisoires (des emojis).
+**Phase actuelle : 1 terminée : cartes, XP, drachmes, Collection, Don des Moires, Offrande du jour, série douce, Route de la Tapisserie, épreuves générées (Hydre, Cyclope, Chimère, Sirène).** Les graphismes sont provisoires (des emojis).
 
 ## Comment ça marche
 
@@ -13,7 +13,8 @@ app.js      l'interface sur téléphone
 index.html  la page, avec son style
 sync.js     la sauvegarde commune entre appareils
 tapisserie.js le dessin de la Tapisserie
-progression.js cartes, niveaux, XP, drachmes, Don des Moires
+progression.js cartes, niveaux, XP, drachmes, Don des Moires, Offrande, série, Route
+epreuves.js  l'épreuve du jour (prologue écrit, puis générée selon la date)
 sauvegarde/ le script Google Apps Script de sauvegarde
 sw.js       le cache hors ligne (changer VERSION à chaque modification)
 tests/      les tests et la simulation d'équilibrage

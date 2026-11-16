@@ -40,6 +40,7 @@
       const anime = progression != null && k === visibles.length - 1;
       const p = anime ? progression : 1;
       const [c1, c2] = couleurs(r);
+      x.globalAlpha = r.echo ? 0.4 : 1;
       const largeur = (W - 2 * marge) * p;
       const pas = 6;
       for (let i = 0; i * pas < largeur; i++) {
@@ -62,8 +63,9 @@
         x.fillRect(marge + hRang + 3, y + 3, lt + 10, hRang - 10);
         x.fillStyle = '#f6ead2';
         x.fillText(texte, marge + hRang + 8, y + (hRang - 4) / 2 + 1);
+        if (r.echo) { x.textAlign = 'right'; x.fillStyle = '#f6ead2'; x.fillText('ÉCHO · non tissé', W - marge - 6, y + (hRang - 4) / 2 + 1); x.textAlign = 'left'; }
         x.fillStyle = 'rgba(30,18,10,.85)';
-        if (r.victoire) { x.textAlign = 'right'; x.fillText('★'.repeat(r.etoiles), W - marge - 6, y + (hRang - 4) / 2 + 1); }
+        if (r.victoire && !r.echo) { x.textAlign = 'right'; x.fillText('★'.repeat(r.etoiles), W - marge - 6, y + (hRang - 4) / 2 + 1); }
       } else {
         // la navette
         x.fillStyle = '#f3e9dc';
@@ -71,6 +73,7 @@
         x.strokeStyle = c2; x.lineWidth = 2; x.beginPath(); x.moveTo(marge + largeur, y + (hRang - 4) / 2); x.lineTo(marge + largeur + 8, y + (hRang - 4) / 2); x.stroke();
       }
     });
+    x.globalAlpha = 1;
     // Rangs à venir
     for (let k = visibles.length; k < RANGS_VISIBLES; k++) {
       const y = haut + k * hRang + 2;

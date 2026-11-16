@@ -75,6 +75,39 @@
         { id: 'bourrasque', nom: 'Bourrasque', type: 'attaque', cible: 'ennemi', puissance: 38, poids: 'normal', affinite: 'vent' }
       ]
     },
+    sirene: {
+      id: 'sirene', nom: 'Sirène des récifs', emoji: '🧜‍♀️', affinite: 'onde', pvMax: 105, attaque: 26, defense: 12, vitesse: 120,
+      comportement: 'aleatoire',
+      desc: "Elle chantait pour noyer les marins. L'Effilochage a rendu son chant fou.",
+      special: "Tous les 3 tours, son Chant touche toute l'équipe et peut étourdir (25 %).",
+      competences: [
+        { id: 'griffe', nom: 'Griffe', type: 'attaque', cible: 'ennemi', puissance: 30, poids: 'normal', affinite: 'airain' },
+        { id: 'vague', nom: 'Vague', type: 'attaque', cible: 'ennemi', puissance: 36, poids: 'normal', affinite: 'onde' },
+        { id: 'chant', nom: 'Chant des abysses', type: 'attaque', cible: 'ennemi', zone: true, puissance: 16, etourdit: 0.25, poids: 'normal', affinite: 'onde', chaque: 3 }
+      ]
+    },
+    cyclope: {
+      id: 'cyclope', nom: 'Cyclope des Monts', emoji: '👹', affinite: 'roc', pvMax: 1000, attaque: 54, defense: 24, vitesse: 85,
+      mecanique: 'cyclope', comportement: 'agressif', gardien: true,
+      desc: "Un géant à l'œil unique, geôlier oublié d'une prison de pierre.",
+      special: "Lent mais très fort. Un coup de Lumière l'aveugle : sa prochaine attaque a de grandes chances de rater. Tous les 3 tours : Séisme sur toute l'équipe.",
+      competences: [
+        { id: 'massue', nom: 'Massue', type: 'attaque', cible: 'ennemi', puissance: 44, poids: 'lourd', affinite: 'airain' },
+        { id: 'rocher', nom: 'Jet de rocher', type: 'attaque', cible: 'ennemi', puissance: 38, poids: 'normal', affinite: 'roc' },
+        { id: 'seisme', nom: 'Séisme', type: 'attaque', cible: 'ennemi', zone: true, puissance: 40, poids: 'lourd', affinite: 'roc', chaque: 3 }
+      ]
+    },
+    chimere: {
+      id: 'chimere', nom: 'Chimère', emoji: '🦁', affinite: 'flamme', pvMax: 880, attaque: 44, defense: 18, vitesse: 115,
+      comportement: 'aleatoire', gardien: true,
+      desc: "Lion, chèvre et serpent à la fois. Trois têtes, trois colères.",
+      special: "Ses Crocs frappent deux fois de suite. Tous les 3 tours, son Souffle brûle toute l'équipe.",
+      competences: [
+        { id: 'crocs', nom: 'Crocs jumeaux', type: 'attaque', cible: 'ennemi', puissance: 22, coups: 2, poids: 'normal', affinite: 'airain' },
+        { id: 'cornes', nom: 'Cornes de chèvre', type: 'attaque', cible: 'ennemi', puissance: 34, poids: 'normal', affinite: 'flamme' },
+        { id: 'souffle', nom: 'Souffle ardent', type: 'attaque', cible: 'ennemi', zone: true, puissance: 30, brulure: { tours: 2, degats: 7 }, poids: 'lourd', affinite: 'flamme', chaque: 3 }
+      ]
+    },
     hydre: {
       id: 'hydre', nom: "Hydre de l'Étang", emoji: '🐉', affinite: 'onde', pvMax: 560, attaque: 31, defense: 20, vitesse: 90,
       mecanique: 'hydre', tetes: 1, tetesMax: 4, comportement: 'aleatoire', gardien: true,
@@ -202,6 +235,12 @@
     { cat: 'Cartes', icone: '⚔️', terme: 'Préparation', texte: "À partir du jour 4, avant chaque épreuve, tu choisis 4 cartes par héros. La Garde et la Prouesse sont toujours disponibles." },
     { cat: 'Cartes', icone: '🎁', terme: 'Don des Moires', texte: "Après chaque victoire, choisis 1 récompense parmi 3 : une carte inédite, des doublons ou une bourse. Passer rapporte 25 drachmes." },
     { cat: 'Cartes', icone: '✨', terme: 'Niveau d\'équipe', texte: "L'XP des épreuves fait monter le niveau de l'équipe : +4 % de PV et d'attaque par niveau pour tous tes héros. Les ennemis grandissent aussi." },
+    { cat: 'Épreuve', icone: '🏺', terme: 'Offrande du jour', texte: "Une amphore gratuite à ouvrir chaque jour sur l'accueil : des drachmes, des doublons, parfois une carte inédite. Sa qualité dépend de ta série. Les taux sont consultables." },
+    { cat: 'Épreuve', icone: '🔥', terme: 'Série', texte: "Le nombre de jours de suite où tu ouvres l'Offrande. Paliers : 3, 7, 14 jours. Un jour manqué fait reculer d'un palier, sans remise à zéro." },
+    { cat: 'Épreuve', icone: '🧵', terme: 'Fil de réserve', texte: "Gagné tous les 7 jours de série (2 au maximum). Il protège automatiquement ta série si tu manques un jour." },
+    { cat: 'Épreuve', icone: '🛤️', terme: 'Route de la Tapisserie', texte: "Aux rangs 2, 4, 6, 9, 12 et 15 de ta Tapisserie, une récompense connue à l'avance : une carte inédite, un Fil de réserve ou une amphore dorée." },
+    { cat: 'Épreuve', icone: '☀️', terme: 'Épreuve des Dieux', texte: "Le dimanche, le Gardien est renforcé, et l'XP et les drachmes sont multipliés par 1,5." },
+    { cat: 'États', icone: '🙈', terme: 'Aveuglé', texte: "Propre au Cyclope : touché par la Lumière, sa prochaine attaque a 45 % de chances de rater." },
     { cat: 'Épreuve', icone: '📅', terme: 'Épreuve du jour', texte: "Une nouvelle épreuve chaque jour. Une seule tentative compte pour les récompenses." },
     { cat: 'Épreuve', icone: '🔁', terme: 'Mode Écho', texte: "Rejouer l'épreuve après ta tentative, pour t'entraîner. Aucune récompense." },
     { cat: 'Épreuve', icone: '⭐', terme: 'Étoiles', texte: "3 : victoire sans perte. 2 : un héros tombé. 1 : victoire de justesse." }

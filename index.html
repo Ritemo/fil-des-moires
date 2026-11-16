@@ -246,6 +246,16 @@
   .compTags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; } .compTags .tag { font-size: 12px; padding: 3px 9px; border-radius: 10px; background: var(--carte2); }
   .compBio { line-height: 1.5; margin: 4px 0; } .compApport { color: #f0c27a; font-size: 14px; margin: 0; }
   .compCorps .grille { width: 100%; } .compCorps .principal { width: 100%; margin-top: 8px; }
+
+  .route { font-size: 12px; color: var(--or); margin-top: 4px; }
+  .offrande { display: flex; align-items: center; gap: 10px; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px; cursor: pointer; }
+  .offrande.dispo { border-color: var(--or); background: linear-gradient(90deg, #3b2b1b, #2a1f18); box-shadow: 0 0 14px rgba(224,176,79,.3); }
+  .offrande .amph { font-size: 34px; } .offrande.dispo .amph { animation: secoue 1.6s infinite; } .offrande .amph.eteinte { opacity: .4; }
+  .offrande .txt { flex: 1; display: flex; flex-direction: column; } .offrande .txt b { color: var(--or); font-weight: normal; font-variant: small-caps; font-size: 16px; } .offrande .txt span { font-size: 12px; color: var(--doux); }
+  .offrande .ouvrir { background: linear-gradient(#d39a3a, #a8742a); color: #1b1410; border-radius: 10px; padding: 8px 12px; font-weight: bold; }
+  @keyframes secoue { 0%, 70%, 100% { transform: rotate(0); } 75% { transform: rotate(-12deg); } 85% { transform: rotate(10deg); } 95% { transform: rotate(-5deg); } }
+  .amphGrande { font-size: 120px; text-align: center; cursor: pointer; } .amphGrande.secoue { animation: secoue 1s infinite; }
+  .precedemment { font-size: 13px; background: rgba(160,110,40,.15); border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -262,9 +272,12 @@
       <div class="tete"><b>Ta tapisserie</b><span id="tapisCompte"></span></div>
       <canvas id="tapisAccueil" width="440" height="200"></canvas>
       <div class="legende" id="tapisLegende">Touche un rang pour revoir ta journée.</div>
+      <div class="route" id="route"></div>
     </div>
+    <div class="offrande" id="offrande"></div>
     <div class="bourse"><span>Niveau <b id="niveauEquipe">1</b></span><div class="xpbarre"><i id="xpAccueil"></i></div><span>🪙 <b id="drachmesAccueil">0</b></span></div>
     <div class="parchemin">
+      <div class="precedemment" id="precedemment"></div>
       <h2 id="titreEpreuve"></h2>
       <div style="font-size:13px;color:#6b5440" id="dateJour"></div>
       <p class="presage" id="presage"></p>
@@ -284,7 +297,7 @@
       </select>
     </div>
     <div style="display:flex;justify-content:center;align-items:center;gap:6px"><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
-    <div class="info">Prototype phase 0 bis · graphismes provisoires</div>
+    <div class="info">Phase 1 · graphismes provisoires</div>
     <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px">
       <button class="lien" id="btnJourSuivant">Passer au jour suivant (test)</button>
       <button class="lien" id="btnReset">Tout réinitialiser (test)</button>
@@ -363,6 +376,7 @@
 <script src="data.js"></script>
 <script src="tapisserie.js"></script>
 <script src="progression.js"></script>
+<script src="epreuves.js"></script>
 <script src="sync.js"></script>
 <script src="app.js"></script>
 </body>

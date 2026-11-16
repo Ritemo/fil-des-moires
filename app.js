@@ -1,7 +1,7 @@
 /* Le Fil des Moires : interface (phase 0 bis). */
 (function () {
   'use strict';
-  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression;
+  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves;
   const $ = id => document.getElementById(id);
 
   // ---------- Stockage (protégé : peut être indisponible) ----------
@@ -91,7 +91,7 @@
     partie = null;
     const fait = profil.derniereDate === aujourdhui();
     const jour = fait ? Math.max(1, profil.joursJoues) : profil.joursJoues + 1;
-    const ep = D.epreuveDuJour(jour);
+    const ep = E.epreuve(jour, aujourdhui());
     $('mode').textContent = '';
     $('tapisCompte').textContent = profil.rangs.length + ' / 30 rangs';
     T.dessiner($('tapisAccueil'), profil.rangs);
@@ -106,6 +106,15 @@
     const dernier = profil.rangs[profil.rangs.length - 1];
     $('etatJour').textContent = fait && dernier ? 'Épreuve du jour terminée : ' + (dernier.victoire ? 'victoire ' + '★'.repeat(dernier.etoiles) : 'défaite') + '. Nouvelle épreuve demain.' : '';
     $('reglageClotho').value = profil.clotho;
+    // Précédemment
+    const hier = profil.rangs[profil.rangs.length - (fait ? 2 : 1)];
+    $('precedemment').innerHTML = hier ? `<b>Précédemment</b> (jour ${hier.jour}) : ${hier.resume}` : '';
+    $('precedemment').style.display = hier ? 'block' : 'none';
+    // Route de la Tapisserie
+    const pal = P.prochainPalier(profil);
+    const LIB = { carte: '🆕 une carte inédite', fil: '🧵 un Fil de réserve', amphore: '🏆 une amphore dorée' };
+    $('route').textContent = pal ? `Route de la Tapisserie : au rang ${pal.rang}, ${LIB[pal.type]} (encore ${pal.rang - profil.rangs.length}).` : 'Route de la Tapisserie terminée pour ce Chant.';
+    afficherOffrande();
     $('niveauEquipe').textContent = profil.niveau;
     $('xpAccueil').style.width = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau)) + '%';
     $('drachmesAccueil').textContent = profil.drachmes;
@@ -118,7 +127,7 @@
 
   function demarrer(echo) {
     const jour = echo ? Math.max(1, profil.joursJoues) : profil.joursJoues + 1;
-    const ep = D.epreuveDuJour(jour);
+    const ep = E.epreuve(jour, aujourdhui());
     const graine = echo ? Math.floor(Math.random() * 1e9) : M.graineDuJour(aujourdhui() + '|' + jour);
     const totalEnnemis = ep.rencontres.reduce((n, r) => n + r.ennemis.length, 0);
     partie = { echo, jour, ep, rencontre: 0, reprise: null, gloire: 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
@@ -223,15 +232,17 @@
     if (partie.coupMax) morceaux.push('coup le plus fort : ' + partie.coupMax.nom + ' (' + partie.coupMax.degats + ')');
     morceaux.push(partie.kos ? partie.kos + ' héros tombé' + (partie.kos > 1 ? 's' : '') : 'aucun héros tombé');
     const rang = { jour: partie.jour, date: aujourdhui(), titre: partie.ep.titre.replace(/^Le Prologue : /, ''), victoire, etoiles,
-      couleur, motif: (etat.unites.find(u => u.gardien) || cible).emoji, resume: morceaux.join(', ') + '.' };
+      couleur, motif: (etat.unites.find(u => u.gardien) || cible).emoji, resume: morceaux.join(', ') + '.', echo: partie.echo || undefined };
     const rangs = profil.rangs.concat([rang]);
     let g = null, niveaux = 0, butin = {}, dons = null, niveauAvant = profil.niveau;
     if (!partie.echo) {
       profil.rangs = rangs; profil.joursJoues = partie.jour; profil.derniereDate = aujourdhui();
       g = P.gains(victoire, etoiles);
+      if (partie.ep.dimanche) { g.xp = Math.round(g.xp * 1.5); g.drachmes = Math.round(g.drachmes * 1.5); }
       niveaux = P.ajouterXp(profil, g.xp);
       profil.drachmes += g.drachmes;
       if (victoire) { butin = P.butin(profil, partie.graine + 17, etoiles); dons = P.genererDon(profil, partie.graine + 29); }
+      partie.route = P.reclamerRoute(profil, partie.graine + 41);
       sauver();
     }
     ecran('fin');
@@ -285,14 +296,60 @@
   }
   function nbAmeliorables() { return Object.keys(profil.cartes).filter(id => P.peutAmeliorer(profil, id)).length; }
 
+  // ---------- Offrande du jour ----------
+  function afficherOffrande() {
+    const dispo = P.offrandeDisponible(profil, aujourdhui()) && profil.joursJoues >= 1;
+    const serie = profil.serie ? profil.serie.jours : 0;
+    const prochaine = P.qualiteSerie(dispo ? serie + 1 : serie);
+    const q = P.QUALITES[prochaine];
+    const fils = profil.filsReserve ? ' · 🧵×' + profil.filsReserve : '';
+    $('offrande').className = 'offrande' + (dispo ? ' dispo' : '');
+    $('offrande').innerHTML = profil.joursJoues < 1 ? '' : dispo
+      ? `<div class="amph">${q.icone}</div><div class="txt"><b>Offrande du jour</b><span>${q.nom} · série ${serie} jour${serie > 1 ? 's' : ''}${fils}</span></div><div class="ouvrir">Ouvrir</div>`
+      : `<div class="amph eteinte">🏺</div><div class="txt"><b>Offrande ouverte</b><span>Reviens demain · série ${serie} jour${serie > 1 ? 's' : ''}${fils}</span></div><button class="lien" id="btnTaux">Taux</button>`;
+    $('offrande').style.display = profil.joursJoues < 1 ? 'none' : 'flex';
+    $('offrande').onclick = e => { if (e.target.id === 'btnTaux') return montrerTaux(); if (dispo) ouvrirAmphore(); };
+  }
+  function montrerTaux() {
+    $('titreModale').textContent = '🏺 Offrande du jour';
+    $('onglets').innerHTML = '';
+    $('lexiqueCorps').innerHTML = `<p class="small">Une amphore gratuite par jour. Plus ta série est longue, plus elle est belle. Un jour manqué ne remet pas la série à zéro : elle recule d'un palier. Tous les 7 jours, tu gagnes un 🧵 Fil de réserve qui protège ta série d'un jour d'absence (2 au maximum).</p>` +
+      Object.keys(P.QUALITES).map(k => { const q = P.QUALITES[k]; const seuil = { argile: '1 à 2 jours', bronze: '3 à 6 jours', argent: '7 à 13 jours', doree: '14 jours et plus' }[k];
+        return `<div class="ligne">${q.icone} <b>${q.nom}</b> (série de ${seuil}) : ${q.objets} objets · ${q.drachmes[0]} à ${q.drachmes[1]} 🪙 · doublons de tes cartes équipées · ${Math.round(q.inedite * 100)} % de chance par objet d'une carte inédite</div>`; }).join('');
+    $('modale').classList.add('visible');
+  }
+  function ouvrirAmphore() {
+    const r = P.ouvrirOffrande(profil, aujourdhui(), M.graineDuJour(aujourdhui() + '|offrande'));
+    if (!r) return;
+    sauver();
+    const q = P.QUALITES[r.qualite];
+    const notes = [r.protege ? '🧵 Ton Fil de réserve a protégé ta série.' : '', r.recul ? 'Un jour manqué : ta série a reculé d\'un palier, sans repartir à zéro.' : '', r.filGagne ? '🧵 7 jours de suite : tu gagnes un Fil de réserve !' : ''].filter(Boolean).join('<br>');
+    const ids = {}; r.objets.filter(o => o.type === 'doublons').forEach(o => { ids[o.id] = (ids[o.id] || 0) + o.nombre; });
+    const cartes = r.objets.filter(o => o.type === 'carte').map(o => tuileCarte(o.id, { grande: false }).replace('<div class="art"', '<div class="neuf">NOUVELLE</div><div class="art"')).join('');
+    const doublons = Object.keys(ids).map(id => tuileCarte(id, { ajout: ids[id] }).replace('</div></div>', `</div><div class="gain">+${ids[id]}</div></div>`)).join('');
+    const bourse = r.objets.filter(o => o.type === 'drachmes').reduce((n, o) => n + o.nombre, 0);
+    $('donCorps').innerHTML = `<div class="titreDon">${q.nom}</div><div class="amphGrande secoue">${q.icone}</div><div class="consigne">Touche l'amphore pour l'ouvrir</div>`;
+    $('donVoile').classList.add('visible');
+    document.querySelector('.amphGrande').onclick = () => {
+      $('donCorps').innerHTML = `<div class="titreDon">${q.nom}</div><div class="consigne">Série : ${r.serie} jour${r.serie > 1 ? 's' : ''}</div>
+        <div class="bourse" style="justify-content:center"><span>🪙 +${bourse} drachmes</span></div>
+        <div class="grille">${cartes}${doublons}</div>${notes ? `<div class="consigne">${notes}</div>` : ''}
+        <button class="principal" id="donFin">Continuer</button>`;
+      animerBarres($('donCorps'));
+      particules(document.querySelector('.donCorps'), '✨', 10);
+      $('donFin').onclick = () => { $('donVoile').classList.remove('visible'); accueil(); };
+    };
+  }
+
   // ---------- Gains de fin d'épreuve ----------
   function afficherGains(g, niveaux, niveauAvant, butin) {
-    if (!g) { $('finGains').innerHTML = ''; return; }
+    if (!g) { $('finGains').innerHTML = partie && partie.echo ? '<div class="bourse"><span>Mode Écho : ce rang n\'est pas tissé dans ta Tapisserie (il apparaît en fantôme).</span></div>' : ''; return; }
     const pct = Math.round(100 * profil.xp / P.xpPourNiveau(profil.niveau));
     const ids = Object.keys(butin);
     $('finGains').innerHTML = `<div class="bourse"><span>Niveau <b>${profil.niveau}</b></span><div class="xpbarre"><i id="xpFin" style="width:0%"></i></div><span>+${g.xp} XP</span></div>
       <div class="bourse"><span>🪙 +${g.drachmes} drachmes (total <b>${profil.drachmes}</b>)</span></div>
       ${ids.length ? `<div class="sousTitre">🃏 Butin : des doublons pour tes cartes</div><div class="grille">${ids.map(id => tuileCarte(id, { ajout: butin[id] }).replace('</div></div>', `</div><div class="gain">+${butin[id]}</div></div>`)).join('')}</div>` : ''}
+      ${partie.route ? `<div class="niveauPlus">🧵 Route de la Tapisserie, rang ${partie.route.rang} : ${partie.route.type === 'carte' ? 'nouvelle carte ' + nomCarte(partie.route.id) : partie.route.type === 'fil' ? 'un Fil de réserve' : partie.route.type === 'amphore' ? 'une amphore dorée, déjà ouverte pour toi' : '100 drachmes'}</div>` : ''}
       ${niveaux ? `<div class="niveauPlus">✨ Niveau ${niveauAvant} → ${profil.niveau} : +4 % PV et attaque par niveau</div>` : ''}`;
     setTimeout(() => { const x = $('xpFin'); if (x) x.style.width = pct + '%'; }, 100);
     animerBarres($('finGains'));
@@ -542,6 +599,7 @@
     let etats = '';
     if (u.etats.brulure) etats += `<span title="Brûlure">🔥<sub>${u.etats.brulure.tours}</sub></span>`;
     if (u.etats.etourdi) etats += '<span title="Étourdi">💫</span>';
+    if (u.etats.aveugle) etats += '<span title="Aveuglé">🙈</span>';
     if (u.etats.cauterise) etats += `<span title="Cautérisé">♨️<sub>${u.etats.cauterise}</sub></span>`;
     if (u.gardePar) etats += '<span title="Protégé">🛡️</span>';
     if (u.mecanique === 'hydre') etats += ' ' + '🐍'.repeat(u.tetes);
@@ -664,6 +722,7 @@
         case 'interception': plus(400, () => { flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
         case 'garde': plus(350, () => { flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
         case 'presage': plus(350, () => { flotter(carteEl(e.cible), '⏩ joue ensuite', 'info'); ajouterEffet(N(e.cible) + ' joue juste après'); }); break;
+        case 'aveugle': plus(450, () => { flotter(carteEl(e.cible), '🙈 aveuglé', 'info'); ajouterEffet('Le Cyclope est aveuglé', true); journal('Le Cyclope est aveuglé : sa prochaine attaque risque de rater.'); }); break;
         case 'oeil': plus(350, () => { flotter(carteEl(e.cible), '👁️ prochain coup critique', 'info'); ajouterEffet(N(e.cible) + ' : prochain coup critique'); }); break;
         case 'recul': plus(300, () => { flotter(carteEl(e.cible), '⏪ recule', 'info'); ajouterEffet('Recule dans la File'); }); break;
         case 'ko': plus(800, () => {

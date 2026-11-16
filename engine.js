@@ -224,7 +224,8 @@
         cible = gardien; reduction = 0.5; cibleInitiale.gardePar = null;
       }
     }
-    if (etat.hasard() > (comp.precision || 0.95)) {
+    const precision = attaquant.etats && attaquant.etats.aveugle ? 0.55 : (comp.precision || 0.95);
+    if (etat.hasard() > precision) {
       evenements.push({ type: 'rate', source: attaquant.uid, cible: cible.uid });
       return;
     }
@@ -258,6 +259,11 @@
         cible.tetes++;
         evenements.push({ type: 'tete', cible: cible.uid, tetes: cible.tetes });
       }
+    }
+    // Mécanique du Cyclope : la Lumière l'aveugle
+    if (cible.mecanique === 'cyclope' && comp.affinite === 'lumiere' && cible.pv > 0 && !cible.etats.aveugle) {
+      cible.etats.aveugle = true;
+      evenements.push({ type: 'aveugle', cible: cible.uid });
     }
     if (cible.pv <= 0) tomber(etat, cible, evenements);
   }
@@ -327,6 +333,7 @@
       }
     }
 
+    if (acteur.etats.aveugle && comp.type === 'attaque') delete acteur.etats.aveugle;
     finTour(etat, acteur, comp.poids || 'normal');
     if (acteur.camp === 'ennemi') planifier(etat, acteur);
     verifierFin(etat);

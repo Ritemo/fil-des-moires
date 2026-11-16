@@ -86,7 +86,7 @@
   function ennemisPourJoueur(r, profil, jour) {
     const e = D.ennemisDeRencontre(r);
     if (jour <= 3) return e;
-    const m = 1 + 0.07 * (profil.niveau - 1) + 0.012 * (jour - 4);
+    const m = 1.04 + 0.07 * (profil.niveau - 1) + 0.012 * (jour - 4);
     return e.map(x => Object.assign(x, { pvMax: Math.round(x.pvMax * m), attaque: Math.round(x.attaque * m) }));
   }
 
@@ -155,7 +155,83 @@
     } else if (option.type === 'drachmes') profil.drachmes += option.nombre;
   }
 
+  // ---------- Offrande du jour, série douce, Fil de réserve ----------
+  const PALIERS_SERIE = [0, 3, 7, 14];
+  const QUALITES = {
+    argile: { nom: 'Amphore d\'argile', icone: '🏺', objets: 2, inedite: 0.05, drachmes: [15, 25] },
+    bronze: { nom: 'Amphore de bronze', icone: '🏺', objets: 3, inedite: 0.08, drachmes: [20, 35] },
+    argent: { nom: 'Amphore d\'argent', icone: '⚱️', objets: 3, inedite: 0.12, drachmes: [40, 60] },
+    doree: { nom: 'Amphore dorée', icone: '🏆', objets: 4, inedite: 0.2, drachmes: [60, 90] }
+  };
+  const qualiteSerie = n => n >= 14 ? 'doree' : n >= 7 ? 'argent' : n >= 3 ? 'bronze' : 'argile';
+  function ecartJours(a, b) { const [x, y] = [a, b].map(d => { const [an, m, j] = d.split('-').map(Number); return Date.UTC(an, m - 1, j); }); return Math.round((y - x) / 86400000); }
+  function offrandeDisponible(profil, date) { return !profil.offrande || profil.offrande.date !== date; }
+  // Contenu d'une amphore de qualité donnée
+  function remplirAmphore(profil, qualite, graine) {
+    const q = QUALITES[qualite], hasard = M.creerHasard(graine), objets = [];
+    const heros = herosDisponibles(profil);
+    const equipees = heros.flatMap(h => profil.equipement[h] || []).filter(id => profil.cartes[id] && profil.cartes[id].niveau < NIVEAU_MAX_CARTE);
+    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && heros.includes(carteInfo(id).heros.id));
+    objets.push({ type: 'drachmes', nombre: q.drachmes[0] + Math.floor(hasard() * (q.drachmes[1] - q.drachmes[0] + 1)) });
+    for (let i = 1; i < q.objets; i++) {
+      if (inedites.length && hasard() < q.inedite) { const id = inedites.splice(Math.floor(hasard() * inedites.length), 1)[0]; objets.push({ type: 'carte', id }); continue; }
+      const id = equipees.length ? equipees[Math.floor(hasard() * equipees.length)] : Object.keys(profil.cartes)[0];
+      objets.push({ type: 'doublons', id, nombre: { commune: 2, rare: 1, epique: 1, legendaire: 1 }[rarete(id)] + (qualite === 'argent' || qualite === 'doree' ? 1 : 0) });
+    }
+    return objets;
+  }
+  function appliquerObjets(profil, objets) { objets.forEach(o => appliquerDon(profil, o)); }
+  // Ouvre l'Offrande : met à jour la série, puis remplit l'amphore
+  function ouvrirOffrande(profil, date, graine) {
+    if (!offrandeDisponible(profil, date)) return null;
+    const serie = profil.serie || (profil.serie = { jours: 0, dernier: null });
+    let protege = false, recul = false;
+    if (serie.dernier) {
+      const ecart = ecartJours(serie.dernier, date);
+      if (ecart === 1) serie.jours++;
+      else if (ecart === 2 && (profil.filsReserve || 0) > 0) { profil.filsReserve--; serie.jours++; protege = true; }
+      else if (ecart > 1) {
+        // Série douce : on recule d'un palier au lieu de repartir à zéro
+        const palier = PALIERS_SERIE.filter(p => p <= serie.jours).pop();
+        const idx = PALIERS_SERIE.indexOf(palier);
+        serie.jours = PALIERS_SERIE[Math.max(0, idx - 1)] + 1; recul = true;
+      }
+    } else serie.jours = 1;
+    serie.dernier = date;
+    let filGagne = false;
+    if (serie.jours % 7 === 0 && (profil.filsReserve || 0) < 2) { profil.filsReserve = (profil.filsReserve || 0) + 1; filGagne = true; }
+    const qualite = qualiteSerie(serie.jours);
+    const objets = remplirAmphore(profil, qualite, graine);
+    appliquerObjets(profil, objets);
+    profil.offrande = { date };
+    return { qualite, objets, serie: serie.jours, protege, recul, filGagne };
+  }
+
+  // ---------- Route de la Tapisserie ----------
+  const ROUTE = { 2: 'carte', 4: 'fil', 6: 'carte', 9: 'amphore', 12: 'carte', 15: 'carte' };
+  const ORDRE_ROUTE = ['ralliement', 'aube', 'rafale', 'pommeau', 'oeil', 'cri'];
+  function prochainPalier(profil) {
+    const n = profil.rangs.length;
+    const p = Object.keys(ROUTE).map(Number).find(k => k > n);
+    return p ? { rang: p, type: ROUTE[p] } : null;
+  }
+  // Réclame la récompense du palier atteint (une seule fois)
+  function reclamerRoute(profil, graine) {
+    const n = profil.rangs.length, type = ROUTE[n];
+    profil.route = profil.route || {};
+    if (!type || profil.route[n]) return null;
+    profil.route[n] = true;
+    if (type === 'fil') { profil.filsReserve = Math.min(2, (profil.filsReserve || 0) + 1); return { rang: n, type }; }
+    if (type === 'amphore') { const objets = remplirAmphore(profil, 'doree', graine); appliquerObjets(profil, objets); return { rang: n, type, objets }; }
+    const heros = herosDisponibles(profil);
+    const id = ORDRE_ROUTE.find(x => !profil.cartes[x] && heros.includes(carteInfo(x).heros.id)) || ORDRE_ROUTE.find(x => !profil.cartes[x]);
+    if (!id) { profil.drachmes += 100; return { rang: n, type: 'drachmes', nombre: 100 }; }
+    appliquerDon(profil, { type: 'carte', id });
+    return { rang: n, type: 'carte', id };
+  }
+
   const Progression = {
+    QUALITES, ROUTE, offrandeDisponible, ouvrirOffrande, remplirAmphore, qualiteSerie, prochainPalier, reclamerRoute, ecartJours,
     NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, NOMS_RARETE, COULEURS_RARETE,
     initialiser, rarete, carteInfo, coutAmelioration, peutAmeliorer, ameliorer, basculerEquipement,
     equipeDuJoueur, ennemisPourJoueur, butin, xpPourNiveau, gains, ajouterXp, herosDisponibles, genererDon, appliquerDon,
