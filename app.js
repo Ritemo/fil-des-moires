@@ -50,7 +50,7 @@
     const j = partie ? partie.jour : profil.joursJoues + 1;
     return j <= 3 ? 'bavarde' : j <= 10 ? 'discrete' : 'muette';
   }
-  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'don', 'collection', 'niveau', 'gardien', 'tapisserie', 'discret', 'intention'];
+  const NOUVEAUTES = ['debut', 'garde', 'gloire', 'gloireIntro', 'don', 'collection', 'niveau', 'gardien', 'tapisserie', 'discret', 'intention', 'lierCarte', 'lier', 'lienRate', 'lie', 'choixCrea', 'codex'];
   const fileClotho = [];
   function clotho(cle) {
     if (profil.vus[cle]) return;
@@ -204,6 +204,7 @@
         if (toursJoueur === 3) clotho('poids');
         if (d.acteur.competences.some(c => c.type === 'garde')) clotho('garde');
         const lier = d.acteur.competences.find(c => c.type === 'lier');
+        if (lier) clotho('lierCarte');
         if (lier && M.ciblesPossibles(etat, d.acteur, lier).length) clotho('lier');
         occupe = false;
         montrerActions(d.acteur);
@@ -430,6 +431,7 @@
     } else $('colMenace').textContent = 'Touche une carte pour voir son détail, l\'améliorer ou l\'équiper. ✓ = équipée.';
     const heros = P.herosDisponibles(profil);
     const creaturesDispo = ['griffon'].concat(profil.creatures).filter(id => heros.includes(id));
+    if (preparation && creaturesDispo.length > 1) clotho('choixCrea');
     const blocCreature = (preparation && creaturesDispo.length > 1) ? `<h3>🐾 Créature de l'équipe</h3><div class="grille">${creaturesDispo.map(id => { const c = D.HEROS.concat(D.CREATURES).find(x => x.id === id);
       return `<div class="tuile choixCrea ${profil.creature === id ? 'equipee' : ''}" data-crea="${id}" style="--r:${aff(c.affinite).couleur}"><div class="art" style="--a:${aff(c.affinite).couleur}"><span>${c.emoji}</span><div class="affb">${aff(c.affinite).icone}</div></div><div class="nom">${c.nom}</div><div class="sous">${aff(c.affinite).nom}</div>${profil.creature === id ? '<div class="coche">✓</div>' : ''}</div>`; }).join('')}</div>` : '';
     const groupes = D.HEROS.filter(h => heros.includes(h.id)).concat(D.CREATURES.filter(c => profil.creatures.includes(c.id)));
@@ -521,6 +523,7 @@
 
   // ---------- Codex ----------
   function ouvrirCodex() {
+    clotho('codex');
     const ids = Object.keys(D.ENNEMIS);
     const vus = ids.filter(id => profil.codex[id] && profil.codex[id].vu).length;
     const lies = profil.creatures.length, liables = D.CREATURES.length;
@@ -822,7 +825,7 @@
           partie.lies.push(u.id); partie.vaincus++;
           $('filProgres').style.width = Math.round(100 * partie.vaincus / partie.totalEnnemis) + '%';
         }); break;
-        case 'lienRate': plus(700, () => { const u = M.unite(etat, e.cible); banniere('🧵 Le fil glisse...', u.nom + ' résiste', 'Chance : ' + Math.round(100 * e.chance) + ' %'); flotter(carteEl(e.cible), 'Lien raté', 'faible'); journal('Le lien a glissé.'); }); break;
+        case 'lienRate': plus(700, () => { const u = M.unite(etat, e.cible); banniere('🧵 Le fil glisse...', u.nom + ' résiste', 'Chance : ' + Math.round(100 * e.chance) + ' %'); flotter(carteEl(e.cible), 'Lien raté', 'faible'); journal('Le lien a glissé.'); clotho('lienRate'); }); break;
         case 'releve': plus(900, () => { banniere('💨 Second Souffle', N(e.cible) + ' se relève !', '25 % des PV'); particules(carteEl(e.cible), '✨', 8); journal(N(e.cible) + ' se relève grâce au Second Souffle.'); }); break;
         case 'aveugle': plus(450, () => { flotter(carteEl(e.cible), '🙈 aveuglé', 'info'); ajouterEffet('Le Cyclope est aveuglé', true); journal('Le Cyclope est aveuglé : sa prochaine attaque risque de rater.'); }); break;
         case 'oeil': plus(350, () => { flotter(carteEl(e.cible), '👁️ prochain coup critique', 'info'); ajouterEffet(N(e.cible) + ' : prochain coup critique'); }); break;
