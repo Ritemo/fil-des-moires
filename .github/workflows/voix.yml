@@ -1,0 +1,38 @@
+name: Voix
+# Enregistre les répliques de l'histoire (voix neuronales, une par personnage) quand le texte du Chant change.
+# Les fichiers vont dans art/voix/ et sont ajoutés au dépôt par le robot. Lancement manuel possible (Run workflow).
+on:
+  push:
+    branches: [main]
+    paths: ['chant1.js', 'voix.js', 'outils/**', '.github/workflows/voix.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  voix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Enregistrer les répliques manquantes
+        run: |
+          pip install edge-tts
+          node outils/repliques.js > /tmp/repliques.json
+          python outils/voix.py /tmp/repliques.json
+      - name: Ajouter les fichiers au dépôt
+        run: |
+          git config user.name "Ritemo"
+          git config user.email "noreply@anthropic.com"
+          git add art/voix
+          git diff --cached --quiet || (git commit -m "Voix : nouvelles répliques enregistrées" && git push)
+      - name: Alerte en cas d'échec
+        if: failure()
+        env:
+          SUJET: ${{ secrets.NTFY_ALERTE }}
+        run: |
+          if [ -n "$SUJET" ]; then curl -s -d "Le Fil des Moires : l'enregistrement des voix a échoué" "https://ntfy.sh/$SUJET"; fi

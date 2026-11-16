@@ -325,7 +325,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.11.1 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.12.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 

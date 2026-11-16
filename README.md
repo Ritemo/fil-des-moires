@@ -17,6 +17,8 @@ progression.js cartes, niveaux, XP, drachmes, Don des Moires, Offrande, série, 
 chant1.js    le Chant I écrit : 30 jours, scènes, répliques de fin, choix et leurs conséquences
 epreuves.js  l'épreuve du jour (le Chant I, puis des épreuves générées en attendant le Chant II)
 sauvegarde/ le script Google Apps Script de sauvegarde
+voix.js     les voix : fichiers pré-enregistrés (art/voix/), sinon la synthèse vocale de l'appareil
+outils/     repliques.js (liste des répliques) et voix.py (enregistrement), utilisés par le robot Voix
 son.js      le son : bruitages et ambiances, synthétisés en direct (aucun fichier audio)
 emojis.js   remplace les emojis par les images 3D de art/e/ (même rendu sur tous les appareils)
 art/e/      les émoticônes 3D Fluent Emoji de Microsoft (licence MIT, voir LICENCE-fluentui-emoji.txt)
@@ -75,3 +77,7 @@ Chaque invité a sa propre partie, sauvegardée dans le même script mais dans u
 ## Illustrations
 
 Les personnages, créatures et cartes utilisent les émoticônes 3D **Fluent Emoji** de Microsoft (licence MIT, libres d'utilisation). Pour ajouter un emoji : déposer son image 3D (256 px, réduite à 160 px) dans `art/e/` sous le nom de son code Unicode (ex. `1f409.png` pour 🐉) et l'ajouter à la table de `emojis.js`. Un emoji sans image reste affiché en texte.
+
+## Voix de l'histoire
+
+Le robot **Voix** (GitHub Actions, `.github/workflows/voix.yml`) enregistre chaque réplique de l'histoire avec une voix neuronale par personnage (service de lecture à voix haute de Microsoft Edge, via `edge-tts`, gratuit et sans clé). Il se lance tout seul quand `chant1.js` change, ou à la main : onglet *Actions* > *Voix* > *Run workflow*. Les fichiers vont dans `art/voix/` ; seules les répliques nouvelles ou modifiées sont enregistrées. Les voix de chaque personnage se règlent dans `outils/voix.py`. Si un fichier manque, le jeu utilise la voix de l'appareil.

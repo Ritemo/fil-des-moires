@@ -1,9 +1,26 @@
-/* Le Fil des Moires : les voix. Lecture des textes de l'histoire par la synthèse vocale du téléphone ou de
-   l'ordinateur (Web Speech API, gratuite, sans téléchargement). Chaque personnage a sa hauteur et son débit,
-   et, quand l'appareil propose plusieurs voix françaises, sa propre voix. Réglage par appareil (on/off). */
+/* Le Fil des Moires : les voix.
+   1. En priorité, des fichiers audio pré-enregistrés avec des voix neuronales, une par personnage
+      (art/voix/<id>.mp3, fabriqués par le robot GitHub Actions « Voix » ; liste dans art/voix/index.json).
+   2. À défaut, la synthèse vocale de l'appareil (Web Speech API), avec une hauteur et un débit par personnage.
+   L'identifiant d'une réplique (cleVoix) est calculé de la même façon ici et dans outils/repliques.js. */
 (function (racine) {
   'use strict';
+  const node = typeof module !== 'undefined' && module.exports;
+  // Texte lu : sans emojis, sans indications entre parenthèses, sans guillemets
+  const nettoyer = t => t.replace(/\([^)]*\)/g, '').replace(/[«»"]/g, '').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
+  // Identifiant stable d'une réplique : FNV-1a 32 bits du texte UTF-8 « qui|texte nettoyé »
+  function cleVoix(qui, texte) {
+    const octets = new TextEncoder().encode((qui === 'kelos' ? 'narrateur' : qui) + '|' + nettoyer(texte));
+    let h = 0x811c9dc5;
+    for (const o of octets) { h ^= o; h = Math.imul(h, 0x01000193) >>> 0; }
+    return h.toString(16).padStart(8, '0');
+  }
+  if (node) { module.exports = { cleVoix, nettoyer }; return; }
   const synth = racine.speechSynthesis;
+  // Liste des répliques enregistrées
+  let enregistrees = {};
+  fetch('art/voix/index.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : []).then(l => { l.forEach(id => { enregistrees[id] = true; }); }).catch(() => {});
+  let audioCourant = null;
   const cle = 'fdm_voix';
   let actif = (() => { try { return localStorage.getItem(cle) !== 'non'; } catch (e) { return true; } })();
   // Timbre de chaque personnage : hauteur (pitch), débit (rate), et préférence de voix féminine ou masculine
@@ -41,11 +58,21 @@
     const n = Object.keys(TIMBRES).indexOf(qui);
     return liste[Math.max(0, n) % liste.length];
   }
-  // Retire les emojis, les indications entre parenthèses et les guillemets avant lecture
-  const nettoyer = t => t.replace(/\([^)]*\)/g, '').replace(/[«»"]/g, '').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}️‍]/gu, '').replace(/\s+/g, ' ').trim();
 
   // Lit une réplique. Renvoie une promesse résolue à la fin de la lecture (ou tout de suite si les voix sont coupées).
   function dire(qui, texte) {
+    const id = texte ? cleVoix(qui, texte) : null;
+    if (actif && id && enregistrees[id]) return new Promise(fin => {
+      stop();
+      const a = new Audio('art/voix/' + id + '.mp3'); audioCourant = a;
+      let fait = false; const terminer = () => { if (!fait) { fait = true; fin(); } };
+      a.onended = terminer;
+      a.onerror = () => { fait = true; direSynthese(qui, texte).then(fin); }; // fichier absent : voix de l'appareil
+      a.play().catch(() => { if (!fait) { fait = true; direSynthese(qui, texte).then(fin); } });
+    });
+    return direSynthese(qui, texte);
+  }
+  function direSynthese(qui, texte) {
     return new Promise(fin => {
       if (!synth || !actif || !texte) return fin();
       const u = new SpeechSynthesisUtterance(nettoyer(texte));
@@ -59,9 +86,9 @@
       synth.speak(u);
     });
   }
-  function stop() { if (synth) synth.cancel(); }
+  function stop() { if (synth) synth.cancel(); if (audioCourant) { audioCourant.pause(); audioCourant = null; } }
   function regler(v) { actif = v; try { localStorage.setItem(cle, v ? 'oui' : 'non'); } catch (e) { /* rien */ } if (!v) stop(); }
   document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
 
-  racine.Voix = { dire, stop, regler, actif: () => actif && !!synth, disponible: () => !!synth };
-})(window);
+  racine.Voix = { dire, stop, regler, cleVoix, actif: () => actif, disponible: () => true };
+})(typeof window !== 'undefined' ? window : this);
