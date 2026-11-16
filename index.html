@@ -287,7 +287,7 @@
   .chroVide { color: var(--doux); font-style: italic; font-size: 14px; margin-bottom: 6px; }
   /* Onglets façon Clash Royale : chaque onglet tient dans l'écran, la barre reste en bas */
   html.fixe, html.fixe body { overflow: hidden; height: 100%; overscroll-behavior: none; }
-  body.fixe #app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+  body.fixe #app { height: 100vh; height: 100dvh; height: var(--hauteur, 100dvh); min-height: 0; overflow: hidden; }
   body.fixe .ecran.onglet.actif { min-height: 0; overflow-y: auto; gap: 8px; padding-bottom: 4px; }
   body.fixe #accueil > * { flex-shrink: 0; }
   body.fixe #accueil > #parchAccueil { flex: 0 1 auto; min-height: 0; overflow-y: auto; }

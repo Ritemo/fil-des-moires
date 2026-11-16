@@ -5,6 +5,12 @@
   // Au rafraîchissement, le navigateur restaure l'ancienne position de défilement : on la remet à zéro
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
+  // Hauteur réellement visible (certains Android comptent la barre de navigation dans 100vh / 100dvh)
+  const majHauteur = () => document.documentElement.style.setProperty('--hauteur', (window.visualViewport ? window.visualViewport.height : window.innerHeight) + 'px');
+  majHauteur();
+  window.addEventListener('resize', majHauteur);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', majHauteur);
+  window.addEventListener('pageshow', majHauteur);
   const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves, C = window.Chant1;
   const $ = id => document.getElementById(id);
 
