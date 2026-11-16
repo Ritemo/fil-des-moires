@@ -311,8 +311,11 @@
   .apercuJour .lig { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
   .apercuJour .lig span:last-child { font-size: 22px; letter-spacing: 2px; }
   .apercuJour .titre { font-variant: small-caps; color: #8a5a20; font-size: 13px; letter-spacing: .04em; }
-  nav.ongletsBas { display: none; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 8px; flex-shrink: 0; }
+  /* La barre d'onglets est fixée en bas de l'écran visible : elle reste toujours accessible, quelle que soit la hauteur annoncée par le téléphone */
+  nav.ongletsBas { display: none; grid-template-columns: repeat(5, 1fr); gap: 4px; position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; z-index: 15;
+    padding: 12px 10px calc(env(safe-area-inset-bottom) + 8px); background: linear-gradient(transparent, #1b1410 30%); }
   body.fixe nav.ongletsBas { display: grid; }
+  body.fixe #app { padding-bottom: calc(env(safe-area-inset-bottom) + 84px); }
   nav.ongletsBas button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0; font-size: 11.5px; color: var(--doux); background: #241a14; border-color: #3a2c22; position: relative; }
   nav.ongletsBas .ic { font-size: 21px; filter: grayscale(.5); }
   nav.ongletsBas button.on { color: var(--or); border-color: var(--or); background: linear-gradient(#4a3420, #2a1f18); }
@@ -410,7 +413,7 @@
       </select>
     </div>
     <div class="carteReglage"><b>Sauvegarde</b><span class="info" id="etatSync"></span><button class="lien" id="btnSync">Configurer</button></div>
-    <div class="info">Phase 2 · graphismes provisoires</div>
+    <div class="info" id="versionJeu">Phase 2</div>
     <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px">
       <button class="lien" id="btnJourSuivant">Passer au jour suivant (test)</button>
       <button class="lien" id="btnReset">Tout réinitialiser (test)</button>

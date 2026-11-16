@@ -199,7 +199,7 @@
       ${deco}
       <path d="M0 160 Q90 140 180 158 T360 152 V190 H0Z" fill="${P_.pres}"/>
       ${foes}
-      ${equipe.map((e, k) => emo(e, 64 + k * 42, 182 - (k % 2) * 6, 38)).join('')}
+      ${equipe.map((e, k) => emo(e, 64 + k * 42, 170 - (k % 2) * 5, 36)).join('')}
       ${fait ? '<rect width="360" height="190" fill="#000" opacity=".35"/><text x="180" y="104" font-size="20" text-anchor="middle" fill="#f6ead2" font-family="Georgia">Épreuve accomplie</text>' : ''}
     </svg>`;
   }
@@ -242,6 +242,7 @@
     $('modale').classList.add('visible');
   };
   $('btnReglages').onclick = () => { if (!partie) ecran('reglages'); };
+  $('versionJeu').textContent = 'Version 1.9.3 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = accueil;
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
