@@ -76,6 +76,7 @@
       temps: 0,
       tour: 0,
       gloire: options.gloire || 0,
+      gloireActive: options.gloireActive !== false,
       unites: [],
       journal: [],
       premieresFois: options.premieresFois || {},
@@ -107,15 +108,20 @@
 
   // Prévision des n prochains tours (on suppose des actions de poids normal,
   // sauf pour les ennemis dont l'intention est connue).
-  function prevision(etat, n) {
+  function prevision(etat, n, fantome) {
     const sim = vivants(etat).map(u => ({ uid: u.uid, t: u.prochain, v: u.vitesse, intention: u.intention, camp: u.camp }));
+    if (fantome) {
+      // L'acteur actuel a déjà joué ce tour : on le replace là où l'action choisie le renverra
+      const a = sim.find(s => s.uid === fantome.uid);
+      if (a) { a.t = etat.temps + delai(fantome.poids || 'normal', a.v); a.fantome = true; }
+    }
     const resultat = [];
     const premiers = {};
     for (let i = 0; i < n && sim.length; i++) {
       sim.sort((a, b) => a.t - b.t || b.v - a.v);
       const s = sim[0];
       const montrerIntention = s.camp === 'ennemi' && !premiers[s.uid] && s.intention && s.intention.annonce;
-      resultat.push({ uid: s.uid, annonce: montrerIntention ? s.intention.competence : null });
+      resultat.push({ uid: s.uid, annonce: montrerIntention ? s.intention.competence : null, fantome: !!(s.fantome && !premiers[s.uid]) });
       premiers[s.uid] = true;
       s.t += delai('normal', s.v);
     }
@@ -168,6 +174,7 @@
   }
 
   function gagnerGloire(etat, n, evenements) {
+    if (!etat.gloireActive) return;
     const avant = etat.gloire;
     etat.gloire = Math.min(100, etat.gloire + n);
     if (avant < 100 && etat.gloire >= 100) evenements.push({ type: 'gloirePleine' });
@@ -324,19 +331,33 @@
       const normales = comps.filter(c => !c.chaque);
       choix = normales[Math.floor(etat.hasard() * normales.length)];
     }
-    ennemi.intention = { competence: choix.id, annonce: !!choix.chaque || etat.hasard() < 0.5 };
+    let cible = null;
+    if (!choix.zone) {
+      const cibles = ciblesPossibles(etat, ennemi, choix);
+      if (ennemi.comportement === 'agressif') cible = cibles.slice().sort((a, b) => a.pv - b.pv)[0];
+      else cible = cibles[Math.floor(etat.hasard() * cibles.length)];
+    }
+    ennemi.intention = { competence: choix.id, annonce: true, cible: cible ? cible.uid : null, grand: !!choix.chaque };
   }
 
   function tourEnnemi(etat, ennemi) {
     const comp = ennemi.competences.find(c => c.id === ennemi.intention.competence);
     let cible = null;
     if (!comp.zone) {
-      const cibles = ciblesPossibles(etat, ennemi, comp);
-      if (comp.type === 'soin') cible = cibles.sort((a, b) => a.pv / a.pvMax - b.pv / b.pvMax)[0];
-      else if (ennemi.comportement === 'agressif') cible = cibles.sort((a, b) => a.pv - b.pv)[0];
-      else cible = cibles[Math.floor(etat.hasard() * cibles.length)];
+      cible = ennemi.intention.cible ? unite(etat, ennemi.intention.cible) : null;
+      if (!cible || cible.ko) {
+        const cibles = ciblesPossibles(etat, ennemi, comp);
+        cible = cibles[Math.floor(etat.hasard() * cibles.length)];
+      }
     }
     return agir(etat, ennemi.uid, comp.id, cible ? cible.uid : null);
+  }
+
+  // Fourchette de dégâts attendue (sans critique, sans Garde)
+  function estimer(attaquant, cible, comp) {
+    const mult = multiplicateur(comp.affinite, cible.affinite);
+    const base = comp.puissance * attaquant.attaque / (attaquant.attaque + cible.defense) * 1.6 * mult;
+    return { min: Math.max(1, Math.round(base * 0.9)), max: Math.max(1, Math.round(base * 1.1)), mult };
   }
 
   // ---------- Résultat ----------
@@ -350,7 +371,7 @@
     AFFINITES, FORT_CONTRE, POIDS, NOM_POIDS,
     creerHasard, graineDuJour, multiplicateur, creerCombat, vivants, unite,
     acteurSuivant, prevision, debutTour, competencesDisponibles, ciblesPossibles,
-    agir, tourEnnemi, verifierFin, etoiles, calculerDegats
+    agir, tourEnnemi, verifierFin, etoiles, calculerDegats, estimer, delai, planifier
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Moteur;
   else racine.Moteur = Moteur;

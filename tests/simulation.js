@@ -35,10 +35,11 @@ function choisirAction(etat, acteur, naif) {
   return meilleur;
 }
 
-function jouerEpreuve(graine, naif) {
+function jouerEpreuve(graine, naif, jour) {
   let reprise = null, gloire = 0, tours = 0, etat;
-  for (const r of D.EPREUVE.rencontres) {
-    etat = M.creerCombat({ graine: graine + tours, allies: D.HEROS, ennemis: r.ennemis.map(id => D.ENNEMIS[id]), reprise, gloire });
+  const ep = D.epreuveDuJour(jour);
+  for (const r of ep.rencontres) {
+    etat = M.creerCombat({ graine: graine + tours, allies: D.equipeDuJour(ep), ennemis: D.ennemisDeRencontre(r), reprise, gloire, gloireActive: ep.gloire });
     let garde = 0;
     while (!etat.fini && garde++ < 500) {
       const d = M.debutTour(etat);
@@ -57,7 +58,7 @@ function jouerEpreuve(graine, naif) {
     if (etat.fini === 'defaite') return { victoire: false, tours, etoiles: 0 };
     reprise = {};
     etat.unites.filter(u => u.camp === 'allie').forEach(u => {
-      const pv = u.ko ? Math.round(u.pvMax * 0.25) : Math.min(u.pvMax, u.pv + Math.round(u.pvMax * D.EPREUVE.soinEntre));
+      const pv = u.ko ? Math.round(u.pvMax * 0.25) : Math.min(u.pvMax, u.pv + Math.round(u.pvMax * D.SOIN_ENTRE));
       reprise[u.id] = { pv, energie: u.energie, hubris: u.hubris };
     });
     gloire = etat.gloire;
@@ -78,9 +79,16 @@ const e = M.creerCombat({ graine: 7, allies: D.HEROS, ennemis: [D.ENNEMIS.satyre
 assert.strictEqual(M.prevision(e, 8).length, 8);
 
 // Équilibrage
-for (const naif of [false, true]) {
-  let v = 0, et = 0, t = 0; const N = 400;
-  for (let i = 0; i < N; i++) { const r = jouerEpreuve(1000 + i * 7, naif); if (r.victoire) v++; et += r.etoiles; t += r.tours; }
-  console.log((naif ? 'Joueur naïf      ' : 'Joueur raisonnable') + ' : victoires ' + Math.round(100 * v / N) + ' %, étoiles moyennes ' + (et / N).toFixed(2) + ', tours moyens ' + Math.round(t / N));
+for (const jour of [1, 2, 3]) for (const naif of [false, true]) {
+  let v = 0, et = 0, t = 0; const N = 300;
+  for (let i = 0; i < N; i++) { const r = jouerEpreuve(1000 + i * 7, naif, jour); if (r.victoire) v++; et += r.etoiles; t += r.tours; }
+  console.log('Jour ' + jour + ' · ' + (naif ? 'joueur naïf       ' : 'joueur raisonnable') + ' : victoires ' + Math.round(100 * v / N) + ' %, étoiles ' + (et / N).toFixed(2) + ', tours ' + Math.round(t / N));
 }
+// Intentions : chaque ennemi a une cible prévue valide
+const e2 = M.creerCombat({ graine: 3, allies: D.equipeDuJour(D.epreuveDuJour(3)), ennemis: D.ennemisDeRencontre(D.epreuveDuJour(3).rencontres[0]) });
+M.vivants(e2, 'ennemi').forEach(e => assert(e.intention && (e.intention.cible || e.competences.find(c => c.id === e.intention.competence).zone)));
+const d2 = M.debutTour(e2);
+assert(M.prevision(e2, 8, { uid: d2.acteur.uid, poids: 'leger' }).some(p => p.fantome), 'Jeton fantôme absent');
+const est = M.estimer(e2.unites[0], M.vivants(e2, 'ennemi')[0], e2.unites[0].competences[0]);
+assert(est.min <= est.max && est.min > 0);
 console.log('Tests OK');

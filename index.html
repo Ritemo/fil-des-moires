@@ -11,181 +11,195 @@
   :root {
     --fond: #1b1410; --carte: #2a1f18; --carte2: #33261d; --bord: #4a382b;
     --texte: #f3e9dc; --doux: #b9a58f; --or: #e0b04f; --terre: #c8643b;
-    --pv: #6cc070; --pvbas: #e05b4b; --energie: #5fb2e8; --hubris: #d94a8c;
+    --pv: #6cc070; --pvbas: #e05b4b; --energie: #5fb2e8;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; background: var(--fond); color: var(--texte);
-    font-family: Georgia, 'Palatino Linotype', serif; }
-  body { display: flex; justify-content: center; }
+  html, body { margin: 0; height: 100%; background: var(--fond); color: var(--texte); font-family: Georgia, 'Palatino Linotype', serif; }
+  body { display: flex; justify-content: center; overflow-x: hidden; }
   #app { width: 100%; max-width: 480px; min-height: 100%; display: flex; flex-direction: column;
     padding: env(safe-area-inset-top) 10px calc(env(safe-area-inset-bottom) + 10px);
     background: radial-gradient(ellipse at top, #3a2a1e 0%, var(--fond) 70%); }
   header { display: flex; align-items: center; justify-content: space-between; padding: 10px 2px 6px; }
-  header h1 { font-size: 18px; margin: 0; letter-spacing: .5px; color: var(--or); font-variant: small-caps; }
+  header h1 { font-size: 18px; margin: 0; color: var(--or); font-variant: small-caps; }
   header .mode { font-size: 12px; color: var(--doux); }
   .frise { height: 6px; margin: 2px 0 8px; opacity: .6;
     background: repeating-linear-gradient(90deg, var(--or) 0 6px, transparent 6px 8px, var(--or) 8px 10px, transparent 10px 16px); }
-  button { font-family: inherit; color: var(--texte); background: var(--carte2); border: 1px solid var(--bord);
-    border-radius: 10px; padding: 10px; font-size: 15px; cursor: pointer; }
+  button { font-family: inherit; color: var(--texte); background: var(--carte2); border: 1px solid var(--bord); border-radius: 10px; padding: 10px; font-size: 15px; cursor: pointer; }
   button:active { transform: scale(.97); }
   button.principal { background: linear-gradient(#d39a3a, #a8742a); color: #1b1410; font-weight: bold; border: none; font-size: 17px; padding: 14px; }
   button:disabled { opacity: .35; }
+  .rond { width: 34px; height: 34px; border-radius: 50%; padding: 0; font-size: 17px; }
+  .lien { background: none; border: none; color: var(--doux); text-decoration: underline; font-size: 12px; padding: 4px; }
   .ecran { display: none; flex: 1; flex-direction: column; gap: 10px; }
   .ecran.actif { display: flex; }
-
-  /* Accueil */
-  .parchemin { background: #efe2c6; color: #3a2a1e; border-radius: 12px; padding: 16px; line-height: 1.45;
-    box-shadow: inset 0 0 30px rgba(120,80,30,.35); }
-  .parchemin h2 { margin: 0 0 8px; font-size: 20px; font-variant: small-caps; }
-  .parchemin .presage { font-style: italic; }
   .info { font-size: 13px; color: var(--doux); text-align: center; }
-  .equipe { display: flex; gap: 8px; justify-content: center; font-size: 13px; }
-  .equipe > div { background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; padding: 8px; text-align: center; flex: 1; }
-  .equipe .e { font-size: 30px; }
+  .parchemin { background: #efe2c6; color: #3a2a1e; border-radius: 12px; padding: 14px 16px; line-height: 1.45; box-shadow: inset 0 0 30px rgba(120,80,30,.35); }
+  .parchemin h2 { margin: 0 0 6px; font-size: 19px; font-variant: small-caps; }
+  .parchemin .presage { font-style: italic; margin: 6px 0; }
+  .nouveau { font-size: 13px; background: rgba(160,110,40,.15); border-radius: 8px; padding: 6px 8px; margin-top: 6px; }
+
+  /* Tapisserie */
+  .tapis { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px; }
+  .tapis .tete { display: flex; justify-content: space-between; font-size: 13px; color: var(--doux); margin-bottom: 6px; }
+  .tapis .tete b { color: var(--or); font-weight: normal; font-variant: small-caps; font-size: 15px; }
+  .tapis canvas { width: 100%; display: block; border-radius: 6px; }
+  .tapis .legende { font-size: 13px; color: var(--doux); margin-top: 6px; min-height: 18px; line-height: 1.4; }
 
   /* File */
-  .file { display: flex; gap: 4px; align-items: center; background: var(--carte); border: 1px solid var(--bord);
-    border-radius: 10px; padding: 6px; }
+  .file { display: flex; gap: 4px; align-items: center; background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; padding: 6px; }
   .file .lbl { font-size: 10px; color: var(--doux); writing-mode: vertical-rl; transform: rotate(180deg); }
-  .file .jeton { position: relative; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-size: 20px; background: var(--carte2); border: 2px solid var(--bord); flex: none; }
-  .file .jeton.allie { border-color: #5a8f5e; }
-  .file .jeton.ennemi { border-color: #a5483a; }
-  .file .jeton.premier { width: 44px; height: 44px; font-size: 25px; box-shadow: 0 0 10px var(--or); border-color: var(--or); }
-  .file .jeton .alerte { position: absolute; top: -6px; right: -6px; font-size: 13px; }
-  .file .aide { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; padding: 0; font-size: 15px; flex: none; }
+  .jeton { position: relative; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; background: var(--carte2); border: 2px solid var(--bord); flex: none; }
+  .jeton.allie { border-color: #5a8f5e; } .jeton.ennemi { border-color: #a5483a; }
+  .jeton.premier { width: 44px; height: 44px; font-size: 25px; box-shadow: 0 0 10px var(--or); border-color: var(--or); }
+  .jeton.fantome { border: 2px dashed #fff; opacity: .75; animation: pulse 1s infinite; }
+  .jeton .alerte { position: absolute; top: -6px; right: -6px; font-size: 13px; }
+  .barreHaut { display: flex; justify-content: space-between; align-items: center; }
+  .barreHaut .info { text-align: left; }
 
   /* Combattants */
+  #combat { position: relative; }
   .zone { display: flex; gap: 8px; justify-content: center; }
-  .unite { position: relative; flex: 1; max-width: 150px; background: var(--carte); border: 1px solid var(--bord);
-    border-radius: 12px; padding: 8px 6px; text-align: center; transition: transform .15s, opacity .3s, box-shadow .2s; }
+  .unite { position: relative; flex: 1; max-width: 150px; background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 8px 6px; text-align: center; transition: transform .15s, opacity .3s, box-shadow .2s; }
   .unite .e { font-size: 38px; line-height: 1.1; }
   .unite.gardien .e { font-size: 56px; }
   .unite .nom { font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .unite .aff { font-size: 11px; color: var(--doux); }
-  .barre { height: 7px; background: #120d0a; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-  .barre i { display: block; height: 100%; background: var(--pv); transition: width .4s; }
-  .barre.bas i { background: var(--pvbas); }
+  .barre { position: relative; height: 8px; background: #120d0a; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .barre i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--pv); transition: width .35s; }
+  .barre i.ghost { background: #fff3d6; transition: width .9s .35s; }
+  .barre i.perte { background: #ff6b5b; animation: clignote .6s infinite; }
+  .barre.bas i.vrai { background: var(--pvbas); }
+  @keyframes clignote { 50% { opacity: .25; } }
   .pvtxt { font-size: 10px; color: var(--doux); }
   .pips { display: flex; justify-content: center; gap: 3px; margin-top: 3px; }
   .pips b { width: 8px; height: 8px; border-radius: 50%; background: #120d0a; border: 1px solid var(--energie); }
   .pips b.on { background: var(--energie); }
-  .hub { height: 4px; background: #120d0a; border-radius: 2px; margin-top: 3px; overflow: hidden; }
-  .hub i { display: block; height: 100%; background: var(--hubris); transition: width .4s; }
   .etats { font-size: 13px; min-height: 16px; }
+  .etats span { margin: 0 2px; } .etats sub { font-size: 9px; color: var(--doux); }
+  .intention { font-size: 11px; background: #3b1f18; border: 1px solid #7a3b2c; border-radius: 8px; padding: 3px 4px; margin: -2px 0 4px; line-height: 1.3; }
+  .intention.grand { background: #5a1d14; border-color: #e05b4b; animation: pulse 1.4s infinite; }
+  .apercu { position: absolute; left: 50%; top: -10px; transform: translateX(-50%); background: #111; border: 1px solid var(--or); color: #ffe7a8; font-size: 12px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; z-index: 4; }
+  .apercu.fort { border-color: #ffd34d; color: #ffd34d; } .apercu.faible { border-color: #888; color: #bbb; }
   .unite.actif { box-shadow: 0 0 0 2px var(--or), 0 0 14px rgba(224,176,79,.5); }
   .unite.ciblable { box-shadow: 0 0 0 2px #fff; animation: pulse 1s infinite; cursor: pointer; }
+  .unite.conseil, .actions button.conseil { box-shadow: 0 0 0 2px #7fd1ff, 0 0 12px rgba(127,209,255,.6); }
   .unite.ko { opacity: .3; filter: grayscale(1); }
+  .unite.effiloche { animation: effiloche .8s forwards; }
+  @keyframes effiloche { 0% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 100% 0); opacity: .2; transform: translateY(12px); } }
   .unite.touche { animation: secousse .3s; }
-  @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(255,255,255,.5); } }
-  @keyframes secousse { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-  .flottant { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); font-weight: bold; font-size: 20px;
-    pointer-events: none; animation: monte 1s forwards; text-shadow: 0 2px 3px #000; white-space: nowrap; z-index: 5; }
-  .flottant.soin { color: var(--pv); } .flottant.fort { color: #ffd34d; font-size: 24px; } .flottant.faible { color: #aaa; }
+  .unite.elan-haut { animation: elanHaut .45s; } .unite.elan-bas { animation: elanBas .45s; }
+  @keyframes elanHaut { 40% { transform: translateY(-22px) scale(1.06); } }
+  @keyframes elanBas { 40% { transform: translateY(22px) scale(1.06); } }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(255,255,255,.35); } }
+  @keyframes secousse { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .tremble { animation: tremble .35s; }
+  @keyframes tremble { 20% { transform: translate(-6px, 3px); } 40% { transform: translate(5px, -4px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(3px, -1px); } }
+  .particule { position: absolute; left: 50%; top: 40%; font-size: 18px; pointer-events: none; z-index: 6; animation: eclate .8s forwards; }
+  @keyframes eclate { to { transform: translate(var(--dx), var(--dy)) scale(.4); opacity: 0; } }
+  .flottant { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); font-weight: bold; font-size: 22px; pointer-events: none; animation: monte 1.1s forwards; text-shadow: 0 2px 3px #000; white-space: nowrap; z-index: 5; }
+  .flottant.soin { color: var(--pv); } .flottant.fort { color: #ffd34d; font-size: 28px; } .flottant.faible { color: #aaa; }
   .flottant.info { font-size: 13px; color: var(--or); }
-  @keyframes monte { to { transform: translate(-50%, -40px); opacity: 0; } }
+  @keyframes monte { 0% { transform: translate(-50%, 0) scale(1.3); } 20% { transform: translate(-50%, -6px) scale(1); } 100% { transform: translate(-50%, -44px); opacity: 0; } }
   .vs { text-align: center; color: var(--doux); font-size: 12px; }
-
   .gloire { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--or); }
   .gloire .barre { flex: 1; height: 9px; margin: 0; }
   .gloire .barre i { background: linear-gradient(90deg, #a8742a, #ffd34d); }
+  .fil { height: 4px; background: #120d0a; border-radius: 2px; position: relative; overflow: hidden; }
+  .fil i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--or); transition: width .6s; }
 
   /* Actions */
   .panneau { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 8px; }
-  .panneau .titre { font-size: 13px; color: var(--doux); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .panneau .titre { font-size: 13px; color: var(--doux); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .actions button { text-align: left; padding: 8px; font-size: 14px; line-height: 1.2; }
   .actions button small { display: block; font-size: 11px; color: var(--doux); margin-top: 2px; }
+  .actions button small b { color: var(--energie); font-weight: normal; }
   .actions button.choisi { border-color: var(--or); background: #4a3622; }
   .actions button.prouesse { border-color: var(--or); }
   .desc { font-size: 12px; color: var(--doux); min-height: 30px; margin-top: 6px; }
   .journal { font-size: 12px; color: var(--doux); min-height: 48px; line-height: 1.4; }
   .journal div:first-child { color: var(--texte); }
 
+  /* Bannière */
+  #banniere { position: fixed; left: 50%; top: 36%; transform: translate(-50%, -50%) scale(.8); opacity: 0; z-index: 15; background: rgba(20,14,10,.94); border: 1px solid var(--or); border-radius: 14px; padding: 10px 18px; text-align: center; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 86%; }
+  #banniere.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #banniere.fort { transform: translate(-50%, -50%) scale(1.15); border-color: #ffd34d; box-shadow: 0 0 30px rgba(255,211,77,.4); }
+  #banniere .qui { font-size: 13px; color: var(--doux); } #banniere .quoi { font-size: 19px; font-weight: bold; } #banniere .eff { font-size: 14px; margin-top: 2px; color: #ffe7a8; }
+
   /* Clotho */
-  #clotho { position: fixed; inset: auto 0 0 0; display: none; justify-content: center; z-index: 20; padding: 10px;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
+  #clotho { position: fixed; inset: auto 0 0 0; display: none; justify-content: center; z-index: 20; padding: 10px; padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
   #clotho.visible { display: flex; }
-  #clotho .bulle { max-width: 460px; width: 100%; background: #efe2c6; color: #3a2a1e; border-radius: 14px; padding: 12px 14px;
-    box-shadow: 0 -4px 30px rgba(0,0,0,.6); display: flex; gap: 10px; align-items: flex-start; }
-  #clotho .portrait { font-size: 36px; }
-  #clotho .qui { font-weight: bold; font-variant: small-caps; }
+  #clotho .bulle { max-width: 460px; width: 100%; background: #efe2c6; color: #3a2a1e; border-radius: 14px; padding: 12px 14px; box-shadow: 0 -4px 30px rgba(0,0,0,.6); display: flex; gap: 10px; align-items: flex-start; }
+  #clotho .portrait { font-size: 36px; } #clotho .qui { font-weight: bold; font-variant: small-caps; }
   #clotho p { margin: 4px 0 8px; line-height: 1.4; font-size: 15px; }
   #clotho button { background: #3a2a1e; color: #efe2c6; padding: 8px 14px; font-size: 14px; }
-  .voile { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; z-index: 19; }
+  .voile { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 19; }
   .voile.visible { display: block; }
 
-  /* Modale affinités */
+  /* Modale */
   #modale { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 30; background: rgba(0,0,0,.7); padding: 20px; }
   #modale.visible { display: flex; }
-  #modale .contenu { background: var(--carte); border: 1px solid var(--or); border-radius: 14px; padding: 16px; max-width: 420px; width: 100%; }
-  #modale h3 { margin: 0 0 10px; color: var(--or); font-variant: small-caps; }
+  #modale .contenu { background: var(--carte); border: 1px solid var(--or); border-radius: 14px; padding: 16px; max-width: 420px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; }
+  #modale h3 { margin: 0; color: var(--or); font-variant: small-caps; }
+  .onglets { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 10px; }
+  .onglets button { padding: 6px 10px; font-size: 13px; } .onglets button.on { border-color: var(--or); color: var(--or); }
+  .lexique { overflow-y: auto; font-size: 14px; line-height: 1.4; }
+  .lexique .ligne { padding: 8px 0; border-bottom: 1px solid var(--bord); } .lexique .ligne b { color: var(--or); }
   .cycle { font-size: 16px; margin: 8px 0; text-align: center; }
   .small { font-size: 12px; color: var(--doux); line-height: 1.4; }
+  select { font-family: inherit; background: var(--carte2); color: var(--texte); border: 1px solid var(--bord); border-radius: 8px; padding: 6px; font-size: 14px; }
 
-  /* Fin */
-  .resultat { text-align: center; padding: 20px 0; }
-  .resultat .grand { font-size: 28px; color: var(--or); font-variant: small-caps; }
-  .resultat .etoiles { font-size: 40px; letter-spacing: 6px; margin: 10px 0; }
-  .lien { background: none; border: none; color: var(--doux); text-decoration: underline; font-size: 12px; padding: 4px; }
-
-  header .aide { width: 34px; height: 34px; border-radius: 50%; padding: 0; font-size: 17px; }
-  #modale .contenu { max-height: 85vh; display: flex; flex-direction: column; }
-  .onglets { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
-  .onglets button { padding: 6px 10px; font-size: 13px; }
-  .onglets button.on { border-color: var(--or); color: var(--or); }
-  .lexique { overflow-y: auto; font-size: 14px; line-height: 1.4; }
-  .lexique .ligne { padding: 8px 0; border-bottom: 1px solid var(--bord); }
-  .lexique .ligne b { color: var(--or); }
+  /* Présentation des ennemis */
   .bestiaire { display: flex; flex-direction: column; gap: 10px; }
   .fiche { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 12px; display: flex; gap: 12px; }
-  .fiche .e { font-size: 52px; line-height: 1; }
-  .fiche h4 { margin: 0 0 4px; color: var(--or); font-size: 17px; }
+  .fiche .e { font-size: 52px; line-height: 1; } .fiche h4 { margin: 0 0 4px; color: var(--or); font-size: 17px; }
   .fiche p { margin: 4px 0; font-size: 13px; line-height: 1.4; }
   .fiche .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--carte2); margin: 2px 4px 2px 0; }
   .fiche .special { color: #f0c27a; }
-  #banniere { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(.8); opacity: 0; z-index: 15;
-    background: rgba(20,14,10,.92); border: 1px solid var(--or); border-radius: 14px; padding: 10px 18px; text-align: center;
-    pointer-events: none; transition: opacity .2s, transform .2s; max-width: 86%; }
-  #banniere.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  #banniere .qui { font-size: 13px; color: var(--doux); }
-  #banniere .quoi { font-size: 19px; font-weight: bold; }
-  #banniere .eff { font-size: 14px; margin-top: 2px; }
-  .unite.elan-haut { animation: elanHaut .45s; } .unite.elan-bas { animation: elanBas .45s; }
-  @keyframes elanHaut { 40% { transform: translateY(-22px) scale(1.06); } }
-  @keyframes elanBas { 40% { transform: translateY(22px) scale(1.06); } }
-  .unite .eclat { position: absolute; inset: 0; border-radius: 12px; pointer-events: none; opacity: 0; }
-  .unite .eclat.on { animation: eclat .5s; }
-  @keyframes eclat { 0% { opacity: .75; } 100% { opacity: 0; } }
-  .unite.soigne { box-shadow: 0 0 0 2px var(--pv), 0 0 16px rgba(108,192,112,.6); }
-  .actions button small b { color: var(--energie); font-weight: normal; }
+
+  /* Fin */
+  .resultat { text-align: center; padding: 6px 0; }
+  .resultat .grand { font-size: 28px; color: var(--or); font-variant: small-caps; }
+  .resultat .etoiles { font-size: 36px; letter-spacing: 6px; margin: 6px 0; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <h1>🧵 Le Fil des Moires</h1>
-    <span style="display:flex;align-items:center;gap:8px"><span class="mode" id="mode"></span><button class="aide" id="btnLexique" title="Lexique">📖</button></span>
+    <span style="display:flex;align-items:center;gap:8px"><span class="mode" id="mode"></span><button class="rond" id="btnLexique" title="Lexique">📖</button></span>
   </header>
   <div class="frise"></div>
 
   <!-- Accueil -->
   <section class="ecran actif" id="accueil">
+    <div class="tapis">
+      <div class="tete"><b>Ta tapisserie</b><span id="tapisCompte"></span></div>
+      <canvas id="tapisAccueil" width="440" height="200"></canvas>
+      <div class="legende" id="tapisLegende">Touche un rang pour revoir ta journée.</div>
+    </div>
     <div class="parchemin">
       <h2 id="titreEpreuve"></h2>
-      <div class="info" style="color:#6b5440;text-align:left" id="dateJour"></div>
+      <div style="font-size:13px;color:#6b5440" id="dateJour"></div>
       <p class="presage" id="presage"></p>
-      <p style="margin:0;font-size:14px">Deux rencontres, puis le Gardien. <b>Une seule tentative compte</b> chaque jour. Ensuite, tu peux rejouer en mode Écho, sans récompense.</p>
+      <div class="nouveau" id="nouveau"></div>
     </div>
-    <div class="equipe" id="equipe"></div>
     <div class="info" id="etatJour"></div>
     <button class="principal" id="btnJouer">Commencer l'épreuve</button>
-    <button id="btnEcho">Rejouer en Écho</button>
+    <button id="btnEcho">Rejouer en Écho (sans récompense)</button>
     <div style="flex:1"></div>
-    <div class="info">Prototype phase 0 · graphismes provisoires</div>
-    <div style="display:flex;justify-content:center;gap:10px">
-      <button class="lien" id="btnAide">📖 Lexique</button>
-      <button class="lien" id="btnReset">Réinitialiser (tests)</button>
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;font-size:13px;color:var(--doux)">
+      Clotho : <select id="reglageClotho">
+        <option value="auto">s'efface avec le temps</option>
+        <option value="bavarde">bavarde</option>
+        <option value="discrete">discrète</option>
+        <option value="muette">muette</option>
+      </select>
+    </div>
+    <div class="info">Prototype phase 0 bis · graphismes provisoires</div>
+    <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px">
+      <button class="lien" id="btnJourSuivant">Passer au jour suivant (test)</button>
+      <button class="lien" id="btnReset">Tout réinitialiser (test)</button>
     </div>
   </section>
 
@@ -199,13 +213,14 @@
 
   <!-- Combat -->
   <section class="ecran" id="combat">
-    <div class="info" id="nomRencontre"></div>
+    <div class="barreHaut"><span class="info" id="nomRencontre"></span>
+      <span><button class="lien" id="btnVitesse">Vitesse x1</button> <button class="rond" id="btnIndice" title="Indice" style="display:none">💡</button></span></div>
+    <div class="fil" title="Progression de l'épreuve"><i id="filProgres"></i></div>
     <div class="file" id="file"></div>
-    <div id="banniere"></div>
     <div class="zone" id="ennemis"></div>
     <div class="vs">⚔︎</div>
     <div class="zone" id="allies"></div>
-    <div class="gloire"><span>Gloire</span><div class="barre"><i id="gloire"></i></div><span id="gloireTxt">0</span></div>
+    <div class="gloire" id="blocGloire"><span>Gloire</span><div class="barre"><i id="gloire"></i></div><span id="gloireTxt">0</span></div>
     <div class="panneau">
       <div class="titre"><span id="tourDe"></span><button class="lien" id="btnAnnuler" style="display:none">Annuler</button></div>
       <div class="actions" id="actions"></div>
@@ -219,14 +234,18 @@
     <div class="resultat">
       <div class="grand" id="finTitre"></div>
       <div class="etoiles" id="finEtoiles"></div>
-      <div id="finXp"></div>
+    </div>
+    <div class="tapis">
+      <div class="tete"><b>Le rang du jour</b><span id="finXp"></span></div>
+      <canvas id="tapisFin" width="440" height="200"></canvas>
+      <div class="legende" id="finResume"></div>
     </div>
     <div class="parchemin"><b>Clotho :</b> <span id="finClotho"></span></div>
-    <div class="info" id="finEcho"></div>
     <button class="principal" id="btnRetour">Retour</button>
   </section>
 </div>
 
+<div id="banniere"></div>
 <div class="voile" id="voile"></div>
 <div id="clotho"><div class="bulle"><div class="portrait">🧶</div><div>
   <div class="qui">Clotho, la Fileuse</div><p id="clothoTexte"></p><button id="clothoOk">Compris</button>
@@ -240,6 +259,7 @@
 
 <script src="engine.js"></script>
 <script src="data.js"></script>
+<script src="tapisserie.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
