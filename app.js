@@ -48,7 +48,16 @@
     return p;
   }
   let profil = migrer(Object.assign(profilVide(), stock.lire('profil', {})));
-  const sauver = () => { profil.maj = Date.now(); stock.ecrire('profil', profil); S.envoyer(profil); };
+  // Prochaine épreuve (titre et Présage), lue par le script de sauvegarde pour le rappel du matin
+  function noterProchaine() {
+    try {
+      const d = new Date(); if (profil.derniereDate === aujourdhui()) d.setDate(d.getDate() + 1);
+      const date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const jour = profil.joursJoues + 1, ep = E.epreuve(jour, date, profil.histoire);
+      profil.prochaine = { jour, titre: ep.titre.replace(/^Le Prologue : /, ''), presage: ep.presage || '', nouveau: ep.nouveau || '' };
+    } catch (e) { /* le rappel se contentera du numéro du jour */ }
+  }
+  const sauver = () => { noterProchaine(); profil.maj = Date.now(); stock.ecrire('profil', profil); S.envoyer(profil); };
 
   // ---------- Sauvegarde commune ----------
   // Au démarrage et quand l'appli revient au premier plan : on prend la version la plus récente.
@@ -345,7 +354,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.16.1 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.17.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1336,7 +1345,7 @@
     if (!S.conf()) { $('lexiqueCorps').innerHTML = '<p>Le rappel lit ta progression dans la sauvegarde en ligne : configure d\'abord la sauvegarde commune (Réglages, Sauvegarde), ou rejoins le jeu par un lien d\'invitation.</p>'; return $('modale').classList.add('visible'); }
     const afficher = () => {
       const t = profil.ntfy;
-      $('lexiqueCorps').innerHTML = t ? `<p>Chaque matin vers 8 h 30, tu reçois le titre et le Présage de ta prochaine épreuve (sauf si tu as déjà joué).</p>
+      $('lexiqueCorps').innerHTML = t ? `<p>Chaque matin vers 8 h, tu reçois le titre et le Présage de ta prochaine épreuve (sauf si tu as déjà joué).</p>
         <p><b>1.</b> Installe l'appli gratuite <b>ntfy</b> (Play Store ou App Store).</p>
         <p><b>2.</b> Dans ntfy, touche <b>+</b> et abonne-toi au sujet :</p><div class="lienInvit">${t}</div>
         <a href="ntfy://ntfy.sh/${t}" style="display:block;margin-top:6px"><button style="width:100%">📲 Ouvrir dans l'appli ntfy</button></a>

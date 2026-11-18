@@ -1,9 +1,7 @@
 name: Rappel
-# Chaque matin, envoie à chaque joueur sa quête du jour (notification ntfy).
+# Tests manuels des notifications. Le rappel quotidien est envoyé par le script Google (rappelDuMatin).
 # 7 h 37 UTC = 8 h 37 à Paris en hiver (9 h 37 en été). Lancement manuel possible (Run workflow) pour tester.
 on:
-  schedule:
-    - cron: '37 7 * * *'
   workflow_dispatch:
     inputs:
       test:

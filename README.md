@@ -92,4 +92,5 @@ Quand un joueur termine son épreuve, le script de sauvegarde envoie une notific
 
 ## Rappel du matin
 
-Le robot **Rappel** (`.github/workflows/rappel.yml`) envoie chaque matin (8 h 37 à Paris en hiver) à chaque joueur qui l'a activé le titre et le Présage de sa prochaine épreuve, par l'appli gratuite **ntfy**. Chaque joueur l'active dans *Réglages* > *Rappel du matin* (le jeu lui donne son sujet ntfy). Le robot lit les sauvegardes via le script Google : secrets `SAUVEGARDE_URL` (adresse /exec) et `SAUVEGARDE_CLE` (la clé `CLE` du joueur principal). Si tu changes ta clé, change aussi ce secret.
+Chaque matin vers 8 h (heure de Paris), le script de sauvegarde envoie à chaque joueur qui a activé le rappel le titre et le Présage de sa prochaine épreuve, sauf s'il a déjà joué. Mise en place, une seule fois : dans l'éditeur Apps Script, choisir la fonction `installerRappel` et cliquer sur Exécuter (accepter les autorisations). Vérification : `<adresse du script>/exec?version=1` affiche `rappelInstalle: true` et le journal des derniers envois. Le robot GitHub « Rappel » ne sert plus qu'aux tests manuels.
+

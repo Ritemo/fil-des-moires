@@ -8,12 +8,15 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 5;
+const VERSION_SCRIPT = 6;
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
 
 function doGet(e) {
   // Vérification sans clé : ouvrir <adresse>/exec?version=1 doit afficher la version du script
-  if (e.parameter.version) return reponse({ ok: true, version: VERSION_SCRIPT, joueurs: PropertiesService.getScriptProperties().getKeys().filter(function (k) { return k.indexOf('CLE_') === 0; }).map(function (k) { return k.slice(4); }) });
+  if (e.parameter.version) return reponse({ ok: true, version: VERSION_SCRIPT,
+    joueurs: PropertiesService.getScriptProperties().getKeys().filter(function (k) { return k.indexOf('CLE_') === 0; }).map(function (k) { return k.slice(4); }),
+    rappelInstalle: ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'rappelDuMatin'; }),
+    journal: JSON.parse(PropertiesService.getScriptProperties().getProperty('JOURNAL') || '[]') });
   const joueur = nettoyer(e.parameter.joueur);
   if (joueur && !PropertiesService.getScriptProperties().getProperty('CLE_' + joueur.toUpperCase())) return reponse({ ok: false, erreur: 'joueur', version: VERSION_SCRIPT });
   if (joueur === false || !cleValide(joueur, e.parameter.cle)) return reponse({ ok: false, erreur: 'cle', version: VERSION_SCRIPT });
@@ -72,7 +75,7 @@ function doPost(e) {
   // On garde toujours la version la plus récente (champ maj, en millisecondes)
   if (!actuel || !actuel.maj || (recu && recu.maj >= actuel.maj)) {
     ecrire(joueur, recu);
-    try { annoncerExploit(joueur, actuel, recu); } catch (err) { console.log('Annonce impossible : ' + err); }
+    try { annoncerExploit(joueur, actuel, recu); } catch (err) { noter('annonce impossible : ' + err); }
     return reponse({ ok: true, donnees: recu, ecrit: true });
   }
   return reponse({ ok: true, donnees: actuel, ecrit: false });
@@ -127,8 +130,38 @@ function annoncerExploit(joueur, avant, apres) {
 }
 
 function envoyerNtfy(sujet, titre, message) {
-  UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+  const r = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     payload: JSON.stringify({ topic: sujet, title: titre, message: message, click: ADRESSE_JEU, tags: ['crossed_swords'] }) });
+  noter(titre + ' -> ' + r.getResponseCode());
+}
+
+// Journal des 15 derniers envois (visible avec <adresse>/exec?version=1, sans clé)
+function noter(texte) {
+  const props = PropertiesService.getScriptProperties();
+  const j = JSON.parse(props.getProperty('JOURNAL') || '[]');
+  j.unshift(Utilities.formatDate(new Date(), 'Europe/Paris', 'dd/MM HH:mm') + ' · ' + texte);
+  props.setProperty('JOURNAL', JSON.stringify(j.slice(0, 15)));
+}
+
+// ---------- Rappel du matin, envoyé par Google chaque jour vers 8 h (plus fiable que le robot GitHub) ----------
+function rappelDuMatin() {
+  const auj = Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd');
+  PropertiesService.getScriptProperties().getKeys()
+    .filter(function (k) { return k === 'CLE' || k.indexOf('CLE_') === 0; })
+    .forEach(function (k) {
+      const j = k === 'CLE' ? '' : k.slice(4).toLowerCase(), p = lire(j);
+      if (!p || !p.ntfy) return;
+      if (p.derniereDate === auj) { noter(nomDe(j, p) + ' a déjà joué : pas de rappel'); return; }
+      const pr = p.prochaine || { jour: (p.joursJoues || 0) + 1, titre: 'ta quête t\'attend', presage: '' };
+      envoyerNtfy(p.ntfy, '🧵 Jour ' + pr.jour + ' : ' + pr.titre, (pr.presage || 'Le fil t\'attend.') + (pr.nouveau ? '\n' + pr.nouveau : ''));
+    });
+}
+
+// À lancer une fois depuis l'éditeur (bouton Exécuter) : programme le rappel chaque jour vers 8 h, heure de Paris
+function installerRappel() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'rappelDuMatin') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('rappelDuMatin').timeBased().atHour(8).everyDays(1).inTimezone('Europe/Paris').create();
+  noter('rappel du matin programmé');
 }
 
 // À lancer une fois depuis l'éditeur (bouton Exécuter) : autorise l'envoi de notifications et t'envoie un test
