@@ -56,7 +56,7 @@
     const u = copier(modele);
     u.uid = camp + index + '_' + modele.id;
     u.camp = camp;
-    u.pv = u.pvMax;
+    u.pv = u.pvDepart ? Math.min(u.pvMax, u.pvDepart) : u.pvMax;
     u.energie = u.energieDepart != null ? u.energieDepart : 2;
     u.energieMax = u.energieMax || 5;
     u.hubris = 0;
@@ -371,6 +371,15 @@
     const comps = ennemi.competences;
     ennemi.compteur = (ennemi.compteur || 0) + 1;
     let choix = comps.find(c => c.chaque && ennemi.compteur % c.chaque === 0);
+    if (!choix && ennemi.ombre) {
+      // L'ombre d'un joueur : elle respecte son énergie, soigne seulement si un allié est blessé, préfère ses gros coups
+      const e = ennemi.energie + 1, blesse = vivants(etat, ennemi.camp).some(u => u.pv < u.pvMax * 0.6);
+      let options = comps.filter(c => c.type !== 'garde' && c.type !== 'lier' && !c.prouesse && (c.cout || 0) <= e && (c.type !== 'soin' || blesse)
+        && (!c.cible || c.zone || ciblesPossibles(etat, ennemi, c).length));
+      if (!options.length) options = comps.filter(c => c.type === 'attaque').sort((a, b) => (a.cout || 0) - (b.cout || 0)).slice(0, 1);
+      options.sort((a, b) => (b.cout || 0) - (a.cout || 0));
+      choix = etat.hasard() < 0.6 ? options[0] : options[Math.floor(etat.hasard() * options.length)];
+    }
     if (!choix) {
       const normales = comps.filter(c => !c.chaque);
       choix = normales[Math.floor(etat.hasard() * normales.length)];

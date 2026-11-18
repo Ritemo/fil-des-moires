@@ -8,7 +8,7 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 6;
+const VERSION_SCRIPT = 7;
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
 
 function doGet(e) {
@@ -46,7 +46,11 @@ function classement() {
     if (!p) return null;
     const rangs = (p.rangs || []).filter(function (r) { return !r.echo; });
     return {
+      joueur: j,
       nom: p.pseudo || (j ? j.charAt(0).toUpperCase() + j.slice(1) : 'Joueur principal'),
+      // Agora : trophées de l'Arène, dégâts sur le Titan de la semaine, talisman (pour son ombre dans l'Arène)
+      act: p.activites ? { trophees: (p.activites.arene || {}).trophees || 0, titan: p.activites.titan || null,
+        talisman: p.activites.talisman || null, talismans: p.activites.talismans || {} } : null,
       jour: p.joursJoues || 0, niveau: p.niveau || 1,
       etoiles: rangs.reduce(function (n, r) { return n + (r.victoire ? r.etoiles || 0 : 0); }, 0),
       victoires: rangs.filter(function (r) { return r.victoire; }).length,
@@ -60,6 +64,7 @@ function classement() {
       fiche: {
         recents: rangs.slice(-7),
         equipement: p.equipement || {}, creature: p.creature || null, compagnons: p.compagnons || [],
+        voie: p.voie || null, serments: p.serments || {},
         cartes: p.cartes || {}, creatures: p.creatures || [], drachmes: p.drachmes || 0
       }
     };

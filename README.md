@@ -86,6 +86,20 @@ Les personnages, créatures et cartes utilisent les émoticônes 3D **Fluent Emo
 
 Le robot **Voix** (GitHub Actions, `.github/workflows/voix.yml`) enregistre chaque réplique de l'histoire avec une voix neuronale par personnage (service de lecture à voix haute de Microsoft Edge, via `edge-tts`, gratuit et sans clé). Il se lance tout seul quand `chant1.js` change, ou à la main : onglet *Actions* > *Voix* > *Run workflow*. Les fichiers vont dans `art/voix/` ; seules les répliques nouvelles ou modifiées sont enregistrées. Les voix de chaque personnage se règlent dans `outils/voix.py`. Si un fichier manque, le jeu utilise la voix de l'appareil.
 
+## L'Agora (activités du jour)
+
+L'onglet Agora (ancien onglet Trésors) réunit, en plus de l'Offrande et de la Route de la Tapisserie, cinq activités qui s'ouvrent une par une (fichier `activites.js`) :
+
+| Activité | Ouverture | Principe |
+|---|---|---|
+| 🔮 Oracle de Delphes | après le jour 3 | une énigme mythologique par jour, la même pour tous ; drachmes et éclats d'oracle |
+| 🏟️ Arène des ombres | après le jour 4 | un duel par jour contre l'ombre d'un autre joueur (son équipe, pilotée par l'ordinateur) ; trophées et ligues |
+| ⚒️ Forge d'Héphaïstos | après le jour 4 | des talismans (3 niveaux) fabriqués avec les matériaux ; le talisman équipé renforce l'équipe partout |
+| 🗺️ Expéditions | après le jour 5 | une créature part explorer un lieu et revient le lendemain avec du butin |
+| 🗿 Titan de la semaine | après le jour 6 | un boss commun du lundi au dimanche ; un assaut de 12 actions par jour, les dégâts de tous s'additionnent ; récompenses à 25, 50, 75 et 100 % |
+
+L'Arène et le Titan lisent les autres joueurs dans le classement du script de sauvegarde (version 7 ou plus). Sans sauvegarde commune, on affronte sa propre ombre et on combat le Titan seul.
+
 ## Annonce des exploits
 
 Quand un joueur termine son épreuve, le script de sauvegarde envoie une notification ntfy aux autres joueurs qui ont activé le Rappel du matin (« 🧵 Marion a tissé le jour 4 », avec ses étoiles). Chacun peut la couper dans Réglages, Rappel du matin. Après avoir collé le script, lancer une fois la fonction `testerNotification` depuis l'éditeur Apps Script pour autoriser l'envoi.
