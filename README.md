@@ -104,7 +104,16 @@ L'Arène et le Titan lisent les autres joueurs dans le classement du script de s
 
 Quand un joueur termine son épreuve, le script de sauvegarde envoie une notification ntfy aux autres joueurs qui ont activé le Rappel du matin (« 🧵 Marion a tissé le jour 4 », avec ses étoiles). Chacun peut la couper dans Réglages, Rappel du matin. Après avoir collé le script, lancer une fois la fonction `testerNotification` depuis l'éditeur Apps Script pour autoriser l'envoi.
 
-## Rappel du matin
+## Rappel du matin et robot « Envoi »
 
-Chaque matin vers 8 h (heure de Paris), le script de sauvegarde envoie à chaque joueur qui a activé le rappel le titre et le Présage de sa prochaine épreuve, sauf s'il a déjà joué. Mise en place, une seule fois : dans l'éditeur Apps Script, choisir la fonction `installerRappel` et cliquer sur Exécuter (accepter les autorisations). Vérification : `<adresse du script>/exec?version=1` affiche `rappelInstalle: true` et le journal des derniers envois. Le robot GitHub « Rappel » ne sert plus qu'aux tests manuels.
+Chaque matin vers 8 h (heure de Paris), le script de sauvegarde envoie à chaque joueur qui a activé le rappel le titre et le Présage de sa prochaine épreuve, sauf s'il a déjà joué. Mise en place, une seule fois : dans l'éditeur Apps Script, choisir la fonction `installerRappel` et cliquer sur Exécuter.
+
+ntfy refuse souvent les messages venant de Google (erreur 429 : les serveurs de Google sont partagés par des milliers de scripts). Dans ce cas, le script dépose le message dans une boîte d'envoi et réveille le robot GitHub « Envoi » (`.github/workflows/envoi.yml`), qui l'expédie aussitôt. Pour cela, le script a besoin d'un jeton GitHub :
+
+1. Sur GitHub : photo de profil > Settings > Developer settings > Personal access tokens > Fine-grained tokens > Generate new token.
+2. Nom « Fil des Moires », expiration la plus longue possible, Repository access : Only select repositories > fil-des-moires, Permissions : Actions > Read and write. Générer et copier le jeton.
+3. Dans Apps Script : Paramètres du projet > Propriétés du script > ajouter `GITHUB_JETON` avec le jeton.
+4. Lancer la fonction `testerRobot` depuis l'éditeur : une notification de test doit arriver.
+
+Vérification : `<adresse du script>/exec?version=1` affiche le journal des derniers envois (200 = envoyé directement, « confié au robot » puis « robot réveillé -> 204 » = passé par GitHub). Quand le jeton expire, le journal affiche « robot réveillé -> 401 » : en générer un nouveau.
 

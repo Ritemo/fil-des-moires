@@ -1,0 +1,20 @@
+# Envoi des notifications confiées par le script de sauvegarde (rappel du matin, annonces).
+# Réveillé par le script lui-même (workflow_dispatch avec le jeton GITHUB_JETON) ; lançable à la main pour tester.
+name: Envoi
+on:
+  workflow_dispatch:
+concurrency: envoi
+jobs:
+  envoi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Expédier la boîte d'envoi
+        env:
+          SAUVEGARDE_URL: ${{ secrets.SAUVEGARDE_URL }}
+          SAUVEGARDE_CLE: ${{ secrets.SAUVEGARDE_CLE }}
+        run: node outils/envoi.js

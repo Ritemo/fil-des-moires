@@ -8,7 +8,8 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 7;
+const VERSION_SCRIPT = 8;
+const DEPOT = 'Ritemo/fil-des-moires';
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
 
 function doGet(e) {
@@ -22,6 +23,7 @@ function doGet(e) {
   if (joueur === false || !cleValide(joueur, e.parameter.cle)) return reponse({ ok: false, erreur: 'cle', version: VERSION_SCRIPT });
   if (e.parameter.classement) return reponse({ ok: true, classement: classement() });
   if (e.parameter.rappels && !joueur) return reponse({ ok: true, rappels: rappels() }); // réservé au joueur principal (robot de rappel)
+  if (e.parameter.boite && !joueur) return reponse({ ok: true, messages: viderBoite() });   // réservé au robot « Envoi » (GitHub)
   return reponse({ ok: true, donnees: lire(joueur) });
 }
 
@@ -134,10 +136,50 @@ function annoncerExploit(joueur, avant, apres) {
     });
 }
 
-function envoyerNtfy(sujet, titre, message) {
-  const r = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    payload: JSON.stringify({ topic: sujet, title: titre, message: message, click: ADRESSE_JEU, tags: ['crossed_swords'] }) });
-  noter(titre + ' -> ' + r.getResponseCode());
+// ntfy limite les envois par adresse IP, et Google partage ses adresses entre des milliers de scripts :
+// l'envoi direct est souvent refusé (429). Dans ce cas, le message est mis dans une boîte d'envoi
+// et le robot GitHub « Envoi » est réveillé pour l'expédier depuis ses propres serveurs.
+function envoyerNtfy(sujet, titre, message, sansReveil) {
+  const corps = { topic: sujet, title: titre, message: message, click: ADRESSE_JEU, tags: ['crossed_swords'] };
+  let code = 0;
+  try { code = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify(corps) }).getResponseCode(); }
+  catch (err) { code = 'erreur'; }
+  if (code === 200) { noter(titre + ' -> 200'); return true; }
+  deposer(corps);
+  noter(titre + ' -> ' + code + ', confié au robot');
+  if (!sansReveil) reveillerRobot();
+  return false;
+}
+
+function deposer(corps) {
+  const verrou = LockService.getScriptLock(); verrou.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties(), b = JSON.parse(props.getProperty('BOITE') || '[]');
+    b.push(corps); props.setProperty('BOITE', JSON.stringify(b.slice(-30)));
+  } finally { verrou.releaseLock(); }
+}
+function viderBoite() {
+  const verrou = LockService.getScriptLock(); verrou.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties(), b = JSON.parse(props.getProperty('BOITE') || '[]');
+    props.setProperty('BOITE', '[]'); return b;
+  } finally { verrou.releaseLock(); }
+}
+// Lance le robot GitHub « Envoi » (propriété GITHUB_JETON : jeton GitHub avec le droit Actions en écriture sur le dépôt)
+function reveillerRobot() {
+  const jeton = PropertiesService.getScriptProperties().getProperty('GITHUB_JETON');
+  if (!jeton) { noter('robot non réveillé : propriété GITHUB_JETON absente'); return; }
+  const r = UrlFetchApp.fetch('https://api.github.com/repos/' + DEPOT + '/actions/workflows/envoi.yml/dispatches', { method: 'post', muteHttpExceptions: true,
+    contentType: 'application/json', headers: { Authorization: 'Bearer ' + jeton, Accept: 'application/vnd.github+json' }, payload: JSON.stringify({ ref: 'main' }) });
+  noter('robot réveillé -> ' + r.getResponseCode() + (r.getResponseCode() === 204 ? ' (ok)' : ''));
+}
+
+// À lancer depuis l'éditeur pour tout vérifier : envoie une notification de test au joueur principal en passant par le robot
+function testerRobot() {
+  const p = lire('');
+  if (!p || !p.ntfy) throw new Error('Active d\'abord le Rappel du matin dans les Réglages du jeu (joueur principal).');
+  deposer({ topic: p.ntfy, title: '🧵 Le Fil des Moires', message: 'Le robot d\'envoi fonctionne : tes rappels arriveront même quand ntfy refuse Google.', click: ADRESSE_JEU, tags: ['crossed_swords'] });
+  reveillerRobot();
 }
 
 // Journal des 15 derniers envois (visible avec <adresse>/exec?version=1, sans clé)
@@ -150,6 +192,7 @@ function noter(texte) {
 
 // ---------- Rappel du matin, envoyé par Google chaque jour vers 8 h (plus fiable que le robot GitHub) ----------
 function rappelDuMatin() {
+  let aConfier = false;
   const auj = Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd');
   PropertiesService.getScriptProperties().getKeys()
     .filter(function (k) { return k === 'CLE' || k.indexOf('CLE_') === 0; })
@@ -158,8 +201,9 @@ function rappelDuMatin() {
       if (!p || !p.ntfy) return;
       if (p.derniereDate === auj) { noter(nomDe(j, p) + ' a déjà joué : pas de rappel'); return; }
       const pr = p.prochaine || { jour: (p.joursJoues || 0) + 1, titre: 'ta quête t\'attend', presage: '' };
-      envoyerNtfy(p.ntfy, '🧵 Jour ' + pr.jour + ' : ' + pr.titre, (pr.presage || 'Le fil t\'attend.') + (pr.nouveau ? '\n' + pr.nouveau : ''));
+      if (!envoyerNtfy(p.ntfy, '🧵 Jour ' + pr.jour + ' : ' + pr.titre, (pr.presage || 'Le fil t\'attend.') + (pr.nouveau ? '\n' + pr.nouveau : ''), true)) aConfier = true;
     });
+  if (aConfier) reveillerRobot();
 }
 
 // À lancer une fois depuis l'éditeur (bouton Exécuter) : programme le rappel chaque jour vers 8 h, heure de Paris
