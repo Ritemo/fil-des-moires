@@ -100,6 +100,10 @@ L'onglet Agora (ancien onglet Trésors) réunit, en plus de l'Offrande et de la 
 
 L'Arène et le Titan lisent les autres joueurs dans le classement du script de sauvegarde (version 7 ou plus). Sans sauvegarde commune, on affronte sa propre ombre et on combat le Titan seul.
 
+## Le Corbeau d'Hermès (messagerie)
+
+L'icône 🐦‍⬛ du bandeau ouvre une messagerie entre les joueurs qui partagent la sauvegarde commune : messages libres, présages rapides en un appui, réactions (👏 ⚔️ 🔥 😮) sur les annonces d'épreuves. Les 200 derniers messages sont gardés dans `fil-des-moires-messagerie.json` (Drive). Chaque message prévient les autres joueurs par ntfy (option dans Réglages, Rappel du matin). Nécessite le script en version 9.
+
 ## Annonce des exploits
 
 Quand un joueur termine son épreuve, le script de sauvegarde envoie une notification ntfy aux autres joueurs qui ont activé le Rappel du matin (« 🧵 Marion a tissé le jour 4 », avec ses étoiles). Chacun peut la couper dans Réglages, Rappel du matin. Après avoir collé le script, lancer une fois la fonction `testerNotification` depuis l'éditeur Apps Script pour autoriser l'envoi.

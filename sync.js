@@ -61,7 +61,25 @@
     } catch (e) { return { erreur: 'reseau' }; }
   }
 
-  racine.Sync = { classement,
+  // Messagerie : messages postés après « depuis » (ms). null si pas de sauvegarde commune ou script trop ancien.
+  async function messages(depuis) {
+    const c = lireConf(); if (!c) return null;
+    try {
+      const r = await fetch(adresse(c.url, c.cle, c.joueur) + '&messages=1&depuis=' + (depuis || 0), { cache: 'no-store' });
+      const j = await r.json();
+      return j.ok && Array.isArray(j.messages) ? j.messages : null;
+    } catch (e) { return null; }
+  }
+  async function poster(message) {
+    const c = lireConf(); if (!c) return null;
+    try {
+      const r = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle: c.cle, joueur: c.joueur || '', message }) });
+      const j = await r.json();
+      return j.ok ? j.message : null;
+    } catch (e) { return null; }
+  }
+
+  racine.Sync = { classement, messages, poster,
     conf: lireConf, configurer: ecrireConf, telecharger, envoyer, tester,
     etat: () => etat, surChangement: f => { surEtat = f; }
   };

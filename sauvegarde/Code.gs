@@ -8,7 +8,8 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 8;
+const VERSION_SCRIPT = 9;
+const NOM_MESSAGES = 'fil-des-moires-messagerie.json';
 const DEPOT = 'Ritemo/fil-des-moires';
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
 
@@ -22,6 +23,7 @@ function doGet(e) {
   if (joueur && !PropertiesService.getScriptProperties().getProperty('CLE_' + joueur.toUpperCase())) return reponse({ ok: false, erreur: 'joueur', version: VERSION_SCRIPT });
   if (joueur === false || !cleValide(joueur, e.parameter.cle)) return reponse({ ok: false, erreur: 'cle', version: VERSION_SCRIPT });
   if (e.parameter.classement) return reponse({ ok: true, classement: classement() });
+  if (e.parameter.messages) { const depuis = +e.parameter.depuis || 0; return reponse({ ok: true, messages: lireMessages().filter(function (m) { return m.t > depuis; }) }); }
   if (e.parameter.rappels && !joueur) return reponse({ ok: true, rappels: rappels() }); // réservé au joueur principal (robot de rappel)
   if (e.parameter.boite && !joueur) return reponse({ ok: true, messages: viderBoite() });   // réservé au robot « Envoi » (GitHub)
   return reponse({ ok: true, donnees: lire(joueur) });
@@ -77,8 +79,10 @@ function doPost(e) {
   const corps = JSON.parse(e.postData.contents);
   const joueur = nettoyer(corps.joueur);
   if (joueur === false || !cleValide(joueur, corps.cle)) return reponse({ ok: false, erreur: 'cle' });
+  if (corps.message) return reponse(posterMessage(joueur, corps.message));
   const actuel = lire(joueur);
   const recu = corps.profil;
+  if (!recu || !recu.maj) return reponse({ ok: false, erreur: 'profil' });
   // On garde toujours la version la plus récente (champ maj, en millisecondes)
   if (!actuel || !actuel.maj || (recu && recu.maj >= actuel.maj)) {
     ecrire(joueur, recu);
@@ -125,6 +129,7 @@ function annoncerExploit(joueur, avant, apres) {
   const resultat = r.victoire ? '★'.repeat(r.etoiles || 0) + '☆'.repeat(3 - (r.etoiles || 0)) : 'le fil a cédé';
   const titre = '🧵 ' + nom + ' a tissé le jour ' + r.jour;
   const message = (r.titre ? r.titre + ' · ' : '') + resultat + (r.resume ? '\n' + r.resume : '');
+  try { ajouterMessage({ type: 'annonce', de: joueur, nom: nom, texte: 'a tissé le jour ' + r.jour + (r.titre ? ' · ' + r.titre : '') + ' · ' + resultat }); } catch (err) { noter('messagerie : ' + err); }
   PropertiesService.getScriptProperties().getKeys()
     .filter(function (k) { return k === 'CLE' || k.indexOf('CLE_') === 0; })
     .map(function (k) { return k === 'CLE' ? '' : k.slice(4).toLowerCase(); })
@@ -218,4 +223,52 @@ function testerNotification() {
   const p = lire('');
   if (!p || !p.ntfy) throw new Error('Active d\'abord le Rappel du matin dans les Réglages du jeu (joueur principal).');
   envoyerNtfy(p.ntfy, '🧵 Le Fil des Moires', 'Le script de sauvegarde peut t\'envoyer des notifications.');
+}
+
+// ---------- Messagerie « Le Corbeau d'Hermès » : messages entre joueurs (200 derniers gardés) ----------
+function fichierMessages() {
+  const l = DriveApp.getFilesByName(NOM_MESSAGES);
+  return l.hasNext() ? l.next() : DriveApp.createFile(NOM_MESSAGES, '[]', 'application/json');
+}
+function lireMessages() { try { return JSON.parse(fichierMessages().getBlob().getDataAsString()) || []; } catch (err) { return []; } }
+function ajouterMessage(m) {
+  const verrou = LockService.getScriptLock(); verrou.waitLock(10000);
+  try {
+    const liste = lireMessages();
+    m.t = Date.now(); m.id = m.t.toString(36) + Math.random().toString(36).slice(2, 6);
+    liste.push(m);
+    fichierMessages().setContent(JSON.stringify(liste.slice(-200)));
+    return m;
+  } finally { verrou.releaseLock(); }
+}
+function posterMessage(joueur, msg) {
+  const p = lire(joueur), nom = nomDe(joueur, p);
+  let m;
+  if (msg.reaction) {
+    const emoji = String(msg.reaction).slice(0, 8), cible = String(msg.cible || '');
+    const visee = lireMessages().filter(function (x) { return x.id === cible; })[0];
+    if (!visee) return { ok: false, erreur: 'cible' };
+    m = ajouterMessage({ type: 'reaction', de: joueur, nom: nom, texte: emoji, cible: cible });
+    if (visee.de !== joueur) prevenir([visee.de], '🐦‍⬛ ' + nom + ' a réagi ' + emoji, visee.type === 'annonce' ? nomDe(visee.de, null) + ' ' + visee.texte : visee.texte);
+  } else {
+    const texte = String(msg.texte || '').trim().slice(0, 500);
+    if (!texte) return { ok: false, erreur: 'vide' };
+    m = ajouterMessage({ type: 'msg', de: joueur, nom: nom, texte: texte });
+    prevenir(tousLesJoueurs().filter(function (j) { return j !== joueur; }), '🐦‍⬛ ' + nom, texte);
+  }
+  return { ok: true, message: m };
+}
+function tousLesJoueurs() {
+  return PropertiesService.getScriptProperties().getKeys()
+    .filter(function (k) { return k === 'CLE' || k.indexOf('CLE_') === 0; })
+    .map(function (k) { return k === 'CLE' ? '' : k.slice(4).toLowerCase(); });
+}
+function prevenir(joueurs, titre, texte) {
+  let confie = false;
+  joueurs.forEach(function (j) {
+    const p = lire(j);
+    if (!p || !p.ntfy || p.ntfyMessages === false) return;
+    if (!envoyerNtfy(p.ntfy, titre, texte, true)) confie = true;
+  });
+  if (confie) reveillerRobot();
 }

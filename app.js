@@ -472,6 +472,90 @@
     $('voirAgora').onclick = () => { $('modale').classList.remove('visible'); ouvrirTresors(); };
   }
 
+  // ======================================================================
+  // ---------- Le Corbeau d'Hermès : messagerie entre joueurs ----------
+  // ======================================================================
+  const PRESAGES = ['Bien joué ! 👏', 'Tu as trouvé l\'énigme ? 🔮', 'On tape le Titan ? 🗿', 'Je t\'attends dans l\'Arène ⚔️', 'Bonne nuit 🌙', 'Courage pour l\'épreuve ! 🔥'];
+  const REACTIONS = ['👏', '⚔️', '🔥', '😮'];
+  let corbeau = { liste: [], ok: null, minuterie: null };
+  try { corbeau.liste = JSON.parse(localStorage.getItem('fdm_msgs') || '[]'); } catch (e) { corbeau.liste = []; }
+  const moiCorbeau = () => (S.conf() && S.conf().joueur) || '';
+  const luCorbeau = () => +(localStorage.getItem('fdm_lu') || 0);
+  function majPastilleCorbeau() {
+    if (!$('btnCorbeau')) return;
+    $('btnCorbeau').hidden = !S.conf();
+    const n = corbeau.liste.filter(m => m.de !== moiCorbeau() && m.t > luCorbeau() && m.type !== 'reaction').length;
+    $('pastilleCorbeau').textContent = n ? (n > 9 ? '9+' : n) : '';
+    $('pastilleCorbeau').style.display = n ? '' : 'none';
+  }
+  async function relever() {
+    if (!S.conf()) { majPastilleCorbeau(); return false; }
+    const derniers = corbeau.liste.length ? corbeau.liste[corbeau.liste.length - 1].t : 0;
+    const neufs = await S.messages(derniers);
+    if (neufs === null) { corbeau.ok = corbeau.ok === null ? false : corbeau.ok; majPastilleCorbeau(); return false; }
+    corbeau.ok = true;
+    const ids = new Set(corbeau.liste.map(m => m.id));
+    neufs.forEach(m => { if (!ids.has(m.id)) corbeau.liste.push(m); });
+    corbeau.liste = corbeau.liste.slice(-200);
+    try { localStorage.setItem('fdm_msgs', JSON.stringify(corbeau.liste)); } catch (e) { /* plein */ }
+    majPastilleCorbeau();
+    return neufs.length > 0;
+  }
+  const echapper = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  function heure(t) { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function jourDe(t) { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function filCorbeau() {
+    const moi = moiCorbeau(), reactions = {};
+    corbeau.liste.filter(m => m.type === 'reaction').forEach(r => { (reactions[r.cible] = reactions[r.cible] || []).push(r); });
+    let jourCourant = '', h = '';
+    corbeau.liste.filter(m => m.type !== 'reaction').forEach(m => {
+      const j = jourDe(m.t);
+      if (j !== jourCourant) { jourCourant = j; h += `<div class="jourMsg">${quandLe(j)}</div>`; }
+      const reac = (reactions[m.id] || []).map(r => `<span title="${echapper(r.nom)}">${echapper(r.texte)}</span>`).join('');
+      if (m.type === 'annonce') {
+        h += `<div class="annonceMsg"><div>🧵 <b>${echapper(m.nom)}</b> ${echapper(m.texte)}</div><div class="small">${heure(m.t)}</div>
+          <div class="reacs">${reac}${m.de !== moi ? REACTIONS.map(e => `<button class="reagir" data-cible="${m.id}" data-e="${e}">${e}</button>`).join('') : ''}</div></div>`;
+      } else {
+        const mien = m.de === moi;
+        h += `<div class="bulle ${mien ? 'mienne' : ''}">${mien ? '' : `<div class="auteur">${echapper(m.nom)}</div>`}<div>${echapper(m.texte)}</div>
+          <div class="meta">${heure(m.t)}${reac ? ' · ' + reac : ''}${mien ? '' : ` <button class="reagir mini" data-cible="${m.id}" data-e="👏">👏</button>`}</div></div>`;
+      }
+    });
+    return h || '<p class="small" style="text-align:center">Aucun message pour l\'instant. Le corbeau attend ton premier mot !</p>';
+  }
+  function ouvrirCorbeau() {
+    ouvrirModale('🐦‍⬛ Le Corbeau d\'Hermès', `<div id="filMsgs" class="filMsgs">${filCorbeau()}</div>
+      <div class="presages">${PRESAGES.map(p => `<button data-p="${echapper(p)}">${p}</button>`).join('')}</div>
+      <div class="saisieMsg"><textarea id="texteMsg" rows="2" maxlength="500" placeholder="Écris à l'autre tisserand..."></textarea><button id="envoyerMsg" class="principal">Envoyer</button></div>
+      <p class="small" id="etatMsg">${corbeau.ok === false ? '⚠️ Le script de sauvegarde doit être mis à jour (version 9) pour la messagerie.' : ''}</p>`);
+    const fil = $('filMsgs');
+    const rafraichir = () => { const bas = fil.scrollHeight - fil.scrollTop - fil.clientHeight < 40; fil.innerHTML = filCorbeau(); brancher(); if (bas) fil.scrollTop = fil.scrollHeight;
+      if (corbeau.liste.length) localStorage.setItem('fdm_lu', String(Math.max(luCorbeau(), corbeau.liste[corbeau.liste.length - 1].t))); majPastilleCorbeau(); };
+    const envoyer = async (msg) => {
+      $('etatMsg').textContent = '🐦‍⬛ Le corbeau s\'envole...';
+      const m = await S.poster(msg);
+      if (!m) { $('etatMsg').textContent = '⚠️ Message non envoyé (réseau, ou script à mettre à jour en version 9).'; return false; }
+      $('etatMsg').textContent = ''; SON.jouer('clic');
+      await relever(); if (!corbeau.liste.some(x => x.id === m.id)) corbeau.liste.push(m);
+      rafraichir(); fil.scrollTop = fil.scrollHeight; return true;
+    };
+    function brancher() {
+      fil.querySelectorAll('.reagir').forEach(b => b.onclick = () => envoyer({ reaction: b.dataset.e, cible: b.dataset.cible }));
+    }
+    $('lexiqueCorps').querySelectorAll('.presages button').forEach(b => b.onclick = () => envoyer({ texte: b.dataset.p }));
+    $('envoyerMsg').onclick = async () => { const t = $('texteMsg').value.trim(); if (!t) return; if (await envoyer({ texte: t })) $('texteMsg').value = ''; };
+    brancher(); fil.scrollTop = fil.scrollHeight; rafraichir();
+    relever().then(() => { if ($('filMsgs')) rafraichir(); if (corbeau.ok === false && $('etatMsg')) $('etatMsg').textContent = '⚠️ Le script de sauvegarde doit être mis à jour (version 9) pour la messagerie.'; });
+    clearInterval(corbeau.minuterie);
+    corbeau.minuterie = setInterval(async () => {
+      if (!$('modale').classList.contains('visible') || !$('filMsgs')) { clearInterval(corbeau.minuterie); return; }
+      if (await relever()) rafraichir();
+    }, 10000);
+  }
+  if ($('btnCorbeau')) $('btnCorbeau').onclick = () => { SON.jouer('page'); ouvrirCorbeau(); };
+  setInterval(() => { if (document.visibilityState === 'visible' && !partie) relever(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') relever(); });
+
   // ---------- Onglet Trésors ----------
   function ouvrirTresors() {
     ecran('tresors');
@@ -591,7 +675,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.18.2 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.19.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1598,11 +1682,13 @@
         <a href="ntfy://ntfy.sh/${t}" style="display:block;margin-top:6px"><button style="width:100%">📲 Ouvrir dans l'appli ntfy</button></a>
         <p class="small">Sans l'appli, tu peux aussi ouvrir <a href="https://ntfy.sh/${t}" target="_blank" style="color:var(--or)">ntfy.sh/${t}</a> et autoriser les notifications du navigateur.</p>
         <label class="ligneCoche"><input type="checkbox" id="rappelAutres" ${profil.ntfyAutres === false ? '' : 'checked'}> Me prévenir aussi quand un autre tisserand termine son épreuve</label>
+        <label class="ligneCoche"><input type="checkbox" id="rappelMsgs" ${profil.ntfyMessages === false ? '' : 'checked'}> Me prévenir des messages du Corbeau d'Hermès 🐦‍⬛</label>
         <button id="rappelTest" style="width:100%;margin-top:6px">🔔 Envoyer une notification de test</button><p class="small" id="rappelTestMsg"></p>
         <button id="rappelOff" style="width:100%;margin-top:6px">Désactiver le rappel</button>`
         : `<p>Reçois chaque matin le titre et le Présage de ta quête du jour, comme une notification d'appli.</p><button class="principal" id="rappelOn" style="width:100%">Activer le rappel</button>`;
       if ($('rappelOn')) $('rappelOn').onclick = () => { profil.ntfy = 'fdm-' + Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8); sauver(); afficher(); };
       if ($('rappelAutres')) $('rappelAutres').onchange = e => { profil.ntfyAutres = e.target.checked; sauver(); };
+      if ($('rappelMsgs')) $('rappelMsgs').onchange = e => { profil.ntfyMessages = e.target.checked; sauver(); };
       if ($('rappelTest')) $('rappelTest').onclick = async () => {
         const m = $('rappelTestMsg'); m.textContent = 'Envoi…';
         try {
@@ -1642,4 +1728,5 @@
   $('etatSync').textContent = LIBELLES_SYNC[S.conf() ? 'envoi' : 'local'];
   if (recalee) { recalee = false; sauver(); }
   if (!rejoindre()) { synchroniser(); setTimeout(annoncerNouveautes, 1200); }
+  majPastilleCorbeau(); setTimeout(relever, 2500);
 })();
