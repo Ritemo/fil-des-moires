@@ -32,8 +32,10 @@
   // Calage du 16 novembre 2026 : la phase de test est finie. Une partie avancée au-delà du jour 3 est ramenée
   // à « Hydre vaincue le 16 novembre » : le jour 4 commence le lendemain. Les cartes et niveaux gagnés sont gardés.
   let recalee = false;
+  // Calage du 16/11/2026 (retour au jour 3) : appliqué une seule fois à l'époque. Désactivé : une partie
+  // recommencée après cette date n'avait pas le drapeau calage1 et était renvoyée au jour 3 après le jour 4.
   function caler(p) {
-    if (p.calage1 || !(p.joursJoues > 3)) return;
+    return;
     p.calage1 = true; recalee = true;
     p.rangs = (p.rangs || []).filter(r => !r.echo && r.jour <= 3);
     p.joursJoues = 3; p.derniereDate = '2026-11-16';
@@ -578,7 +580,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.18.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.18.1 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
