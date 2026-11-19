@@ -43,8 +43,19 @@
     if (p.route) Object.keys(p.route).forEach(k => { if (+k > 3) delete p.route[k]; });
     p.maj = Date.now();
   }
+  // Réparation du 19/11/2026 : le jour 4 de Mathieu avait été effacé par l'ancien calage (gains conservés, rang perdu)
+  function reparer(p) {
+    if (p.reparation1 || p.pseudo !== 'Mathieu' || p.joursJoues !== 3 || p.derniereDate !== '2026-11-16') return;
+    const r = p.rangs || [];
+    if (r.length !== 3 || (r[2] || {}).date !== '2026-11-18' || !(p.activites && p.activites.oracle && p.activites.oracle.date === '2026-11-19')) return;
+    r.push({ jour: 4, date: '2026-11-19', titre: 'Myrtos, le village sans noms', victoire: true, etoiles: 2, couleur: 'airain', motif: '🐐',
+      resume: 'Victoire sur les bêtes de Myrtos (rang restauré après un souci de sauvegarde).' });
+    p.rangs = r; p.joursJoues = 4; p.derniereDate = '2026-11-19'; p.reparation1 = true; p.maj = Date.now();
+    recalee = true;
+  }
   function migrer(p) {
     caler(p);
+    reparer(p);
     P.initialiser(p);
     A.initialiser(p);
     if (!p.compagnons || (p.compagnons.length === 1 && p.joursJoues >= 2)) p.compagnons = ['errant'].concat(p.joursJoues >= 2 ? ['phaena'] : [], p.joursJoues >= 3 ? ['griffon'] : []);
@@ -580,7 +591,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.18.1 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.18.2 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
