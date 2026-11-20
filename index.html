@@ -447,6 +447,17 @@
   .saisieMsg { display: flex; gap: 6px; align-items: stretch; }
   .saisieMsg textarea { flex: 1; resize: none; background: #1a1410; color: inherit; border: 1px solid var(--bord); border-radius: 10px; padding: 8px; font: inherit; font-size: 15px; }
   .saisieMsg button { width: auto; padding: 0 14px; }
+  .enclosBtn { width: 100%; margin: 4px 0 10px; }
+  .enclos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 8px 0; }
+  .caseEnclos { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; min-height: 86px; border-radius: 10px; border: 1px solid var(--bord); background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--a, #3a2a1c) 35%, transparent), var(--carte)); font-size: 11px; line-height: 1.2; text-align: center; }
+  .caseEnclos .ico { font-size: 28px; }
+  .caseEnclos .ico img.emo { width: 1em; height: 1em; }
+  .caseEnclos b { color: var(--or); font-weight: normal; font-size: 11px; overflow-wrap: anywhere; }
+  .caseEnclos.actif { border-color: var(--or); box-shadow: 0 0 8px rgba(246,210,122,.35); }
+  .caseEnclos .badge { position: absolute; top: -6px; right: -4px; font-size: 9px; background: #6a4a1c; border-radius: 6px; padding: 0 3px; }
+  .caseEnclos.vide { border-style: dashed; color: var(--doux); justify-content: center; opacity: .5; }
+  #surnom { flex: 1; background: #1a1410; color: inherit; border: 1px solid var(--bord); border-radius: 10px; padding: 8px; font: inherit; }
+  button.danger { border-color: #a8483a; color: #f0b0a0; }
   .classe { cursor: pointer; }
   .ligneCoche { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 4px; font-size: 14px; line-height: 1.4; }
   .ligneCoche input { width: 20px; height: 20px; flex: none; accent-color: var(--or); margin: 1px 0 0; }

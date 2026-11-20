@@ -8,6 +8,15 @@
   const NIVEAU_MAX_CARTE = 5;
   const NIVEAU_MAX_EQUIPE = 20;
   const SLOTS = 4;
+  // L'Enclos de Chiron : créatures liées, une fiche par créature (on peut lier plusieurs fois la même espèce)
+  const LIENS_MAX = 10;
+  const TRAITS = [
+    { id: 'vif', nom: 'Vif', desc: '+8 vitesse', appliquer: u => { u.vitesse += 8; } },
+    { id: 'robuste', nom: 'Robuste', desc: '+10 % PV', appliquer: u => { u.pvMax = Math.round(u.pvMax * 1.1); } },
+    { id: 'feroce', nom: 'Féroce', desc: '+8 % attaque', appliquer: u => { u.attaque = Math.round(u.attaque * 1.08); } },
+    { id: 'placide', nom: 'Placide', desc: '+10 % défense', appliquer: u => { u.defense = Math.round(u.defense * 1.1); } },
+    { id: 'fidele', nom: 'Fidèle', desc: '+1 énergie au départ', appliquer: u => { u.energieDepart = (u.energieDepart != null ? u.energieDepart : 2) + 1; } }
+  ];
   // Doublons nécessaires pour passer du niveau n au niveau n+1 (index n-1)
   const DOUBLONS = { commune: [2, 4, 6, 10], rare: [1, 2, 4, 6], epique: [1, 2, 3, 4], legendaire: [1, 1, 2, 2] };
   const DRACHMES = [20, 50, 100, 200];
@@ -26,6 +35,11 @@
     if (profil.drachmes == null) profil.drachmes = 0;
     if (!profil.creatures) profil.creatures = [];
     if (!profil.creature) profil.creature = 'griffon';
+    if (!profil.liens) {
+      profil.liens = profil.creatures.map((id, k) => nouveauLien(profil, id, 'ancien' + k));
+      const actif = profil.liens.find(l => l.espece === profil.creature);
+      profil.lienActif = actif ? actif.uid : null;
+    }
     if (!profil.codex) profil.codex = {};
     if (!profil.histoire) profil.histoire = { choix: {}, jauges: { honneur: 0, ruse: 0, piete: 0 }, sceaux: [] };
     return profil;
@@ -112,6 +126,8 @@
       const m = multiplicateurEquipe(profil.niveau);
       const u = Object.assign({}, h, { competences: comps, pvMax: Math.round(h.pvMax * m), attaque: Math.round(h.attaque * m) });
       appliquerPassifs(u, profil);
+      const la = lienActif(profil);
+      if (la && la.espece === u.id && profil.creature === u.id) { const t = trait(la.trait); if (t) t.appliquer(u); if (la.surnom) u.nom = la.surnom; }
       return u;
     });
   }
@@ -202,19 +218,45 @@
   function herosDisponibles(profil) { return D.HEROS.filter((h, i) => (profil.joursJoues || 0) >= i).map(h => h.id).concat(profil.creatures || []); }
 
   // ---------- Créatures liées et Codex ----------
-  function lierCreature(profil, id) {
+  function nouveauLien(profil, id, graine, date, jour) {
+    const cr = D.CREATURES.find(c => c.id === id) || { nom: id };
+    const hasard = M.creerHasard(M.graineDuJour(id + '|' + graine));
+    const meme = (profil.liens || []).filter(l => l.espece === id).length;
+    return { uid: id + '-' + Date.now().toString(36) + Math.floor(hasard() * 1e6).toString(36), espece: id,
+      surnom: cr.nom + (meme ? ' ' + ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][Math.min(8, meme - 1)] : ''),
+      trait: TRAITS[Math.floor(hasard() * TRAITS.length)].id, date: date || null, jour: jour || null };
+  }
+  // Lier une créature : une nouvelle fiche dans l'Enclos (10 au maximum). Enclos plein : son fil renforce ses cartes.
+  function lierCreature(profil, id, graine, date) {
     const cr = D.CREATURES.find(c => c.id === id);
     if (!cr) return null;
-    if (!profil.creatures.includes(id)) {
-      profil.creatures.push(id);
-      cr.competences.forEach(c => { if (!profil.cartes[c.id]) profil.cartes[c.id] = { niveau: 1, doublons: 0 }; });
-      profil.equipement[id] = cr.competences.map(c => c.id);
-      return { id, nouvelle: true };
+    const nouvelle = !profil.creatures.includes(id);
+    if (nouvelle) profil.creatures.push(id);
+    cr.competences.forEach(c => { if (!profil.cartes[c.id]) profil.cartes[c.id] = { niveau: 1, doublons: 0 }; });
+    if (!profil.equipement[id]) profil.equipement[id] = cr.competences.map(c => c.id);
+    if ((profil.liens || []).length >= LIENS_MAX) {
+      cr.competences.forEach(c => { profil.cartes[c.id].doublons++; });
+      return { id, nouvelle, plein: true };
     }
-    // Déjà liée : son fil se renforce (1 exemplaire de chacune de ses cartes)
-    cr.competences.forEach(c => { profil.cartes[c.id].doublons++; });
-    return { id, nouvelle: false };
+    const lien = nouveauLien(profil, id, graine || Date.now(), date, profil.joursJoues);
+    profil.liens.push(lien);
+    return { id, nouvelle, lien };
   }
+  function lienActif(profil) { return (profil.liens || []).find(l => l.uid === profil.lienActif) || null; }
+  function choisirLien(profil, uid) {
+    if (uid === 'griffon') { profil.lienActif = null; profil.creature = 'griffon'; return true; }
+    const l = (profil.liens || []).find(x => x.uid === uid); if (!l) return false;
+    profil.lienActif = uid; profil.creature = l.espece; return true;
+  }
+  function libererLien(profil, uid) {
+    const k = (profil.liens || []).findIndex(x => x.uid === uid); if (k < 0) return false;
+    const l = profil.liens.splice(k, 1)[0];
+    if (profil.lienActif === uid) { profil.lienActif = null; profil.creature = 'griffon'; }
+    // plus aucune créature de cette espèce : elle quitte la liste des créatures (ses cartes restent dans la collection)
+    if (!profil.liens.some(x => x.espece === l.espece)) profil.creatures = profil.creatures.filter(id => id !== l.espece);
+    return true;
+  }
+  function trait(id) { return TRAITS.find(t => t.id === id); }
   const liable = id => D.CREATURES.some(c => c.id === id);
   function noterCodex(profil, id, champ) {
     const e = profil.codex[id] || (profil.codex[id] = { vu: false, vaincus: 0, lie: false });
@@ -360,7 +402,7 @@
     peutEvoluer, evoluer, carteEvoluee, lierCreature, liable, noterCodex, lienBonus, appliquerChoix, bonusDuJour,
     choixEnAttente, choisirVoie, choisirSerment, gloireDepart, secondSouffle, appliquerPassifs,
     QUALITES, ROUTE, offrandeDisponible, ouvrirOffrande, remplirAmphore, qualiteSerie, prochainPalier, reclamerRoute, ecartJours,
-    NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, NOMS_RARETE, COULEURS_RARETE,
+    NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, LIENS_MAX, TRAITS, trait, lienActif, choisirLien, libererLien, NOMS_RARETE, COULEURS_RARETE,
     initialiser, rarete, carteInfo, coutAmelioration, peutAmeliorer, ameliorer, basculerEquipement,
     equipeDuJoueur, ennemisPourJoueur, butin, xpPourNiveau, gains, ajouterXp, herosDisponibles, genererDon, appliquerDon,
     multiplicateurCarte, multiplicateurEquipe

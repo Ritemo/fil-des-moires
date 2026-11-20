@@ -577,6 +577,49 @@
   setInterval(() => { if (document.visibilityState === 'visible' && !partie) relever(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') relever(); });
 
+  // ---------- L'Enclos de Chiron : les créatures liées (comme le PC du Professeur Chen) ----------
+  function ouvrirEnclos(retour) {
+    const liens = profil.liens || [];
+    const intro = profil.vus.enclos ? '' : `<div class="parchemin"><b>Clotho :</b> Chiron, le sage centaure, garde ici les créatures que tu as liées : jusqu'à ${P.LIENS_MAX}. Tu peux lier plusieurs fois la même espèce. Chaque créature a un trait qui la rend un peu différente des autres. Une seule t'accompagne en épreuve : choisis-la ici ou pendant la Préparation.</div>`;
+    if (!profil.vus.enclos) { profil.vus.enclos = true; sauver(); }
+    const especes = [...new Set(liens.map(l => l.espece))];
+    const cases = liens.slice().sort((a, b) => especes.indexOf(a.espece) - especes.indexOf(b.espece));
+    const tuile = l => { const c = D.CREATURES.find(x => x.id === l.espece), t = P.trait(l.trait), actif = profil.lienActif === l.uid;
+      return `<button class="caseEnclos${actif ? ' actif' : ''}" data-uid="${l.uid}" style="--a:${aff(c.affinite).couleur}"><span class="ico">${c.emoji}</span><b>${l.surnom}</b><span class="small">${t ? t.nom : ''}</span>${actif ? '<span class="badge">⚔️ En équipe</span>' : ''}</button>`; };
+    let vides = ''; for (let i = cases.length; i < P.LIENS_MAX; i++) vides += '<div class="caseEnclos vide">·</div>';
+    const html = intro + `<div class="bourse"><span>🐾 ${liens.length} / ${P.LIENS_MAX} créatures</span><span>${profil.creature === 'griffon' ? '🦅 Kelos en équipe' : ''}</span></div>
+      <div class="enclos">${cases.map(tuile).join('')}${vides}</div>
+      <p class="small">Touche une créature pour la mettre dans l'équipe, la renommer ou la libérer. Quand l'Enclos est plein, une nouvelle liaison renforce seulement les cartes de l'espèce.</p>
+      ${profil.creature !== 'griffon' ? '<button id="enclosKelos" style="width:100%">🦅 Reprendre Kelos dans l\'équipe</button>' : ''}
+      ${retour ? '<button class="principal" id="enclosRetour" style="width:100%;margin-top:8px">Retour</button>' : ''}`;
+    ouvrirModale('🐾 L\'Enclos de Chiron', html);
+    $('lexiqueCorps').querySelectorAll('.caseEnclos[data-uid]').forEach(b => b.onclick = () => ficheLien(b.dataset.uid, retour));
+    if ($('enclosKelos')) $('enclosKelos').onclick = () => { P.choisirLien(profil, 'griffon'); sauver(); SON.jouer('clic'); ouvrirEnclos(retour); };
+    if ($('enclosRetour')) $('enclosRetour').onclick = () => { $('modale').classList.remove('visible'); retour(); };
+  }
+  function ficheLien(uid, retour) {
+    const l = (profil.liens || []).find(x => x.uid === uid); if (!l) return ouvrirEnclos(retour);
+    const c = D.CREATURES.find(x => x.id === l.espece), t = P.trait(l.trait), actif = profil.lienActif === uid;
+    const meme = profil.liens.filter(x => x.espece === l.espece).length;
+    const cartes = (profil.equipement[l.espece] || []).map(id => { const i = P.carteInfo(id), n = profil.cartes[id]; return i ? `<span class="puce">${i.carte.art || '✦'} ${i.carte.nom}${n ? ' <i>niv. ' + n.niveau + '</i>' : ''}</span>` : ''; }).join('');
+    ouvrirModale('🐾 ' + l.surnom, `<div class="ficheEp"><div class="ficheMotif">${c.emoji}</div><div><b>${c.nom}</b> · ${aff(c.affinite).icone} ${aff(c.affinite).nom}
+        <div class="small">Trait : <b>${t ? t.nom : '?'}</b> (${t ? t.desc : ''})</div>
+        <div class="small">${l.date ? 'Liée ' + quandLe(l.date).toLowerCase() + (l.jour ? ' (jour ' + l.jour + ')' : '') : 'Liée avant l\'ouverture de l\'Enclos'}${meme > 1 ? ' · ' + meme + ' de son espèce dans l\'Enclos' : ''}</div></div></div>
+      <div class="sousTitre">Ses cartes (communes à son espèce)</div><div>${cartes || '<span class="small">aucune</span>'}</div>
+      <div class="sousTitre">Surnom</div><div class="saisieMsg"><input id="surnom" maxlength="20" value="${echapper(l.surnom)}"><button id="renommer">Renommer</button></div>
+      <button class="principal" id="lienEquipe" style="width:100%;margin-top:10px" ${actif ? 'disabled' : ''}>${actif ? '⚔️ Déjà dans l\'équipe' : 'Mettre dans l\'équipe'}</button>
+      <button id="lienLiberer" style="width:100%;margin-top:8px">Libérer cette créature</button>
+      <button class="lien" id="lienRetour" style="margin-top:8px">← L'Enclos</button>`);
+    $('lienRetour').onclick = () => ouvrirEnclos(retour);
+    $('renommer').onclick = () => { const v = $('surnom').value.trim(); if (v) { l.surnom = v.slice(0, 20); sauver(); SON.jouer('clic'); ficheLien(uid, retour); } };
+    $('lienEquipe').onclick = () => { P.choisirLien(profil, uid); sauver(); SON.jouer('action'); ouvrirEnclos(retour); };
+    let confirmer = false;
+    $('lienLiberer').onclick = () => {
+      if (!confirmer) { confirmer = true; $('lienLiberer').textContent = 'Confirmer : ' + l.surnom + ' retournera à la nature'; $('lienLiberer').classList.add('danger'); return; }
+      P.libererLien(profil, uid); sauver(); SON.jouer('page'); ouvrirEnclos(retour);
+    };
+  }
+
   // ---------- Onglet Trésors ----------
   function ouvrirTresors() {
     ecran('tresors');
@@ -696,7 +739,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.20.2 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.21.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -929,7 +972,7 @@
       profil.drachmes += g.drachmes;
       if (victoire) { butin = P.butin(profil, partie.graine + 17, etoiles); dons = P.genererDon(profil, partie.graine + 29); }
       partie.route = P.reclamerRoute(profil, partie.graine + 41);
-      partie.liens = partie.lies.map(id => { P.noterCodex(profil, id, 'lie'); return P.lierCreature(profil, id); }).filter(Boolean);
+      partie.liens = partie.lies.map((id, k) => { P.noterCodex(profil, id, 'lie'); return P.lierCreature(profil, id, partie.graine + 53 + k, aujourdhui()); }).filter(Boolean);
       partie.aPresenter = partie.liens.filter(l => l.nouvelle).map(l => l.id);
       sauver();
     }
@@ -1047,7 +1090,9 @@
     $('finGains').innerHTML = `<div class="bourse"><span>Niveau <b>${profil.niveau}</b></span><div class="xpbarre"><i id="xpFin" style="width:0%"></i></div><span>+${g.xp} XP</span></div>
       <div class="bourse"><span>🪙 +${g.drachmes} drachmes (total <b>${profil.drachmes}</b>)</span></div>
       ${ids.length ? `<div class="sousTitre">🃏 Butin : des doublons pour tes cartes</div><div class="grille">${ids.map(id => tuileCarte(id, { ajout: butin[id] }).replace('</div></div>', `</div><div class="gain">+${butin[id]}</div></div>`)).join('')}</div>` : ''}
-      ${(partie.liens || []).map(l => { const c = D.CREATURES.find(x => x.id === l.id); return `<div class="niveauPlus">🧵 ${c.emoji} ${c.nom} ${l.nouvelle ? 'est liée à toi : nouvelle créature !' : 'déjà liée : son fil se renforce (+1 exemplaire de chaque carte)'}</div>`; }).join('')}
+      ${(partie.liens || []).map(l => { const c = D.CREATURES.find(x => x.id === l.id), t = l.lien && P.trait(l.lien.trait);
+        return `<div class="niveauPlus">🧵 ${c.emoji} ${l.plein ? c.nom + ' : ton Enclos est plein (' + P.LIENS_MAX + '/' + P.LIENS_MAX + '). Son fil renforce ses cartes (+1 exemplaire de chaque).'
+          : (l.nouvelle ? c.nom + ' est liée à toi : nouvelle créature !' : l.lien.surnom + ' rejoint ton Enclos.') + (t ? ' Trait : ' + t.nom + ' (' + t.desc + ').' : '')}</div>`; }).join('')}
       ${partie.route ? `<div class="niveauPlus">🧵 Route de la Tapisserie, rang ${partie.route.rang} : ${partie.route.type === 'carte' ? 'nouvelle carte ' + nomCarte(partie.route.id) : partie.route.type === 'fil' ? 'un Fil de réserve' : partie.route.type === 'amphore' ? 'une amphore dorée, déjà ouverte pour toi' : '100 drachmes'}</div>` : ''}
       ${niveaux ? `<div class="niveauPlus">✨ Niveau ${niveauAvant} → ${profil.niveau} : +4 % PV et attaque par niveau</div>` : ''}`;
     setTimeout(() => { const x = $('xpFin'); if (x) x.style.width = pct + '%'; }, 100);
@@ -1117,17 +1162,20 @@
       $('colMenace').textContent = 'Ce qui t\'attend : ' + noms.join(' · ') + '. Touche une carte pour voir ce qu\'elle fait, puis l\'équiper ou la retirer.';
     } else $('colMenace').textContent = 'Touche une carte pour voir son détail, l\'améliorer ou l\'équiper. ✓ = équipée.';
     const heros = P.herosDisponibles(profil);
-    const creaturesDispo = ['griffon'].concat(profil.creatures).filter(id => heros.includes(id));
+    const creaturesDispo = [{ uid: 'griffon', espece: 'griffon' }].concat(profil.liens || []).filter(l => heros.includes(l.espece));
+    const estActif = l => l.uid === 'griffon' ? profil.creature === 'griffon' : profil.lienActif === l.uid;
     if (preparation && creaturesDispo.length > 1) clotho('choixCrea');
-    const blocCreature = (preparation && creaturesDispo.length > 1) ? `<h3>🐾 Créature de l'équipe</h3><div class="grille">${creaturesDispo.map(id => { const c = D.HEROS.concat(D.CREATURES).find(x => x.id === id);
-      return `<div class="tuile choixCrea ${profil.creature === id ? 'equipee' : ''}" data-crea="${id}" style="--r:${aff(c.affinite).couleur}"><div class="art" style="--a:${aff(c.affinite).couleur}"><span>${c.emoji}</span><div class="affb">${aff(c.affinite).icone}</div></div><div class="nom">${c.nom}</div><div class="sous">${aff(c.affinite).nom}</div>${profil.creature === id ? '<div class="coche">✓</div>' : ''}</div>`; }).join('')}</div>` : '';
+    const blocCreature = (preparation && creaturesDispo.length > 1) ? `<h3>🐾 Créature de l'équipe <button class="lien" id="voirEnclos">L'Enclos</button></h3><div class="grille">${creaturesDispo.map(l => { const c = D.HEROS.concat(D.CREATURES).find(x => x.id === l.espece), t = P.trait(l.trait);
+      return `<div class="tuile choixCrea ${estActif(l) ? 'equipee' : ''}" data-lien="${l.uid}" style="--r:${aff(c.affinite).couleur}"><div class="art" style="--a:${aff(c.affinite).couleur}"><span>${c.emoji}</span><div class="affb">${aff(c.affinite).icone}</div></div><div class="nom">${l.surnom || c.nom}</div><div class="sous">${t ? t.nom : aff(c.affinite).nom}</div>${estActif(l) ? '<div class="coche">✓</div>' : ''}</div>`; }).join('')}</div>` : '';
+    const boutonEnclos = !preparation && (profil.liens || []).length ? `<button class="enclosBtn" id="voirEnclos">🐾 L'Enclos de Chiron · ${profil.liens.length}/${P.LIENS_MAX} créatures</button>` : '';
     const groupes = D.HEROS.filter(h => heros.includes(h.id)).concat(D.CREATURES.filter(c => profil.creatures.includes(c.id)));
-    $('colListe').innerHTML = blocCreature + groupes.map(h => {
+    $('colListe').innerHTML = boutonEnclos + blocCreature + groupes.map(h => {
       const ids = h.competences.filter(c => c.type !== 'garde').map(c => c.id);
       const eq = profil.equipement[h.id] || [];
       return `<h3>${h.emoji} ${h.nom} <span class="small">${eq.length}/${P.SLOTS} équipées</span></h3><div class="grille">` + ids.map(id => tuileCarte(id, { montrerEquipe: true })).join('') + '</div>';
     }).join('');
-    $('colListe').querySelectorAll('.choixCrea').forEach(t => t.onclick = () => { profil.creature = t.dataset.crea; sauver(); ouvrirCollection(true); });
+    $('colListe').querySelectorAll('.choixCrea').forEach(t => t.onclick = () => { P.choisirLien(profil, t.dataset.lien); sauver(); ouvrirCollection(true); });
+    if ($('voirEnclos')) $('voirEnclos').onclick = () => ouvrirEnclos(() => ouvrirCollection(preparation));
     $('colListe').querySelectorAll('.tuile:not(.choixCrea)').forEach(t => t.onclick = () => {
       const id = t.dataset.id;
       if (!profil.cartes[id]) return;

@@ -90,6 +90,10 @@ Le robot **Voix** (GitHub Actions, `.github/workflows/voix.yml`) enregistre chaq
 
 Une épreuve par jour, mais un oubli ne pénalise pas : chaque jour manqué donne droit à une épreuve de rattrapage (2 au maximum en réserve). La réserve est calculée à la fin de la première épreuve jouée après l'absence ; l'accueil propose alors « Rattraper un jour ».
 
+## L'Enclos de Chiron (créatures liées)
+
+On peut lier plusieurs fois la même espèce. Chaque créature liée a sa fiche dans l'Enclos (onglet Cartes, 10 places) : un surnom modifiable, un trait tiré au hasard (Vif, Robuste, Féroce, Placide, Fidèle) qui la rend un peu différente, sa date de liaison. Une seule créature accompagne l'équipe (choix dans l'Enclos ou pendant la Préparation). On peut libérer une créature. Enclos plein : une nouvelle liaison renforce seulement les cartes de l'espèce.
+
 ## L'Agora (activités du jour)
 
 L'onglet Agora (ancien onglet Trésors) réunit, en plus de l'Offrande et de la Route de la Tapisserie, cinq activités qui s'ouvrent une par une (fichier `activites.js`) :
@@ -130,4 +134,5 @@ Vérification : `<adresse du script>/exec?version=1` affiche le journal des dern
 - Saison 2 ou 3 : Voie secondaire complète (avec son passif, ou un passif réduit), au lieu des deux seules cartes données au niveau 10.
 - Saison 2 ou 3 : avec deux Voies maîtrisées, un emplacement d'attaques porté de 4 à 6 cartes par héros (vérifier l'équilibrage et l'affichage du combat).
 - Saison 2 : la Chimère sur mesure. Recueillir du sang de Titan (Titan de la semaine) et, au bout d'un moment, forger sa propre créature à partir des créatures liées : une tête, un corps, des pattes, une queue et un attribut en plus (ailes, cornes...). Chaque morceau apporte une capacité de la créature d'origine (ex. Vol avec les ailes de la chauve-souris, Battement de queue avec la queue du griffon). Les créatures utilisées sont sacrifiées : on perd ces alliés, mais la Chimère reprend leur force : chaque sacrifice lui donne des bonus selon le niveau des cartes de la créature sacrifiée. On peut lier plusieurs exemplaires d'une même créature (plusieurs satyres...), dans la limite de 10 liaisons.
+- Saison 3 : combos secrets de la Chimère (ex. tête de manticore + ailes d'aigle = dragon).
 - Chant II à écrire avant le jour 30 du Chant I.
