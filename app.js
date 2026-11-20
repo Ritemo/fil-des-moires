@@ -53,9 +53,19 @@
     p.rangs = r; p.joursJoues = 4; p.derniereDate = '2026-11-19'; p.reparation1 = true; p.maj = Date.now();
     recalee = true;
   }
+  // Rattrapage rétroactif (20/11/2026) : les jours manqués avant l'arrivée du rattrapage comptent aussi (2 au maximum)
+  function rattrapageInitial(p) {
+    if (p.rattrapageInit) return;
+    p.rattrapageInit = true;
+    const r = (p.rangs || []).filter(x => !x.echo);
+    if (!r.length || !p.derniereDate) return;
+    const manques = P.ecartJours(r[0].date, p.derniereDate) + 1 - r.length;
+    if (manques > 0) { p.rattrapage = Math.min(2, (p.rattrapage || 0) + manques); p.maj = Date.now(); recalee = true; }
+  }
   function migrer(p) {
     caler(p);
     reparer(p);
+    rattrapageInitial(p);
     P.initialiser(p);
     A.initialiser(p);
     if (!p.compagnons || (p.compagnons.length === 1 && p.joursJoues >= 2)) p.compagnons = ['errant'].concat(p.joursJoues >= 2 ? ['phaena'] : [], p.joursJoues >= 3 ? ['griffon'] : []);
@@ -678,7 +688,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.20.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.20.1 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
