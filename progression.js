@@ -127,7 +127,7 @@
       const u = Object.assign({}, h, { competences: comps, pvMax: Math.round(h.pvMax * m), attaque: Math.round(h.attaque * m) });
       appliquerPassifs(u, profil);
       const la = lienActif(profil);
-      if (la && la.espece === u.id && profil.creature === u.id) { const t = trait(la.trait); if (t) t.appliquer(u); if (la.surnom) u.nom = la.surnom; }
+      if (la && la.espece === u.id && profil.creature === u.id) { const t = trait(la.trait); if (t) { t.appliquer(u); u.traitNom = t.nom; u.traitDesc = t.desc; } if (la.surnom) u.nom = la.surnom; }
       return u;
     });
   }

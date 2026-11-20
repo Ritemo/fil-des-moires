@@ -585,7 +585,7 @@
     const especes = [...new Set(liens.map(l => l.espece))];
     const cases = liens.slice().sort((a, b) => especes.indexOf(a.espece) - especes.indexOf(b.espece));
     const tuile = l => { const c = D.CREATURES.find(x => x.id === l.espece), t = P.trait(l.trait), actif = profil.lienActif === l.uid;
-      return `<button class="caseEnclos${actif ? ' actif' : ''}" data-uid="${l.uid}" style="--a:${aff(c.affinite).couleur}"><span class="ico">${c.emoji}</span><b>${l.surnom}</b><span class="small">${t ? t.nom : ''}</span>${actif ? '<span class="badge">⚔️ En équipe</span>' : ''}</button>`; };
+      return `<button class="caseEnclos${actif ? ' actif' : ''}" data-uid="${l.uid}" style="--a:${aff(c.affinite).couleur}"><span class="ico">${c.emoji}</span><b>${l.surnom}</b><span class="small">${t ? t.nom : ''}</span><span class="small effetTrait">${t ? t.desc : ''}</span>${actif ? '<span class="badge">⚔️ En équipe</span>' : ''}</button>`; };
     let vides = ''; for (let i = cases.length; i < P.LIENS_MAX; i++) vides += '<div class="caseEnclos vide">·</div>';
     const html = intro + `<div class="bourse"><span>🐾 ${liens.length} / ${P.LIENS_MAX} créatures</span><span>${profil.creature === 'griffon' ? '🦅 Kelos en équipe' : ''}</span></div>
       <div class="enclos">${cases.map(tuile).join('')}${vides}</div>
@@ -739,7 +739,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.21.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.21.1 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1166,7 +1166,7 @@
     const estActif = l => l.uid === 'griffon' ? profil.creature === 'griffon' : profil.lienActif === l.uid;
     if (preparation && creaturesDispo.length > 1) clotho('choixCrea');
     const blocCreature = (preparation && creaturesDispo.length > 1) ? `<h3>🐾 Créature de l'équipe <button class="lien" id="voirEnclos">L'Enclos</button></h3><div class="grille">${creaturesDispo.map(l => { const c = D.HEROS.concat(D.CREATURES).find(x => x.id === l.espece), t = P.trait(l.trait);
-      return `<div class="tuile choixCrea ${estActif(l) ? 'equipee' : ''}" data-lien="${l.uid}" style="--r:${aff(c.affinite).couleur}"><div class="art" style="--a:${aff(c.affinite).couleur}"><span>${c.emoji}</span><div class="affb">${aff(c.affinite).icone}</div></div><div class="nom">${l.surnom || c.nom}</div><div class="sous">${t ? t.nom : aff(c.affinite).nom}</div>${estActif(l) ? '<div class="coche">✓</div>' : ''}</div>`; }).join('')}</div>` : '';
+      return `<div class="tuile choixCrea ${estActif(l) ? 'equipee' : ''}" data-lien="${l.uid}" style="--r:${aff(c.affinite).couleur}"><div class="art" style="--a:${aff(c.affinite).couleur}"><span>${c.emoji}</span><div class="affb">${aff(c.affinite).icone}</div></div><div class="nom">${l.surnom || c.nom}</div><div class="sous">${t ? t.nom + ' · ' + t.desc : aff(c.affinite).nom}</div>${estActif(l) ? '<div class="coche">✓</div>' : ''}</div>`; }).join('')}</div>` : '';
     const boutonEnclos = !preparation && (profil.liens || []).length ? `<button class="enclosBtn" id="voirEnclos">🐾 L'Enclos de Chiron · ${profil.liens.length}/${P.LIENS_MAX} créatures</button>` : '';
     const groupes = D.HEROS.filter(h => heros.includes(h.id)).concat(D.CREATURES.filter(c => profil.creatures.includes(c.id)));
     $('colListe').innerHTML = boutonEnclos + blocCreature + groupes.map(h => {
@@ -1444,7 +1444,7 @@
     const pips = u.camp === 'allie' ? `<div class="pips">${Array.from({ length: u.energieMax }, (_, i) => `<b class="${i < u.energie ? 'on' : ''}"></b>`).join('')}</div>` : '';
     return `<div class="unite ${u.ko ? 'ko' : ''} ${acteur && acteur.uid === u.uid ? 'actif' : ''} ${u.gardien ? 'gardien' : ''}" data-uid="${u.uid}" data-pct="${pct}">
       ${u.camp === 'ennemi' ? intention(u) : ''}
-      <div class="e">${u.emoji}</div><div class="nom">${u.nom}</div><div class="aff">${aff(u.affinite).icone} ${aff(u.affinite).nom}</div>
+      <div class="e">${u.emoji}</div><div class="nom">${u.nom}</div><div class="aff">${aff(u.affinite).icone} ${aff(u.affinite).nom}${u.traitNom ? ` · <span title="${u.traitDesc}">${u.traitNom}</span>` : ''}</div>
       <div class="barre ${pct < 30 ? 'bas' : ''}"><i class="ghost" style="width:${Math.max(avant, pct)}%"></i><i class="vrai" style="width:${avant}%"></i></div><div class="pvtxt">${u.pv} / ${u.pvMax}</div>
       ${pips}<div class="etats">${etats}</div></div>`;
   }
