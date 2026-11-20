@@ -556,7 +556,15 @@
       fil.querySelectorAll('.reagir').forEach(b => b.onclick = () => envoyer({ reaction: b.dataset.e, cible: b.dataset.cible }));
     }
     $('lexiqueCorps').querySelectorAll('.presages button').forEach(b => b.onclick = () => envoyer({ texte: b.dataset.p }));
-    $('envoyerMsg').onclick = async () => { const t = $('texteMsg').value.trim(); if (!t) return; if (await envoyer({ texte: t })) $('texteMsg').value = ''; };
+    // Le champ se vide dès l'envoi (le script met quelques secondes à répondre) ; le texte revient seulement en cas d'échec
+    $('envoyerMsg').onclick = async () => {
+      const champ = $('texteMsg'), t = champ.value.trim(); if (!t || $('envoyerMsg').disabled) return;
+      champ.value = ''; $('envoyerMsg').disabled = true;
+      const ok = await envoyer({ texte: t });
+      if ($('envoyerMsg')) $('envoyerMsg').disabled = false;
+      if (!ok && $('texteMsg') && !$('texteMsg').value) $('texteMsg').value = t;
+    };
+    $('texteMsg').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('envoyerMsg').onclick(); } };
     brancher(); fil.scrollTop = fil.scrollHeight; rafraichir();
     relever().then(() => { if ($('filMsgs')) rafraichir(); if (corbeau.ok === false && $('etatMsg')) $('etatMsg').textContent = '⚠️ Le script de sauvegarde doit être mis à jour (version 9) pour la messagerie.'; });
     clearInterval(corbeau.minuterie);
@@ -688,7 +696,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.20.1 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.20.2 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
