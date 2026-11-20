@@ -125,3 +125,8 @@ ntfy refuse souvent les messages venant de Google (erreur 429 : les serveurs de 
 
 Vérification : `<adresse du script>/exec?version=1` affiche le journal des derniers envois (200 = envoyé directement, « confié au robot » puis « robot réveillé -> 204 » = passé par GitHub). Quand le jeton expire, le journal affiche « robot réveillé -> 401 » : en générer un nouveau.
 
+## Feuille de route (idées pour les saisons suivantes)
+
+- Saison 2 ou 3 : Voie secondaire complète (avec son passif, ou un passif réduit), au lieu des deux seules cartes données au niveau 10.
+- Saison 2 ou 3 : avec deux Voies maîtrisées, un emplacement d'attaques porté de 4 à 6 cartes par héros (vérifier l'équilibrage et l'affichage du combat).
+- Chant II à écrire avant le jour 30 du Chant I.
