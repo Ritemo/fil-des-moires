@@ -142,7 +142,7 @@
     const x = (feteDuJour(date) || {}).id === 'selene' ? 2 : 1;
     const gains = { drachmes: (juste ? 20 : 5) * x, materiaux: juste ? { eclat: (o.serie % 5 === 0 ? 2 : 1) * x } : {} };
     profil.drachmes += gains.drachmes; ajouterMateriaux(profil, gains.materiaux);
-    if (juste) { noterPenchant(profil, 'piete', 2); if (o.justes % 7 === 0) gains.fragment = donnerFragment(profil, hasardDe('oracle-frag|' + date)); }
+    if (juste) { noterPenchant(profil, 'piete', 1); if (o.justes % 7 === 0) gains.fragment = donnerFragment(profil, hasardDe('oracle-frag|' + date)); }
     return { juste, gains, q };
   }
 
@@ -226,7 +226,7 @@
     profil.drachmes += drachmes; ajouterMateriaux(profil, materiaux);
     profil.activites.expedition = null;
     profil.activites.expeditionsFaites = (profil.activites.expeditionsFaites || 0) + 1;
-    noterPenchant(profil, 'ruse', 2);
+    noterPenchant(profil, 'ruse', 1);
     const fragment = h() < 0.3 ? donnerFragment(profil, h) : null;
     return { lieu, creature: cr, materiaux, drachmes, recit, affine, fete, fragment };
   }
@@ -238,7 +238,7 @@
   function equipeHorsChant(p) {
     const comp = p.compagnons || ['errant'];
     const equipe = {}; D.HEROS.forEach(h => { if (h.id === 'errant' || comp.includes(h.id)) equipe[h.id] = 'tout'; });
-    const pseudo = { equipement: p.equipement || {}, cartes: p.cartes || {}, compagnons: comp, creature: p.creature, creatures: p.creatures || [],
+    const pseudo = { equipement: p.equipement || {}, cartes: p.cartes || {}, compagnons: comp, creature: p.creature, creatures: p.creatures || [], liens: p.liens || [], lienActif: p.lienActif || null,
       niveau: p.niveau || 1, serments: p.serments || {}, voie: p.voie, histoire: { choix: {} } };
     const unites = P.equipeDuJoueur({ equipe, gloire: false }, pseudo, 10)
       .map(u => Object.assign(u, { competences: u.competences.filter(c => c.type !== 'lier' && !c.prouesse) }));
@@ -260,7 +260,7 @@
     a.journal = [{ date, adversaire, victoire }].concat(a.journal || []).slice(0, 10);
     const gains = { drachmes: (victoire ? 25 : 5) * x, materiaux: victoire ? { airain: x } : {}, trophees: delta };
     profil.drachmes += gains.drachmes; ajouterMateriaux(profil, gains.materiaux);
-    if (victoire) noterPenchant(profil, 'honneur', 2);
+    if (victoire) noterPenchant(profil, 'honneur', 1);
     return gains;
   }
 
@@ -310,7 +310,7 @@
   }
   function enregistrerTitan(profil, date, degats) {
     const t = etatTitan(profil, date);
-    if (!t.essais.includes(date)) t.essais.push(date);
+    if (!t.essais.includes(date)) { t.essais.push(date); noterPenchant(profil, 'honneur', 1); }
     t.degats += degats;
     return t;
   }
@@ -331,7 +331,7 @@
 
 
   // ====================== PENCHANT (Honneur, Ruse, Piété) ======================
-  // Les choix du Chant comptent 5 points, les activités 1 ou 2 : Arène = Honneur, Expéditions = Ruse, Oracle et Offrande = Piété.
+  // Les choix du Chant comptent 10 points, chaque activité 1 point : assaut sur le Titan et victoire dans l'Arène = Honneur, expédition = Ruse, bonne réponse à l'Oracle = Piété.
   const PENCHANTS = {
     honneur: { nom: 'Honneur', emoji: '🛡️', titre: "Fil d'Honneur", faveur: '+5 % PV pour toute l\'équipe' },
     ruse: { nom: 'Ruse', emoji: '🦊', titre: 'Fil de Ruse', faveur: '+5 % de critique pour toute l\'équipe' },
@@ -339,7 +339,7 @@
   };
   function scoresPenchant(profil) {
     const h = profil.histoire || {}, j = h.jauges || {}, e = h.echos || {};
-    const r = {}; Object.keys(PENCHANTS).forEach(k => { r[k] = 5 * (j[k] || 0) + (e[k] || 0); }); return r;
+    const r = {}; Object.keys(PENCHANTS).forEach(k => { r[k] = 10 * (j[k] || 0) + (e[k] || 0); }); return r;
   }
   function dominante(profil) {
     const sc = scoresPenchant(profil), tri = Object.keys(sc).sort((a, b) => sc[b] - sc[a]);
@@ -481,7 +481,7 @@
     if (debloquee(profil, 'oracle') && !oracleFait(profil, date)) n++;
     if (debloquee(profil, 'arene') && !areneFaite(profil, date)) n++;
     if (debloquee(profil, 'expedition') && (expeditionPrete(profil, date) || (!profil.activites.expedition && profil.activites.derniereExpedition !== date))) n++;
-    if (debloquee(profil, 'titan') && !titanFait(profil, date)) n++;
+    if (debloquee(profil, 'titan') && !titanFait(profil, date) && !(etatTitan(profil, date).paliers || []).includes(100)) n++;
     if (debloquee(profil, 'forge') && TALISMANS.some(t => peutForger(profil, t.id))) n++;
     if (debloquee(profil, 'marchand') && marchandNeuf(profil, date)) n++;
     return n;

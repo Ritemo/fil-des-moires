@@ -134,7 +134,7 @@
   // Penchant du joueur (Honneur, Ruse, Piété) : choix du Chant (5 points) + activités (histoire.echos)
   function majDominante(profil) {
     const h = profil.histoire || {}, j = h.jauges || {}, e = h.echos || {};
-    const sc = {}; ['honneur', 'ruse', 'piete'].forEach(k => { sc[k] = 5 * (j[k] || 0) + (e[k] || 0); });
+    const sc = {}; ['honneur', 'ruse', 'piete'].forEach(k => { sc[k] = 10 * (j[k] || 0) + (e[k] || 0); });
     const tri = Object.keys(sc).sort((a, b) => sc[b] - sc[a]);
     if (profil.histoire) profil.histoire.dominante = sc[tri[0]] >= 5 && sc[tri[0]] > sc[tri[1]] ? tri[0] : null;
   }

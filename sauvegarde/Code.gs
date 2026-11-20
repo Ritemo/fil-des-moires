@@ -8,7 +8,7 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 11;
+const VERSION_SCRIPT = 12;
 const NOM_MESSAGES = 'fil-des-moires-messagerie.json';
 const DEPOT = 'Ritemo/fil-des-moires';
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
@@ -60,7 +60,7 @@ function classement() {
       etoiles: rangs.reduce(function (n, r) { return n + (r.victoire ? r.etoiles || 0 : 0); }, 0),
       victoires: rangs.filter(function (r) { return r.victoire; }).length,
       parfaits: rangs.filter(function (r) { return r.victoire && r.etoiles === 3; }).length,
-      creatures: (p.creatures || []).length,
+      creatures: (p.liens || p.creatures || []).length,
       sceaux: ((p.histoire || {}).sceaux || []).length,
       serie: (p.serie || {}).jours || 0,
       derniereDate: p.derniereDate || null,
@@ -70,7 +70,7 @@ function classement() {
         recents: rangs.slice(-7),
         equipement: p.equipement || {}, creature: p.creature || null, compagnons: p.compagnons || [],
         voie: p.voie || null, serments: p.serments || {},
-        cartes: p.cartes || {}, creatures: p.creatures || [], drachmes: p.drachmes || 0
+        cartes: p.cartes || {}, creatures: p.creatures || [], liens: p.liens || [], lienActif: p.lienActif || null, drachmes: p.drachmes || 0
       }
     };
   }).filter(function (x) { return x; });
@@ -89,7 +89,11 @@ function doPost(e) {
   try {
     actuel = lire(joueur);
     // On garde toujours la version la plus récente (champ maj, en millisecondes)
-    if (!actuel || !actuel.maj || recu.maj >= actuel.maj) { ecrire(joueur, recu); ecrit = true; }
+    // Garde-fou : une sauvegarde moins avancée (moins de rangs) n'écrase jamais une plus avancée,
+    // sauf partie recommencée volontairement (champ raz plus récent)
+    const moinsAvancee = actuel && rangsTisses(recu).length < rangsTisses(actuel).length && !((recu.raz || 0) > (actuel.raz || 0));
+    if (!moinsAvancee && (!actuel || !actuel.maj || recu.maj >= actuel.maj)) { ecrire(joueur, recu); ecrit = true; }
+    else if (moinsAvancee) noter(nomDe(joueur, actuel) + ' : sauvegarde moins avancée refusée');
   } finally { verrou.releaseLock(); }
   if (!ecrit) return reponse({ ok: true, donnees: actuel, ecrit: false });
   try { annoncerExploit(joueur, actuel, recu); } catch (err) { noter('annonce impossible : ' + err); }

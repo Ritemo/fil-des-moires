@@ -93,7 +93,7 @@ Une épreuve par jour, mais un oubli ne pénalise pas : chaque jour manqué donn
 ## Le monde : Moires, penchant, Oracle, fragments, Hermès, fêtes, hauts faits
 
 - **Les trois Moires** se partagent le monde : Clotho (épreuves, liens, expéditions, forge), Lachésis (Oracle, Arène, Titan, hauts faits, penchant), Atropos (libération des créatures, et plus tard la Chimère).
-- **Penchant** : les choix du Chant (5 points) et les activités (Arène et Titan : Honneur ; expéditions : Ruse ; Oracle et Offrande : Piété) donnent un penchant dominant, avec une faveur (+5 % PV, +5 % critique ou +10 % soins) et des répliques propres au jour 30 (condition `dominante=honneur`).
+- **Penchant** : les choix du Chant (10 points) et les activités (1 point : assaut sur le Titan ou victoire dans l'Arène pour l'Honneur, expédition pour la Ruse, bonne réponse à l'Oracle pour la Piété) donnent un penchant dominant, avec une faveur (+5 % PV, +5 % critique ou +10 % soins) et des répliques propres au jour 30 (condition `dominante=honneur`).
 - **Présage de la Pythie** : une bonne réponse à l'Oracle révèle la faiblesse du gardien de la prochaine épreuve, et toute l'équipe commence cette épreuve avec un coup critique.
 - **Fragments de la Tapisserie** : 3 séries de 4 (expéditions 30 %, Titan à 50 et 100 %, Oracle toutes les 7 bonnes réponses, Hermès). Une série complète révèle une page du mythe, dite par une Moire. À lire dans le Codex.
 - **Le Marchand Hermès** (Agora) : 4 articles par semaine, renouvelés le lundi, chacun achetable une fois.

@@ -35,6 +35,8 @@
     artemis: { pitch: 1.1, rate: 0.95, genre: 'f' },
     soeurs: { pitch: 0.6, rate: 0.85, genre: 'f' },
     lysandre: { pitch: 0.9, rate: 0.85, genre: 'f' },
+    lachesis: { pitch: 1.0, rate: 0.9, genre: 'f' },
+    atropos: { pitch: 0.75, rate: 0.85, genre: 'f' },
     kelos: { pitch: 0.95, rate: 0.95, genre: 'h' }
   };
   const FEMININ = /(denise|eloise|vivienne|coralie|jacqueline|yvette|josephine|amelie|amélie|audrey|aurelie|aurélie|celine|céline|denise|eloise|élise|julie|lea|léa|marie|virginie|hortense|brigitte|vivienne|female|femme|google français)/i;

@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: 20
       - name: Tests et simulation
-        run: node tests/simulation.js && node tests/progression.js && node tests/activites.js
+        run: node tests/simulation.js && node tests/progression.js && node tests/activites.js && node tests/coherence.js
       - name: Alerte en cas d'échec
         if: failure()
         env:

@@ -59,5 +59,30 @@ verifier(A.paliersAReclamer(p, '2026-11-20', t.total, t.objectif).length === 2, 
 verifier(A.reclamerPalier(p, '2026-11-20', 25) && !A.reclamerPalier(p, '2026-11-20', 25), 'Titan : palier réclamé une fois');
 verifier(A.etatTitan(p, '2026-11-24').degats === 0, 'Titan : remise à zéro chaque lundi');
 
+// Penchant : un choix du Chant (10) pèse plus que quelques activités
+p = profil(); A.initialiser(p); p.histoire = { choix: {}, jauges: { honneur: 1 }, sceaux: [] };
+for (let i = 0; i < 5; i++) A.noterPenchant(p, 'ruse', 1);
+verifier(A.dominante(p) === 'honneur', 'Penchant : le choix du Chant domine');
+for (let i = 0; i < 6; i++) A.noterPenchant(p, 'ruse', 1);
+verifier(A.dominante(p) === 'ruse', 'Penchant : les activités finissent par compter');
+
+// Fêtes : 2 jours tous les 9 jours, les mêmes pour tous
+let jf = 0; for (let i = 0; i < 90; i++) if (A.feteDuJour(new Date(Date.UTC(2027, 0, 1) + i * 864e5).toISOString().slice(0, 10))) jf++;
+verifier(jf === 20, 'Fêtes : 20 jours de fête sur 90 (' + jf + ')');
+
+// Marchand : 4 articles, un achat par article et par semaine
+p = profil(); A.initialiser(p); p.drachmes = 2000;
+const et = A.etalage(p, '2026-11-23');
+verifier(et.length === 4 && JSON.stringify(et) === JSON.stringify(A.etalage(p, '2026-11-26')), 'Marchand : étalage stable dans la semaine');
+verifier(A.acheter(p, '2026-11-23', et[0].id) && !A.acheter(p, '2026-11-24', et[0].id), 'Marchand : un seul achat par article');
+
+// Fragments et hauts faits
+p = profil(); A.initialiser(p);
+for (let i = 0; i < 12; i++) A.donnerFragment(p, () => 0);
+verifier(p.activites.fragments.length === 12 && A.donnerFragment(p) === null && A.serieComplete(p, 'atropos'), 'Fragments : 12 au total, pas de doublon');
+const hf = A.verifierHautsFaits(p, '2026-11-23');
+verifier(hf.some(h => h.id === 'fragments') && hf.some(h => h.id === 'premier') && A.verifierHautsFaits(p, '2026-11-24').length === 0, 'Hauts faits : débloqués une seule fois');
+verifier(A.titresDisponibles(p).some(t => t.nom === 'Lecteur de fils') && A.nomTitre('fragments') === 'Lecteur de fils', 'Hauts faits : titres');
+
 console.log((ko ? '❌ ' : '✅ ') + ok + ' vérifications réussies, ' + ko + ' échec(s) (activités).');
 process.exit(ko ? 1 : 0);

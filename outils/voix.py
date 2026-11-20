@@ -17,6 +17,8 @@ VOIX = {
     'artemis':   ('fr-BE-CharlineNeural', '-4%', '+0Hz'),
     'soeurs':    ('fr-CA-SylvieNeural', '-12%', '-25Hz'),
     'lysandre':  ('fr-FR-DeniseNeural', '-14%', '-18Hz'),
+    'lachesis':  ('fr-FR-EloiseNeural', '-10%', '-8Hz'),
+    'atropos':   ('fr-CA-SylvieNeural', '-16%', '-12Hz'),
 }
 
 async def enregistrer(r):

@@ -111,12 +111,16 @@
   async function synchroniser() {
     if (partie) return;
     const distant = await S.telecharger();
-    if (distant && distant.maj && distant.maj > (profil.maj || 0)) {
+    // Garde-fou : une sauvegarde plus avancée (plus de rangs tissés) l'emporte toujours, même si l'autre est plus récente.
+    // Un vieil appareil ne peut donc plus écraser la partie (cas du jour 4 effacé le 19/11/2026).
+    const avancement = x => ((x && x.rangs) || []).filter(r => !r.echo).length;
+    const razLocale = (profil.raz || 0) > ((distant && distant.raz) || 0);   // partie recommencée volontairement ici
+    if (distant && distant.maj && !razLocale && (distant.maj > (profil.maj || 0) || avancement(distant) > avancement(profil))) {
       profil = migrer(Object.assign(profilVide(), distant));
       stock.ecrire('profil', profil);
       if (recalee) { recalee = false; S.envoyer(profil, true); }
       if (!partie && $('accueil').classList.contains('actif')) accueil();
-    } else if (S.conf() && (!distant || (profil.maj || 0) > (distant.maj || 0))) {
+    } else if (S.conf() && (!distant || (profil.maj || 0) > (distant.maj || 0)) && (razLocale || avancement(profil) >= avancement(distant))) {
       if (profil.maj) S.envoyer(profil, true);
     }
   }
@@ -469,7 +473,8 @@
         <div class="small">Toi : ${et.degats}${t.contributions.map(c => ' · ' + c.nom + ' : ' + c.degats).join('')}</div>
         <div class="sousTitre">Récompenses</div>` + A.PALIERS.map(p => { const atteint = t.total >= t.objectif * p.pct / 100, pris = et.paliers.includes(p.pct);
           return `<div class="palier ${pris ? 'fait' : atteint ? 'prochain' : ''}"><span class="ic">${pris ? '✅' : atteint ? '🎁' : '🔒'}</span><span>${p.pct} % : ${p.libelle}</span>${atteint && !pris ? `<button data-p="${p.pct}">Réclamer</button>` : ''}</div>`; }).join('') +
-        (A.titanFait(profil, d) ? '<p>✅ Ton assaut du jour est fait. Reviens demain !</p>' : `<button class="principal" id="titanGo" style="width:100%">Lancer l'assaut (${A.ACTIONS_TITAN} actions)</button>`);
+        (t.total >= t.objectif ? '<p>🏆 ' + T.nom.split(',')[0] + ' est vaincu pour cette semaine ! Réclame tes récompenses ; un nouveau Titan se lèvera lundi.</p>'
+          : A.titanFait(profil, d) ? '<p>✅ Ton assaut du jour est fait. Reviens demain !</p>' : `<button class="principal" id="titanGo" style="width:100%">Lancer l'assaut (${A.ACTIONS_TITAN} actions)</button>`);
       ouvrirModale('🗿 Le Titan de la semaine', html);
       $('lexiqueCorps').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const pr = A.reclamerPalier(profil, d, +b.dataset.p); if (pr) { SON.jouer('amphore'); sauver(); rendre(autres); if (pr.fragment) $('lexiqueCorps').insertAdjacentHTML('afterbegin', fragHtml(pr.fragment)); rafraichirAgora(); } });
       if ($('titanGo')) $('titanGo').onclick = () => { $('modale').classList.remove('visible');
@@ -501,7 +506,7 @@
       parole = v ? 'Une ombre n\'est qu\'un souvenir. Toi, tu avances.' : 'Même les ombres apprennent. Demain, tu l\'auras.';
     } else {
       const t = etat.unites.find(u => u.titan), degats = Math.max(0, (t.pvDepart || t.pvMax) - t.pv);
-      A.enregistrerTitan(profil, d, degats); A.noterPenchant(profil, 'honneur', 1);
+      A.enregistrerTitan(profil, d, degats);
       gains = { drachmes: 10 + Math.round(degats / 50), materiaux: t.pv <= 0 ? { perle: 1 } : {} };
       profil.drachmes += gains.drachmes; A.ajouterMateriaux(profil, gains.materiaux);
       titre = t.pv <= 0 ? 'Le Titan est tombé !' : 'Assaut terminé';
@@ -521,7 +526,9 @@
 
   // ----- Annonce des nouveautés (une fois, à partir du 19 novembre 2026) -----
   function annoncerNouveautes() {
-    if (profil.vus.agora1 || aujourdhui() < '2026-11-19' || profil.joursJoues < 1) return;
+    // seulement pour les parties commencées avant l'arrivée de l'Agora (les nouveaux joueurs la découvrent au fil des jours)
+    const premier = (profil.rangs || [])[0];
+    if (profil.vus.agora1 || aujourdhui() < '2026-11-19' || !premier || !(premier.date < '2026-11-19')) { profil.vus.agora1 = true; return; }
     profil.vus.agora1 = true; sauver();
     ouvrirModale('🏛️ Nouveau : l\'Agora', `<p>L'onglet <b>Trésors</b> devient l'<b>Agora</b> 🏛️ : en plus de l'épreuve du jour, cinq activités t'y attendent, à découvrir une par une.</p>` +
       ['oracle', 'arene', 'forge', 'expedition', 'titan'].map(id => `<div class="talisman"><div class="ico">${A.NOMS[id].emoji}</div><div class="txt"><b>${A.NOMS[id].nom}</b>
@@ -700,7 +707,7 @@
     const a = profil.activites, hf = a.hautsFaits || {}, sc = A.scoresPenchant(profil), d = profil.histoire && profil.histoire.dominante;
     const max = Math.max(5, ...Object.values(sc));
     const penchant = `<div class="sousTitre">⚖️ Ton penchant</div>` + Object.keys(A.PENCHANTS).map(k => `<div class="penchant${d === k ? ' dom' : ''}"><span>${A.PENCHANTS[k].emoji} ${A.PENCHANTS[k].nom}</span><div class="barreTitan"><i style="width:${Math.round(100 * sc[k] / max)}%"></i></div><b>${sc[k]}</b></div>`).join('') +
-      `<p class="small">${d ? 'Faveur de ' + A.PENCHANTS[d].nom + ' : ' + A.PENCHANTS[d].faveur + '.' : 'Aucun penchant affirmé pour l\'instant.'} Les choix du Chant comptent 5 points ; l'Arène et le Titan nourrissent l'Honneur, les expéditions la Ruse, l'Oracle et l'Offrande la Piété.</p>`;
+      `<p class="small">${d ? 'Faveur de ' + A.PENCHANTS[d].nom + ' : ' + A.PENCHANTS[d].faveur + '.' : 'Aucun penchant affirmé pour l\'instant.'} Chaque choix du Chant compte 10 points ; chaque assaut sur le Titan et chaque victoire dans l'Arène ajoutent 1 point d'Honneur, chaque expédition 1 point de Ruse, chaque bonne réponse à l'Oracle 1 point de Piété.</p>`;
     const titres = A.titresDisponibles(profil);
     const choixTitre = `<div class="sousTitre">🎖️ Ton titre (affiché dans le classement)</div><div class="choixLigne"><button data-titre="" class="${!profil.titre ? 'on' : ''}">Aucun</button>${titres.map(t => `<button data-titre="${t.id}" class="${profil.titre === t.id ? 'on' : ''}">${t.nom}</button>`).join('')}</div>`;
     const liste = `<div class="sousTitre">🏅 Hauts faits · ${Object.keys(hf).length}/${A.HAUTS_FAITS.length}</div>` + A.HAUTS_FAITS.map(h => `<div class="palier ${hf[h.id] ? 'fait' : ''}"><span class="ic">${hf[h.id] ? '🏅' : '🔒'}</span><span><b>${h.nom}</b> · ${h.desc}${h.titre ? ' <i class="small">(titre : ' + h.titre + ')</i>' : ''}</span></div>`).join('');
@@ -820,14 +827,14 @@
         joueur: '❌ Le script ne connaît pas encore « CLE_' + inv.j.toUpperCase() + ' » : la personne qui t\'a invité doit l\'ajouter dans les Propriétés du script.',
         cle: '❌ La clé « CLE_' + inv.j.toUpperCase() + ' » du script ne correspond pas à « ' + inv.c + ' » : vérifie la valeur dans les Propriétés du script.' })[r] || '❌ Pas de connexion : réessaie dans un moment.'; return; }
       S.configurer({ url: inv.u, cle: inv.c, joueur: inv.j });
-      if (remplace || (actuel && actuel.joueur !== inv.j)) { profil = migrer(profilVide()); stock.ecrire('profil', profil); }
+      if (remplace || (actuel && actuel.joueur !== inv.j)) { profil = migrer(profilVide()); profil.raz = Date.now(); stock.ecrire('profil', profil); }
       if (!profil.pseudo) profil.pseudo = Prenom;
       $('modale').classList.remove('visible');
       await synchroniser(); accueil();
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.22.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.22.1 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1154,7 +1161,6 @@
   function ouvrirAmphore() {
     const r = P.ouvrirOffrande(profil, aujourdhui(), M.graineDuJour(aujourdhui() + '|offrande'));
     if (!r) return;
-    A.noterPenchant(profil, 'piete', 1);
     sauver();
     const q = P.QUALITES[r.qualite];
     const notes = [r.protege ? '🧵 Ton Fil de réserve a protégé ta série.' : '', r.recul ? 'Un jour manqué : ta série a reculé d\'un palier, sans repartir à zéro.' : '', r.filGagne ? '🧵 7 jours de suite : tu gagnes un Fil de réserve !' : ''].filter(Boolean).join('<br>');
@@ -1754,7 +1760,7 @@
       try {
         const p = JSON.parse(decodeURIComponent(escape(atob($('syncCode').value.trim()))));
         if (!p || !Array.isArray(p.rangs)) throw new Error('format');
-        profil = migrer(Object.assign(profilVide(), p)); sauver(); $('syncMsg').textContent = '✅ Partie chargée.'; accueil();
+        profil = migrer(Object.assign(profilVide(), p)); profil.raz = Date.now(); sauver(); $('syncMsg').textContent = '✅ Partie chargée.'; accueil();
       } catch (e) { $('syncMsg').textContent = '❌ Ce code n\'est pas valide.'; }
     };
     $('modale').classList.add('visible');
@@ -1890,7 +1896,7 @@
   $('btnLexique').onclick = () => ouvrirLexique();
   $('btnSync').onclick = ouvrirSync;
   $('btnVitesse').onclick = () => { vitesse = vitesse === 1 ? 0.5 : 1; $('btnVitesse').textContent = 'Vitesse x' + (vitesse === 1 ? 1 : 2); };
-  $('btnReset').onclick = () => { profil = migrer(profilVide()); sauver(); toursJoueur = 0; accueil(); };
+  $('btnReset').onclick = () => { profil = migrer(profilVide()); profil.raz = Date.now(); sauver(); toursJoueur = 0; accueil(); };
 
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claude')) {
     try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* rien */ }
