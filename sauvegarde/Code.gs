@@ -8,7 +8,7 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 9;
+const VERSION_SCRIPT = 10;
 const NOM_MESSAGES = 'fil-des-moires-messagerie.json';
 const DEPOT = 'Ritemo/fil-des-moires';
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
@@ -80,16 +80,19 @@ function doPost(e) {
   const joueur = nettoyer(corps.joueur);
   if (joueur === false || !cleValide(joueur, corps.cle)) return reponse({ ok: false, erreur: 'cle' });
   if (corps.message) return reponse(posterMessage(joueur, corps.message));
-  const actuel = lire(joueur);
   const recu = corps.profil;
   if (!recu || !recu.maj) return reponse({ ok: false, erreur: 'profil' });
-  // On garde toujours la version la plus récente (champ maj, en millisecondes)
-  if (!actuel || !actuel.maj || (recu && recu.maj >= actuel.maj)) {
-    ecrire(joueur, recu);
-    try { annoncerExploit(joueur, actuel, recu); } catch (err) { noter('annonce impossible : ' + err); }
-    return reponse({ ok: true, donnees: recu, ecrit: true });
-  }
-  return reponse({ ok: true, donnees: actuel, ecrit: false });
+  // Verrou : deux sauvegardes simultanées ne doivent pas lire la même version (sinon l'annonce part deux fois)
+  const verrou = LockService.getScriptLock(); verrou.waitLock(20000);
+  let actuel, ecrit = false;
+  try {
+    actuel = lire(joueur);
+    // On garde toujours la version la plus récente (champ maj, en millisecondes)
+    if (!actuel || !actuel.maj || recu.maj >= actuel.maj) { ecrire(joueur, recu); ecrit = true; }
+  } finally { verrou.releaseLock(); }
+  if (!ecrit) return reponse({ ok: true, donnees: actuel, ecrit: false });
+  try { annoncerExploit(joueur, actuel, recu); } catch (err) { noter('annonce impossible : ' + err); }
+  return reponse({ ok: true, donnees: recu, ecrit: true });
 }
 
 // Prénom du joueur : lettres et chiffres seulement. Vide = joueur principal. false = invalide.
