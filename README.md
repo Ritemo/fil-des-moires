@@ -86,6 +86,10 @@ Les personnages, créatures et cartes utilisent les émoticônes 3D **Fluent Emo
 
 Le robot **Voix** (GitHub Actions, `.github/workflows/voix.yml`) enregistre chaque réplique de l'histoire avec une voix neuronale par personnage (service de lecture à voix haute de Microsoft Edge, via `edge-tts`, gratuit et sans clé). Il se lance tout seul quand `chant1.js` change, ou à la main : onglet *Actions* > *Voix* > *Run workflow*. Les fichiers vont dans `art/voix/` ; seules les répliques nouvelles ou modifiées sont enregistrées. Les voix de chaque personnage se règlent dans `outils/voix.py`. Si un fichier manque, le jeu utilise la voix de l'appareil.
 
+## Rattrapage des jours manqués
+
+Une épreuve par jour, mais un oubli ne pénalise pas : chaque jour manqué donne droit à une épreuve de rattrapage (2 au maximum en réserve). La réserve est calculée à la fin de la première épreuve jouée après l'absence ; l'accueil propose alors « Rattraper un jour ».
+
 ## L'Agora (activités du jour)
 
 L'onglet Agora (ancien onglet Trésors) réunit, en plus de l'Offrande et de la Route de la Tapisserie, cinq activités qui s'ouvrent une par une (fichier `activites.js`) :

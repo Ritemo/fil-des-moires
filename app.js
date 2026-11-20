@@ -158,7 +158,7 @@
     const tresor = (profil.joursJoues >= 1 && P.offrandeDisponible(profil, aujourdhui())) || P.choixEnAttente(profil);
     const nAct = A.enAttente(profil, aujourdhui());
     pastille('tresors', nAct ? `<span class="pastille">${nAct}</span>` : tresor ? '<span class="point"></span>' : '');
-    const fait = profil.derniereDate === aujourdhui();
+    const fait = profil.derniereDate === aujourdhui() && !(profil.rattrapage > 0);
     pastille('accueil', fait ? '' : '<span class="point"></span>');
   }
   document.querySelectorAll('#ongletsBas button').forEach(b => b.onclick = () => ({
@@ -169,7 +169,8 @@
   function accueil() {
     ecran('accueil');
     partie = null;
-    const fait = profil.derniereDate === aujourdhui();
+    const rattraper = profil.derniereDate === aujourdhui() && (profil.rattrapage || 0) > 0;
+    const fait = profil.derniereDate === aujourdhui() && !rattraper;
     const jour = fait ? Math.max(1, profil.joursJoues) : profil.joursJoues + 1;
     const ep = E.epreuve(jour, aujourdhui(), profil.histoire);
     $('mode').textContent = '';
@@ -182,9 +183,11 @@
     majAmbChapitre(ep); SON.ambiance(ambChapitre);
     $('vignette').innerHTML = vignetteSvg(ep, fait);
     $('btnJouer').style.display = fait ? 'none' : 'block';
+    $('btnJouer').textContent = rattraper ? 'Rattraper un jour : jour ' + jour : 'Commencer l\'épreuve';
     $('btnEcho').style.display = fait ? 'block' : 'none';
     const dernier = profil.rangs[profil.rangs.length - 1];
-    $('etatJour').textContent = fait && dernier ? 'Épreuve du jour terminée : ' + (dernier.victoire ? 'victoire ' + '★'.repeat(dernier.etoiles) : 'défaite') + '. Nouvelle épreuve demain.' : '';
+    $('etatJour').textContent = rattraper ? '🧵 Tu as manqué ' + (profil.rattrapage > 1 ? 'des jours' : 'un jour') + ' : tu peux rattraper ' + profil.rattrapage + ' épreuve' + (profil.rattrapage > 1 ? 's' : '') + ' en plus aujourd\'hui ou plus tard.'
+      : fait && dernier ? 'Épreuve du jour terminée : ' + (dernier.victoire ? 'victoire ' + '★'.repeat(dernier.etoiles) : 'défaite') + '. Nouvelle épreuve demain.' : '';
     $('reglageClotho').value = profil.clotho;
     // Précédemment
     const hier = profil.rangs[profil.rangs.length - (fait ? 2 : 1)];
@@ -675,7 +678,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.19.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.20.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -896,7 +899,11 @@
     const rangs = profil.rangs.concat([rang]);
     let g = null, niveaux = 0, butin = {}, dons = null, niveauAvant = profil.niveau;
     if (!partie.echo) {
-      profil.rangs = rangs; profil.joursJoues = partie.jour; profil.derniereDate = aujourdhui();
+      // Rattrapage : chaque jour manqué donne droit à une épreuve de plus (2 au maximum en réserve)
+      const avant = profil.derniereDate, auj = aujourdhui();
+      if (avant === auj) { profil.rattrapage = Math.max(0, (profil.rattrapage || 0) - 1); rang.rattrapage = true; }
+      else if (avant) profil.rattrapage = Math.min(2, (profil.rattrapage || 0) + Math.max(0, P.ecartJours(avant, auj) - 1));
+      profil.rangs = rangs; profil.joursJoues = partie.jour; profil.derniereDate = auj;
       g = P.gains(victoire, etoiles);
       g = P.bonusDuJour(g, partie.ep);
       if (victoire && partie.ep.final && !profil.histoire.sceaux.includes('maia')) profil.histoire.sceaux.push('maia');
