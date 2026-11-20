@@ -2,7 +2,7 @@
    Chaque jour : un titre, un Présage, une scène avant le combat, les rencontres, une réplique de fin
    (victoire ou défaite) et parfois un choix. Les choix sont gardés dans profil.histoire.choix (clé « j6 », etc.)
    et changent des répliques ou des combats plus tard.
-   Une réplique : [qui, texte] ou [qui, texte, condition]. Condition : 'j6=ianthe' ou 'j21!=epargner'. */
+   Une réplique : [qui, texte] ou [qui, texte, condition]. Condition : 'j6=ianthe', 'j21!=epargner' ou 'dominante=honneur' (penchant du joueur : honneur, ruse ou piete). */
 (function (racine) {
   'use strict';
 
@@ -17,6 +17,8 @@
     dionysos: { nom: 'Dionysos', emoji: '🍇' },
     artemis: { nom: "Artémis, par la voix de l'autel", emoji: '🏹' },
     soeurs: { nom: 'Les Sœurs Grises', emoji: '👁️' },
+    lachesis: { nom: 'Lachésis', emoji: '📏' },
+    atropos: { nom: 'Atropos', emoji: '✂️' },
     lysandre: { nom: 'Lysandre la Coupeuse', emoji: '✂️' }
   };
 
@@ -526,6 +528,9 @@
         ['phaena', "Son fil est noué à quelque chose d'immense, sous la pierre. Quelque chose qui a faim."],
         ['aelis', "Je suis sur la berge, Errant. Écoute : ce chant est pour toi. (Ta Gloire démarre plus haut.)", 'j14=rester'],
         ['phaena', "Les Sœurs Grises disaient vrai : sa plus vieille tête protège la pierre. Elle ne repoussera pas.", 'j17=souvenir'],
+        ['lachesis', "J'ai mesuré ton fil, Errant. Il est droit, et il tient sa parole. L'Honneur te donnera la force de rester debout.", 'dominante=honneur'],
+        ['lachesis', "J'ai mesuré ton fil, Errant. Il se faufile là où les autres cassent. Ta Ruse trouvera la faille.", 'dominante=ruse'],
+        ['lachesis', "J'ai mesuré ton fil, Errant. Il a été offert aux dieux plus d'une fois. Ils s'en souviendront ce soir.", 'dominante=piete'],
         ['clotho', "Tiens bon, mon fil. Je tiens l'autre bout."]
       ],
       rencontres: [R('La berge', ['sirene', 'effile']), G("L'Hydre éveillée", 'hydre_eveillee')],
@@ -555,7 +560,7 @@
   // Évalue une condition « j6=ianthe » ou « j21!=epargner »
   function verifie(cond, histoire) {
     if (!cond) return true;
-    const choix = (histoire && histoire.choix) || {};
+    const choix = Object.assign({}, (histoire && histoire.choix) || {}, { dominante: histoire && histoire.dominante });
     const m = cond.match(/^(\w+)(!?=)(\w+)$/);
     if (!m) return true;
     return m[2] === '=' ? choix[m[1]] === m[3] : choix[m[1]] !== m[3];

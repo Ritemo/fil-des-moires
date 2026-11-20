@@ -131,8 +131,20 @@
       return u;
     });
   }
+  // Penchant du joueur (Honneur, Ruse, Piété) : choix du Chant (5 points) + activités (histoire.echos)
+  function majDominante(profil) {
+    const h = profil.histoire || {}, j = h.jauges || {}, e = h.echos || {};
+    const sc = {}; ['honneur', 'ruse', 'piete'].forEach(k => { sc[k] = 5 * (j[k] || 0) + (e[k] || 0); });
+    const tri = Object.keys(sc).sort((a, b) => sc[b] - sc[a]);
+    if (profil.histoire) profil.histoire.dominante = sc[tri[0]] >= 5 && sc[tri[0]] > sc[tri[1]] ? tri[0] : null;
+  }
   // Passifs de Voie (Errant) et de Serments (toute l'équipe)
   function appliquerPassifs(u, profil) {
+    // Faveur du penchant
+    const d = profil.histoire && profil.histoire.dominante;
+    if (d === 'honneur') u.pvMax = Math.round(u.pvMax * 1.05);
+    if (d === 'ruse') u.critBonus = (u.critBonus || 0) + 0.05;
+    if (d === 'piete') u.soinMult = (u.soinMult || 1) * 1.1;
     const s = profil.serments || {};
     const a = id => Object.values(s).includes(id);
     if (u.id === 'errant') {
@@ -277,6 +289,7 @@
     if (h.choix[cle]) return 0;
     h.choix[cle] = option.id;
     if (option.jauge) h.jauges[option.jauge] = (h.jauges[option.jauge] || 0) + 1;
+    majDominante(profil);
     const e = option.effet || {};
     if (e.drachmes) profil.drachmes += e.drachmes;
     if (e.fil) profil.filsReserve = Math.min(3, (profil.filsReserve || 0) + e.fil);

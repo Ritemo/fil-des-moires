@@ -8,13 +8,14 @@
   const P = node ? require('./progression.js') : racine.Progression;
 
   // Jours joués nécessaires pour ouvrir chaque activité (une par jour, pour les découvrir une à une)
-  const DEBLOCAGE = { oracle: 3, forge: 4, arene: 4, expedition: 5, titan: 6 };
+  const DEBLOCAGE = { oracle: 3, forge: 4, arene: 4, expedition: 5, titan: 6, marchand: 4 };
   const NOMS = {
     oracle: { nom: "L'Oracle de Delphes", emoji: '🔮', court: 'Oracle' },
     forge: { nom: "La Forge d'Héphaïstos", emoji: '⚒️', court: 'Forge' },
     arene: { nom: "L'Arène des ombres", emoji: '🏟️', court: 'Arène' },
     expedition: { nom: 'Les Expéditions', emoji: '🗺️', court: 'Expéditions' },
-    titan: { nom: 'Le Titan de la semaine', emoji: '🗿', court: 'Titan' }
+    titan: { nom: 'Le Titan de la semaine', emoji: '🗿', court: 'Titan' },
+    marchand: { nom: 'Le Marchand Hermès', emoji: '🪽', court: 'Hermès' }
   };
   const MATERIAUX = {
     airain: { nom: 'Airain', emoji: '⚙️' },
@@ -138,8 +139,10 @@
     const hier = dateDe(joursDepuis(date) - 1);
     o.serie = juste ? (o.derniereJuste === hier ? (o.serie || 0) + 1 : 1) : 0;
     if (juste) { o.derniereJuste = date; o.justes = (o.justes || 0) + 1; }
-    const gains = { drachmes: juste ? 20 : 5, materiaux: juste ? { eclat: o.serie % 5 === 0 ? 2 : 1 } : {} };
+    const x = (feteDuJour(date) || {}).id === 'selene' ? 2 : 1;
+    const gains = { drachmes: (juste ? 20 : 5) * x, materiaux: juste ? { eclat: (o.serie % 5 === 0 ? 2 : 1) * x } : {} };
     profil.drachmes += gains.drachmes; ajouterMateriaux(profil, gains.materiaux);
+    if (juste) { noterPenchant(profil, 'piete', 2); if (o.justes % 7 === 0) gains.fragment = donnerFragment(profil, hasardDe('oracle-frag|' + date)); }
     return { juste, gains, q };
   }
 
@@ -216,11 +219,16 @@
     const affine = cr.affinite === lieu.affinite;
     const n = 3 + Math.floor(h() * 3) + (affine ? 2 : 0), materiaux = {};
     for (let i = 0; i < n; i++) { const m = lieu.butin[Math.floor(h() * lieu.butin.length)]; materiaux[m] = (materiaux[m] || 0) + 1; }
+    const fete = (feteDuJour(date) || {}).id === 'dionysies';
+    if (fete) for (let i = 0; i < 3; i++) { const m = lieu.butin[Math.floor(h() * lieu.butin.length)]; materiaux[m] = (materiaux[m] || 0) + 1; }
     const drachmes = 15 + Math.floor(h() * 21);
     const recit = lieu.recits[Math.floor(h() * lieu.recits.length)].replace('{c}', cr.nom);
     profil.drachmes += drachmes; ajouterMateriaux(profil, materiaux);
     profil.activites.expedition = null;
-    return { lieu, creature: cr, materiaux, drachmes, recit, affine };
+    profil.activites.expeditionsFaites = (profil.activites.expeditionsFaites || 0) + 1;
+    noterPenchant(profil, 'ruse', 2);
+    const fragment = h() < 0.3 ? donnerFragment(profil, h) : null;
+    return { lieu, creature: cr, materiaux, drachmes, recit, affine, fete, fragment };
   }
 
   // ====================== ARÈNE DES OMBRES ======================
@@ -246,11 +254,13 @@
   function resultatArene(profil, date, adversaire, victoire) {
     const a = profil.activites.arene;
     a.date = date;
-    const delta = victoire ? 30 : -10;
+    const x = (feteDuJour(date) || {}).id === 'panathenees' ? 2 : 1;
+    const delta = victoire ? 30 * x : -10;
     a.trophees = Math.max(0, (a.trophees || 0) + delta);
     a.journal = [{ date, adversaire, victoire }].concat(a.journal || []).slice(0, 10);
-    const gains = { drachmes: victoire ? 25 : 5, materiaux: victoire ? { airain: 1 } : {}, trophees: delta };
+    const gains = { drachmes: (victoire ? 25 : 5) * x, materiaux: victoire ? { airain: x } : {}, trophees: delta };
     profil.drachmes += gains.drachmes; ajouterMateriaux(profil, gains.materiaux);
+    if (victoire) noterPenchant(profil, 'honneur', 2);
     return gains;
   }
 
@@ -314,7 +324,155 @@
     t.paliers.push(pct);
     profil.drachmes += p.gains.drachmes; ajouterMateriaux(profil, p.gains.materiaux);
     if (p.gains.fil) profil.filsReserve = (profil.filsReserve || 0) + p.gains.fil;
-    return p;
+    if (pct === 100) profil.activites.titansVaincus = (profil.activites.titansVaincus || 0) + 1;
+    const fragment = pct >= 50 && pct % 50 === 0 ? donnerFragment(profil, hasardDe('titan-frag|' + date + pct)) : null;
+    return Object.assign({}, p, { fragment });
+  }
+
+
+  // ====================== PENCHANT (Honneur, Ruse, Piété) ======================
+  // Les choix du Chant comptent 5 points, les activités 1 ou 2 : Arène = Honneur, Expéditions = Ruse, Oracle et Offrande = Piété.
+  const PENCHANTS = {
+    honneur: { nom: 'Honneur', emoji: '🛡️', titre: "Fil d'Honneur", faveur: '+5 % PV pour toute l\'équipe' },
+    ruse: { nom: 'Ruse', emoji: '🦊', titre: 'Fil de Ruse', faveur: '+5 % de critique pour toute l\'équipe' },
+    piete: { nom: 'Piété', emoji: '🕯️', titre: 'Fil de Piété', faveur: '+10 % de soins' }
+  };
+  function scoresPenchant(profil) {
+    const h = profil.histoire || {}, j = h.jauges || {}, e = h.echos || {};
+    const r = {}; Object.keys(PENCHANTS).forEach(k => { r[k] = 5 * (j[k] || 0) + (e[k] || 0); }); return r;
+  }
+  function dominante(profil) {
+    const sc = scoresPenchant(profil), tri = Object.keys(sc).sort((a, b) => sc[b] - sc[a]);
+    return sc[tri[0]] >= 5 && sc[tri[0]] > sc[tri[1]] ? tri[0] : null;
+  }
+  // Renvoie le nouveau penchant s'il vient de changer (Lachésis l'annonce)
+  function noterPenchant(profil, id, n) {
+    const h = profil.histoire = profil.histoire || { choix: {}, jauges: {}, sceaux: [] };
+    h.echos = h.echos || {}; h.echos[id] = (h.echos[id] || 0) + (n || 1);
+    return majDominante(profil);
+  }
+  function majDominante(profil) {
+    const avant = profil.histoire.dominante || null, d = dominante(profil);
+    profil.histoire.dominante = d;
+    return d !== avant ? d : null;
+  }
+
+  // ====================== FÊTES ======================
+  // Tous les 9 jours, une fête de 2 jours, la même pour tous les joueurs.
+  const FETES = [
+    { id: 'panathenees', nom: 'Les Panathénées', emoji: '🏟️', qui: 'lachesis', desc: 'Arène : trophées, drachmes et airain doublés pour une victoire.' },
+    { id: 'dionysies', nom: 'Les Dionysies', emoji: '🍇', qui: 'dionysos', desc: 'Expéditions : 3 matériaux de plus au retour.' },
+    { id: 'selene', nom: 'La Nuit de Séléné', emoji: '🌙', qui: 'clotho', desc: "Oracle : récompenses doublées." }
+  ];
+  function feteDuJour(date) { const n = joursDepuis(date); return n % 9 < 2 ? FETES[Math.floor(n / 9) % FETES.length] : null; }
+  function prochaineFete(date) { const n = joursDepuis(date); for (let i = 0; i < 10; i++) { const f = feteDuJour(dateDe(n + i)); if (f) return { fete: f, dans: i }; } return null; }
+
+  // ====================== FRAGMENTS DE LA TAPISSERIE ======================
+  const SERIES = [
+    { id: 'metier', nom: 'Le Grand Métier', emoji: '📜', qui: 'clotho',
+      page: "Au début, nous étions trois autour du Métier, et le Métier avait quatre fuseaux. Le quatrième n'a jamais tourné. Mère Nuit disait qu'il attendait une main qui n'était pas encore née. Je l'ai regardé longtemps, Errant. Puis un soir, j'y ai enroulé ton fil." },
+    { id: 'effiles', nom: 'Les Effilés', emoji: '🧵', qui: 'lachesis',
+      page: "Je mesure tout ce qui est, et je n'arrive plus à mesurer les Effilés. Leur fil n'est pas coupé : il est tiré, maille après maille, vers le bas de la tapisserie. Quelque chose, sous le Métier, tire. Les Sceaux de Maïa le retiennent. Il en reste six." },
+    { id: 'atropos', nom: "Le Fil d'Atropos", emoji: '✂️', qui: 'atropos',
+      page: "Ma sœur croit que je coupe par plaisir. Je coupe ce qui pourrit, avant que la pourriture ne gagne le reste. Il y a eu un Errant avant toi. Clotho ne te l'a pas dit ? Son fil aussi était sans destin. Je n'ai pas eu à le couper. Il s'est défait tout seul. Demande-toi pourquoi." }
+  ];
+  const FRAGMENTS = [
+    ['metier', 1, "« ...un métier plus vaste que le ciel, et quatre fuseaux de bronze... »"],
+    ['metier', 2, "« ...Clotho file, Lachésis mesure, Atropos coupe. Le quatrième fuseau reste immobile... »"],
+    ['metier', 3, "« ...les fils d'or ne pendent pas : ils ont été tirés vers le bas... »"],
+    ['metier', 4, "« ...une main nouvelle, née hors du destin, fera tourner le dernier fuseau... »"],
+    ['effiles', 1, "« ...à Myrtos, une tisserande défaisait la nuit ce qu'elle tissait le jour... »"],
+    ['effiles', 2, "« ...l'Effilé ne meurt pas : il s'oublie, et le monde l'oublie avec lui... »"],
+    ['effiles', 3, "« ...sept sceaux, posés par Maïa, la plus discrète des Pléiades... »"],
+    ['effiles', 4, "« ...sous l'Étang noir, le premier sceau. Sous les Monts, le deuxième... »"],
+    ['atropos', 1, "« ...les ciseaux d'Atropos sont faits d'une étoile tombée... »"],
+    ['atropos', 2, "« ...elle a pleuré, une fois, en coupant un fil. Personne ne sait lequel... »"],
+    ['atropos', 3, "« ...un autre fil sans destin, bien avant celui de l'Errant... »"],
+    ['atropos', 4, "« ...son nom a été effacé de la tapisserie. Il en reste un trou, en haut à gauche... »"]
+  ].map(([serie, n, texte]) => ({ id: serie + n, serie, n, texte }));
+  function donnerFragment(profil, h) {
+    const a = profil.activites, manquants = FRAGMENTS.filter(f => !(a.fragments || []).includes(f.id));
+    if (!manquants.length) return null;
+    const f = manquants[Math.floor((typeof h === 'function' ? h() : Math.random()) * manquants.length)];
+    a.fragments = (a.fragments || []).concat(f.id);
+    return f;
+  }
+  function serieComplete(profil, id) { return FRAGMENTS.filter(f => f.serie === id).every(f => (profil.activites.fragments || []).includes(f.id)); }
+
+  // ====================== LE MARCHAND HERMÈS ======================
+  const ARTICLES = [
+    { id: 'eclats', nom: "3 éclats d'oracle", emoji: '🔮', prix: 60, mat: { eclat: 3 } },
+    { id: 'airain', nom: '4 airain', emoji: '⚙️', prix: 50, mat: { airain: 4 } },
+    { id: 'laine', nom: '4 laines sacrées', emoji: '🧶', prix: 50, mat: { laine: 4 } },
+    { id: 'olivier', nom: "4 bois d'olivier", emoji: '🪵', prix: 45, mat: { olivier: 4 } },
+    { id: 'perle', nom: '1 perle de Thétis', emoji: '💎', prix: 130, mat: { perle: 1 } },
+    { id: 'fil', nom: '1 Fil de réserve', emoji: '🧵', prix: 160, fil: 1 },
+    { id: 'fragment', nom: 'Un fragment de tapisserie', emoji: '📜', prix: 200, fragment: true },
+    { id: 'doublons', nom: '3 exemplaires d\'une de tes cartes', emoji: '🃏', prix: 70, doublons: 3 }
+  ];
+  function etalage(profil, date) {
+    const s = semaine(date), h = hasardDe('hermes|' + s + '|' + (profil.pseudo || ''));
+    const pool = ARTICLES.filter(x => !x.fragment || FRAGMENTS.some(f => !(profil.activites.fragments || []).includes(f.id))).slice();
+    const choix = [];
+    while (choix.length < 4 && pool.length) choix.push(pool.splice(Math.floor(h() * pool.length), 1)[0]);
+    // la carte proposée par Hermès : une de tes cartes qui peut encore progresser
+    const cartes = Object.keys(profil.cartes || {}).filter(id => (profil.cartes[id].niveau || 1) < 5).sort();
+    const carte = cartes.length ? cartes[Math.floor(h() * cartes.length)] : null;
+    return choix.filter(x => !x.doublons || carte).map(x => Object.assign({}, x, x.doublons ? { carte } : {}));
+  }
+  function etatMarchand(profil, date) {
+    const s = semaine(date), m = profil.activites.marchand;
+    if (!m || m.semaine !== s) profil.activites.marchand = { semaine: s, achats: [], vu: false };
+    return profil.activites.marchand;
+  }
+  function marchandNeuf(profil, date) { return !etatMarchand(profil, date).vu; }
+  function acheter(profil, date, id) {
+    const m = etatMarchand(profil, date), art = etalage(profil, date).find(x => x.id === id);
+    if (!art || m.achats.includes(id) || profil.drachmes < art.prix) return null;
+    profil.drachmes -= art.prix; m.achats.push(id);
+    profil.activites.achatsTotal = (profil.activites.achatsTotal || 0) + 1;
+    const r = { article: art };
+    if (art.mat) ajouterMateriaux(profil, art.mat);
+    if (art.fil) profil.filsReserve = (profil.filsReserve || 0) + art.fil;
+    if (art.fragment) r.fragment = donnerFragment(profil);
+    if (art.doublons && profil.cartes[art.carte]) profil.cartes[art.carte].doublons = (profil.cartes[art.carte].doublons || 0) + art.doublons;
+    return r;
+  }
+
+  // ====================== HAUTS FAITS ======================
+  const HAUTS_FAITS = [
+    { id: 'premier', nom: 'Premier rang', titre: 'Apprenti tisserand', desc: 'Tisser son premier rang.', test: p => p.joursJoues >= 1 },
+    { id: 'semaine', nom: 'Une semaine de fil', titre: 'Fil tenace', desc: 'Jouer 7 jours d\'affilée.', test: p => ((p.serie || {}).jours || 0) >= 7 },
+    { id: 'parfaits', nom: "Main d'or", titre: "Main d'or", desc: 'Obtenir 5 rangs parfaits (3 étoiles).', test: p => (p.rangs || []).filter(r => r.victoire && r.etoiles === 3 && !r.echo).length >= 5 },
+    { id: 'especes', nom: 'Ami des bêtes', titre: 'Ami des bêtes', desc: 'Lier 3 espèces différentes.', test: p => (p.creatures || []).length >= 3 },
+    { id: 'enclos', nom: "Gardien de l'Enclos", titre: "Gardien de l'Enclos", desc: "Remplir les 10 places de l'Enclos.", test: p => (p.liens || []).length >= 10 },
+    { id: 'oracle', nom: 'Voix de Delphes', titre: 'Voix de Delphes', desc: "10 bonnes réponses à l'Oracle.", test: p => (p.activites.oracle.justes || 0) >= 10 },
+    { id: 'arene', nom: "Champion d'or", titre: "Champion d'or", desc: "Atteindre la Ligue d'or dans l'Arène (300 trophées).", test: p => (p.activites.arene.trophees || 0) >= 300 },
+    { id: 'titan', nom: 'Tueur de Titans', titre: 'Tueur de Titans', desc: "Atteindre 100 % contre un Titan de la semaine.", test: p => (p.activites.titansVaincus || 0) >= 1 },
+    { id: 'forge', nom: "Disciple d'Héphaïstos", titre: "Disciple d'Héphaïstos", desc: 'Forger un talisman au niveau 3.', test: p => Object.values(p.activites.talismans || {}).some(n => n >= 3) },
+    { id: 'voyageur', nom: 'Grand voyageur', titre: 'Grand voyageur', desc: '10 expéditions.', test: p => (p.activites.expeditionsFaites || 0) >= 10 },
+    { id: 'hermes', nom: "Ami d'Hermès", titre: "Ami d'Hermès", desc: '5 achats chez le Marchand.', test: p => (p.activites.achatsTotal || 0) >= 5 },
+    { id: 'fragments', nom: 'Lecteur de fils', titre: 'Lecteur de fils', desc: 'Compléter une série de fragments.', test: p => SERIES.some(s => FRAGMENTS.filter(f => f.serie === s.id).every(f => (p.activites.fragments || []).includes(f.id))) },
+    { id: 'penchant', nom: 'Un fil qui penche', titre: null, desc: 'Avoir un penchant affirmé (Honneur, Ruse ou Piété).', test: p => !!(p.histoire && p.histoire.dominante) },
+    { id: 'hydre', nom: "Vainqueur de l'Hydre", titre: "Vainqueur de l'Hydre", desc: 'Achever le Chant I.', test: p => (p.rangs || []).some(r => r.jour === 30 && r.victoire && !r.echo) }
+  ];
+  function verifierHautsFaits(profil, date) {
+    const a = profil.activites; a.hautsFaits = a.hautsFaits || {};
+    const neufs = HAUTS_FAITS.filter(h => !a.hautsFaits[h.id] && (() => { try { return h.test(profil); } catch (e) { return false; } })());
+    neufs.forEach(h => { a.hautsFaits[h.id] = date; });
+    return neufs;
+  }
+  // Titres que le joueur peut porter : ceux de ses hauts faits, plus celui de son penchant
+  function titresDisponibles(profil) {
+    const a = profil.activites, t = HAUTS_FAITS.filter(h => h.titre && (a.hautsFaits || {})[h.id]).map(h => ({ id: h.id, nom: h.titre }));
+    const d = profil.histoire && profil.histoire.dominante;
+    if (d) t.push({ id: 'penchant_' + d, nom: PENCHANTS[d].titre });
+    return t;
+  }
+  function nomTitre(id) {
+    if (!id) return null;
+    if (id.indexOf('penchant_') === 0) return (PENCHANTS[id.slice(9)] || {}).titre || null;
+    const h = HAUTS_FAITS.find(x => x.id === id); return h ? h.titre : null;
   }
 
   // Combien d'activités attendent le joueur aujourd'hui (pour la pastille de l'onglet)
@@ -325,6 +483,7 @@
     if (debloquee(profil, 'expedition') && (expeditionPrete(profil, date) || (!profil.activites.expedition && profil.activites.derniereExpedition !== date))) n++;
     if (debloquee(profil, 'titan') && !titanFait(profil, date)) n++;
     if (debloquee(profil, 'forge') && TALISMANS.some(t => peutForger(profil, t.id))) n++;
+    if (debloquee(profil, 'marchand') && marchandNeuf(profil, date)) n++;
     return n;
   }
 
@@ -336,7 +495,12 @@
     lieuxOuverts, explorateurs, partirExpedition, expeditionPrete, recolterExpedition,
     ligue, equipeHorsChant, equipeOmbre, areneFaite, resultatArene,
     semaine, titanDeLaSemaine, etatTitan, titanFait, totalTitan, uniteTitan, enregistrerTitan, paliersAReclamer, reclamerPalier,
-    enAttente
+    enAttente,
+    PENCHANTS, scoresPenchant, dominante, noterPenchant, majDominante,
+    FETES, feteDuJour, prochaineFete,
+    SERIES, FRAGMENTS, donnerFragment, serieComplete,
+    ARTICLES, etalage, etatMarchand, marchandNeuf, acheter,
+    HAUTS_FAITS, verifierHautsFaits, titresDisponibles, nomTitre
   };
   if (node) module.exports = Activites; else racine.Activites = Activites;
 })(typeof window !== 'undefined' ? window : this);

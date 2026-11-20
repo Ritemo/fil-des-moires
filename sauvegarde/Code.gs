@@ -8,7 +8,7 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 10;
+const VERSION_SCRIPT = 11;
 const NOM_MESSAGES = 'fil-des-moires-messagerie.json';
 const DEPOT = 'Ritemo/fil-des-moires';
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
@@ -51,6 +51,7 @@ function classement() {
     const rangs = (p.rangs || []).filter(function (r) { return !r.echo; });
     return {
       joueur: j,
+      titre: p.titre || null,
       nom: p.pseudo || (j ? j.charAt(0).toUpperCase() + j.slice(1) : 'Joueur principal'),
       // Agora : trophées de l'Arène, dégâts sur le Titan de la semaine, talisman (pour son ombre dans l'Arène)
       act: p.activites ? { trophees: (p.activites.arene || {}).trophees || 0, titan: p.activites.titan || null,

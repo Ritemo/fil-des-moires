@@ -459,6 +459,23 @@
   .caseEnclos.vide { border-style: dashed; color: var(--doux); justify-content: center; opacity: .5; }
   #surnom { flex: 1; background: #1a1410; color: inherit; border: 1px solid var(--bord); border-radius: 10px; padding: 8px; font: inherit; }
   button.danger { border-color: #a8483a; color: #f0b0a0; }
+  .fete { background: linear-gradient(90deg, #4a2a50, #2a1f30); border: 1px solid #8a5aa0; border-radius: 10px; padding: 6px 10px; margin-bottom: 8px; font-size: 13px; }
+  .fete.prochaine { background: none; border-style: dashed; color: var(--doux); font-size: 12px; }
+  .fete img.emo { width: 1.2em; height: 1.2em; vertical-align: -0.25em; }
+  .fragment { font-size: 13px; padding: 4px 8px; margin: 3px 0; border-left: 2px solid var(--or); }
+  .fragment.manque { color: var(--doux); border-left-color: var(--bord); text-align: center; }
+  .boutonsCodex { display: flex; gap: 8px; margin-bottom: 8px; }
+  .boutonsCodex button { flex: 1; padding: 8px 4px; font-size: 13px; }
+  .penchant { display: grid; grid-template-columns: 84px 1fr 30px; gap: 8px; align-items: center; font-size: 13px; }
+  .penchant.dom span { color: var(--or); }
+  .penchant .barreTitan { margin: 0; }
+  .titreJ { display: block; font-size: 11px; color: var(--or); font-style: italic; }
+  .parchemin img.emo { width: 1.15em; height: 1.15em; vertical-align: -0.2em; }
+  #toasts { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); width: min(92vw, 420px); z-index: 300; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .toast { background: #2a1f18; border: 1px solid var(--or); border-radius: 12px; padding: 8px 12px; font-size: 13.5px; box-shadow: 0 6px 20px rgba(0,0,0,.5); animation: toastIn .35s ease-out; transition: opacity .7s, transform .7s; }
+  .toast.part { opacity: 0; transform: translateY(-10px); }
+  .toast img.emo { width: 1.2em; height: 1.2em; vertical-align: -0.25em; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
   .classe { cursor: pointer; }
   .ligneCoche { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 4px; font-size: 14px; line-height: 1.4; }
   .ligneCoche input { width: 20px; height: 20px; flex: none; accent-color: var(--or); margin: 1px 0 0; }
