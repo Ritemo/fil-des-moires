@@ -380,7 +380,7 @@
     } else serie.jours = 1;
     serie.dernier = date;
     let filGagne = false;
-    if (serie.jours % 7 === 0 && (profil.filsReserve || 0) < 2) { profil.filsReserve = (profil.filsReserve || 0) + 1; filGagne = true; }
+    if (serie.jours % 7 === 0 && (profil.filsReserve || 0) < 3) { profil.filsReserve = (profil.filsReserve || 0) + 1; filGagne = true; }
     const qualite = qualiteSerie(serie.jours);
     const objets = remplirAmphore(profil, qualite, graine);
     appliquerObjets(profil, objets);
@@ -402,7 +402,7 @@
     profil.route = profil.route || {};
     if (!type || profil.route[n]) return null;
     profil.route[n] = true;
-    if (type === 'fil') { profil.filsReserve = Math.min(2, (profil.filsReserve || 0) + 1); return { rang: n, type }; }
+    if (type === 'fil') { profil.filsReserve = Math.min(3, (profil.filsReserve || 0) + 1); return { rang: n, type }; }
     if (type === 'amphore') { const objets = remplirAmphore(profil, 'doree', graine); appliquerObjets(profil, objets); return { rang: n, type, objets }; }
     const heros = herosDisponibles(profil);
     const id = ORDRE_ROUTE.find(x => !profil.cartes[x] && heros.includes(carteInfo(x).heros.id)) || ORDRE_ROUTE.find(x => !profil.cartes[x]);

@@ -323,7 +323,7 @@
     if (!p || t.paliers.includes(pct)) return null;
     t.paliers.push(pct);
     profil.drachmes += p.gains.drachmes; ajouterMateriaux(profil, p.gains.materiaux);
-    if (p.gains.fil) profil.filsReserve = (profil.filsReserve || 0) + p.gains.fil;
+    if (p.gains.fil) profil.filsReserve = Math.min(3, (profil.filsReserve || 0) + p.gains.fil);
     if (pct === 100) profil.activites.titansVaincus = (profil.activites.titansVaincus || 0) + 1;
     const fragment = pct >= 50 && pct % 50 === 0 ? donnerFragment(profil, hasardDe('titan-frag|' + date + pct)) : null;
     return Object.assign({}, p, { fragment });
@@ -412,7 +412,7 @@
   ];
   function etalage(profil, date) {
     const s = semaine(date), h = hasardDe('hermes|' + s + '|' + (profil.pseudo || ''));
-    const pool = ARTICLES.filter(x => !x.fragment || FRAGMENTS.some(f => !(profil.activites.fragments || []).includes(f.id))).slice();
+    const pool = ARTICLES.filter(x => (!x.fragment || FRAGMENTS.some(f => !(profil.activites.fragments || []).includes(f.id))) && !(x.fil && (profil.filsReserve || 0) >= 3)).slice();
     const choix = [];
     while (choix.length < 4 && pool.length) choix.push(pool.splice(Math.floor(h() * pool.length), 1)[0]);
     // la carte proposée par Hermès : une de tes cartes qui peut encore progresser
@@ -433,7 +433,7 @@
     profil.activites.achatsTotal = (profil.activites.achatsTotal || 0) + 1;
     const r = { article: art };
     if (art.mat) ajouterMateriaux(profil, art.mat);
-    if (art.fil) profil.filsReserve = (profil.filsReserve || 0) + art.fil;
+    if (art.fil) profil.filsReserve = Math.min(3, (profil.filsReserve || 0) + art.fil);
     if (art.fragment) r.fragment = donnerFragment(profil);
     if (art.doublons && profil.cartes[art.carte]) profil.cartes[art.carte].doublons = (profil.cartes[art.carte].doublons || 0) + art.doublons;
     return r;
@@ -454,7 +454,7 @@
     { id: 'hermes', nom: "Ami d'Hermès", titre: "Ami d'Hermès", desc: '5 achats chez le Marchand.', test: p => (p.activites.achatsTotal || 0) >= 5 },
     { id: 'fragments', nom: 'Lecteur de fils', titre: 'Lecteur de fils', desc: 'Compléter une série de fragments.', test: p => SERIES.some(s => FRAGMENTS.filter(f => f.serie === s.id).every(f => (p.activites.fragments || []).includes(f.id))) },
     { id: 'penchant', nom: 'Un fil qui penche', titre: null, desc: 'Avoir un penchant affirmé (Honneur, Ruse ou Piété).', test: p => !!(p.histoire && p.histoire.dominante) },
-    { id: 'hydre', nom: "Vainqueur de l'Hydre", titre: "Vainqueur de l'Hydre", desc: 'Achever le Chant I.', test: p => (p.rangs || []).some(r => r.jour === 30 && r.victoire && !r.echo) }
+    { id: 'hydre', nom: "Vainqueur de l'Hydre", titre: "Vainqueur de l'Hydre", desc: 'Achever le Chant I.', test: p => ((p.histoire || {}).sceaux || []).includes('maia') }
   ];
   function verifierHautsFaits(profil, date) {
     const a = profil.activites; a.hautsFaits = a.hautsFaits || {};

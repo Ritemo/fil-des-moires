@@ -682,7 +682,7 @@
     const html = `${introAct('marchand')}<div class="bourse"><span>🪽 Étalage de la semaine</span><span>🪙 ${profil.drachmes}</span></div>` + art.map(x => {
       const pris = m.achats.includes(x.id), i = x.carte && P.carteInfo(x.carte);
       return `<div class="talisman"><div class="ico">${x.emoji}</div><div class="txt"><b>${x.nom}</b>${i ? `<div class="small">${i.carte.art || ''} ${i.carte.nom} (niv. ${profil.cartes[x.carte].niveau})</div>` : ''}
-        <div class="boutons">${pris ? '<span class="small">✅ Acheté</span>' : `<button data-art="${x.id}" ${profil.drachmes >= x.prix ? '' : 'disabled'}>🪙 ${x.prix}</button>`}</div></div></div>`;
+        <div class="boutons">${pris ? '<span class="small">✅ Acheté</span>' : x.fil && (profil.filsReserve || 0) >= 3 ? '<span class="small">Tu as déjà 3 Fils de réserve (maximum)</span>' : `<button data-art="${x.id}" ${profil.drachmes >= x.prix ? '' : 'disabled'}>🪙 ${x.prix}</button>`}</div></div></div>`;
     }).join('') + '<p class="small">Hermès revient lundi avec un nouvel étalage.</p><div id="achatRes"></div>';
     ouvrirModale('🪽 Le Marchand Hermès', html);
     $('lexiqueCorps').querySelectorAll('[data-art]').forEach(b => b.onclick = () => {
@@ -834,7 +834,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.22.1 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.22.2 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1706,7 +1706,7 @@
   let ongletLexique = 'Combat';
   function ouvrirLexique(onglet) {
     if (onglet) ongletLexique = onglet;
-    const onglets = ['Combat', 'Affinités', 'États', 'Cartes', 'Héros', 'Ennemis', 'Épreuve', 'Récit'];
+    const onglets = ['Combat', 'Affinités', 'États', 'Cartes', 'Héros', 'Ennemis', 'Épreuve', 'Agora', 'Récit'];
     $('onglets').innerHTML = onglets.map(o => `<button class="${o === ongletLexique ? 'on' : ''}" data-o="${o}">${o}</button>`).join('');
     $('onglets').querySelectorAll('button').forEach(b => b.onclick = () => ouvrirLexique(b.dataset.o));
     let h = '';
