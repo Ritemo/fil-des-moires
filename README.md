@@ -112,17 +112,19 @@ On peut lier plusieurs fois la même espèce. Chaque créature liée a sa fiche 
 
 ## L'Agora (activités du jour)
 
-L'onglet Agora (ancien onglet Trésors) réunit, en plus de l'Offrande et de la Route de la Tapisserie, cinq activités qui s'ouvrent une par une (fichier `activites.js`) :
+L'onglet Agora (ancien onglet Trésors) réunit, en plus de l'Offrande et de la Route de la Tapisserie, des activités qui s'ouvrent une par une (fichier `activites.js`) :
 
 | Activité | Ouverture | Principe |
 |---|---|---|
 | 🔮 Oracle de Delphes | après le jour 3 | une énigme mythologique par jour, la même pour tous ; drachmes et éclats d'oracle |
 | 🏟️ Arène des ombres | après le jour 4 | un duel par jour contre l'ombre d'un autre joueur (son équipe, pilotée par l'ordinateur) ; trophées et ligues |
 | ⚒️ Forge d'Héphaïstos | après le jour 4 | des talismans (3 niveaux) fabriqués avec les matériaux ; le talisman équipé renforce l'équipe partout |
-| 🗺️ Expéditions | après le jour 5 | une créature part explorer un lieu et revient le lendemain avec du butin |
+| 🗺️ Expéditions | après le jour 5 | jusqu'à 3 créatures (Kelos et l'Enclos) explorent en même temps pour 2, 4 ou 8 heures ; plus c'est long, plus le butin est riche |
 | 🗿 Titan de la semaine | après le jour 6 | un boss commun du lundi au dimanche ; un assaut de 12 actions par jour, les dégâts de tous s'additionnent ; récompenses à 25, 50, 75 et 100 % |
+| 🌀 Labyrinthe des Échos | après le jour 7 | descente de salle en salle, PV conservés, un bienfait au choix entre les salles ; rejouable, seule la meilleure profondeur du jour est récompensée |
+| 🎲 Astragales d'Hermès | après le jour 4 | jeu d'osselets contre Hermès, mise de 10 drachmes, 10 parties par jour |
 
-L'Arène et le Titan lisent les autres joueurs dans le classement du script de sauvegarde (version 7 ou plus). Sans sauvegarde commune, on affronte sa propre ombre et on combat le Titan seul.
+L'Arène et le Titan lisent les autres joueurs dans le classement du script de sauvegarde (version 7 ou plus). La version 13 du script ajoute la profondeur du Labyrinthe au classement. Sans sauvegarde commune, on affronte sa propre ombre et on combat le Titan seul.
 
 ## Le Corbeau d'Hermès (messagerie)
 

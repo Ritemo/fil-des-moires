@@ -8,14 +8,16 @@
   const P = node ? require('./progression.js') : racine.Progression;
 
   // Jours joués nécessaires pour ouvrir chaque activité (une par jour, pour les découvrir une à une)
-  const DEBLOCAGE = { oracle: 3, forge: 4, arene: 4, expedition: 5, titan: 6, marchand: 4 };
+  const DEBLOCAGE = { oracle: 3, forge: 4, arene: 4, expedition: 5, titan: 6, marchand: 4, labyrinthe: 7, astragales: 4 };
   const NOMS = {
     oracle: { nom: "L'Oracle de Delphes", emoji: '🔮', court: 'Oracle' },
     forge: { nom: "La Forge d'Héphaïstos", emoji: '⚒️', court: 'Forge' },
     arene: { nom: "L'Arène des ombres", emoji: '🏟️', court: 'Arène' },
     expedition: { nom: 'Les Expéditions', emoji: '🗺️', court: 'Expéditions' },
     titan: { nom: 'Le Titan de la semaine', emoji: '🗿', court: 'Titan' },
-    marchand: { nom: 'Le Marchand Hermès', emoji: '🪽', court: 'Hermès' }
+    marchand: { nom: 'Le Marchand Hermès', emoji: '🪽', court: 'Hermès' },
+    labyrinthe: { nom: 'Le Labyrinthe des Échos', emoji: '🌀', court: 'Labyrinthe' },
+    astragales: { nom: "Les Astragales d'Hermès", emoji: '🎲', court: 'Astragales' }
   };
   const MATERIAUX = {
     airain: { nom: 'Airain', emoji: '⚙️' },
@@ -203,32 +205,132 @@
     const ids = (profil.compagnons || []).includes('griffon') ? ['griffon'] : [];
     return ids.concat(profil.creatures || []).map(id => D.HEROS.concat(D.CREATURES).find(x => x.id === id)).filter(Boolean);
   }
-  function partirExpedition(profil, date, creatureId, lieuId) {
-    if (profil.activites.expedition) return false;
-    if (profil.activites.derniereExpedition === date) return false;
-    profil.activites.expedition = { creature: creatureId, lieu: lieuId, date };
-    profil.activites.derniereExpedition = date;
+  // Expéditions en parallèle : jusqu'à 3 créatures en route, missions de 2, 4 ou 8 heures (temps réel)
+  const PLACES_EXPEDITION = 3;
+  const DUREES = [
+    { id: 'court', nom: 'Courte', heures: 2, n: 2, drachmes: 8, frag: 0.08 },
+    { id: 'moyen', nom: 'Moyenne', heures: 4, n: 3, drachmes: 15, frag: 0.15 },
+    { id: 'long', nom: 'Longue', heures: 8, n: 5, drachmes: 30, frag: 0.3 }
+  ];
+  // Les explorateurs : Kelos, puis chaque créature de l'Enclos (par sa fiche)
+  function explorateursEnclos(profil) {
+    const r = (profil.compagnons || []).includes('griffon') ? [{ uid: 'griffon', espece: 'griffon', nom: 'Kelos' }] : [];
+    (profil.liens || []).forEach(l => r.push({ uid: l.uid, espece: l.espece, nom: l.surnom }));
+    return r.map(x => Object.assign(x, { modele: D.HEROS.concat(D.CREATURES).find(c => c.id === x.espece) })).filter(x => x.modele);
+  }
+  function migrerExpeditions(profil) {
+    const a = profil.activites;
+    if (!a.expeditions) a.expeditions = [];
+    if (a.expedition) { // ancienne expédition d'un jour : elle rentre tout de suite
+      const e = a.expedition; a.expeditions.push({ id: 'ancienne', creature: e.creature, espece: e.creature, lieu: e.lieu, duree: 'long', depart: 0, fin: 0 });
+      a.expedition = null;
+    }
+    return a.expeditions;
+  }
+  function partirExpedition(profil, maintenant, uid, lieuId, dureeId) {
+    const ex = migrerExpeditions(profil), x = explorateursEnclos(profil).find(c => c.uid === uid), du = DUREES.find(d => d.id === dureeId);
+    if (!x || !du || ex.length >= PLACES_EXPEDITION || ex.some(e => e.creature === uid)) return false;
+    ex.push({ id: maintenant.toString(36) + '-' + uid, creature: uid, espece: x.espece, nom: x.nom, lieu: lieuId, duree: dureeId, depart: maintenant, fin: maintenant + du.heures * 3600e3 });
     return true;
   }
-  function expeditionPrete(profil, date) { const e = profil.activites.expedition; return !!e && e.date < date; }
-  function recolterExpedition(profil, date) {
-    const e = profil.activites.expedition;
-    if (!e || e.date >= date) return null;
-    const lieu = LIEUX.find(l => l.id === e.lieu), cr = D.HEROS.concat(D.CREATURES).find(x => x.id === e.creature) || { nom: 'Ta créature', affinite: '' };
-    const h = hasardDe('expedition|' + e.date + '|' + e.creature + '|' + e.lieu + '|' + (profil.pseudo || ''));
+  const expeditionsPretes = (profil, maintenant) => migrerExpeditions(profil).filter(e => e.fin <= maintenant);
+  function expeditionPrete(profil, date, maintenant) { return expeditionsPretes(profil, maintenant || Date.now()).length > 0; }
+  function recolterExpedition(profil, date, maintenant, id) {
+    const ex = migrerExpeditions(profil), k = ex.findIndex(e => e.id === id && e.fin <= (maintenant || Date.now()));
+    if (k < 0) return null;
+    const e = ex.splice(k, 1)[0];
+    const lieu = LIEUX.find(l => l.id === e.lieu) || LIEUX[0], du = DUREES.find(d => d.id === e.duree) || DUREES[2];
+    const cr = D.HEROS.concat(D.CREATURES).find(x => x.id === e.espece) || { nom: 'Ta créature', affinite: '' };
+    const h = hasardDe('expedition|' + e.id + '|' + e.creature + '|' + e.lieu + '|' + (profil.pseudo || ''));
     const affine = cr.affinite === lieu.affinite;
-    const n = 3 + Math.floor(h() * 3) + (affine ? 2 : 0), materiaux = {};
+    const n = du.n + Math.floor(h() * 2) + (affine ? (du.n >= 5 ? 2 : 1) : 0), materiaux = {};
     for (let i = 0; i < n; i++) { const m = lieu.butin[Math.floor(h() * lieu.butin.length)]; materiaux[m] = (materiaux[m] || 0) + 1; }
     const fete = (feteDuJour(date) || {}).id === 'dionysies';
-    if (fete) for (let i = 0; i < 3; i++) { const m = lieu.butin[Math.floor(h() * lieu.butin.length)]; materiaux[m] = (materiaux[m] || 0) + 1; }
-    const drachmes = 15 + Math.floor(h() * 21);
-    const recit = lieu.recits[Math.floor(h() * lieu.recits.length)].replace('{c}', cr.nom);
+    if (fete) for (let i = 0; i < Math.ceil(du.n / 2); i++) { const m = lieu.butin[Math.floor(h() * lieu.butin.length)]; materiaux[m] = (materiaux[m] || 0) + 1; }
+    const drachmes = du.drachmes + Math.floor(h() * du.drachmes * 0.6);
+    const recit = lieu.recits[Math.floor(h() * lieu.recits.length)].replace('{c}', e.nom || cr.nom);
     profil.drachmes += drachmes; ajouterMateriaux(profil, materiaux);
-    profil.activites.expedition = null;
     profil.activites.expeditionsFaites = (profil.activites.expeditionsFaites || 0) + 1;
     noterPenchant(profil, 'ruse', 1);
-    const fragment = h() < 0.3 ? donnerFragment(profil, h) : null;
-    return { lieu, creature: cr, materiaux, drachmes, recit, affine, fete, fragment };
+    const fragment = h() < du.frag ? donnerFragment(profil, h) : null;
+    return { lieu, creature: Object.assign({}, cr, { nom: e.nom || cr.nom }), materiaux, drachmes, recit, affine, fete, fragment, duree: du };
+  }
+
+  // ====================== LE LABYRINTHE DES ÉCHOS ======================
+  // Une descente de salle en salle, les PV se gardent d'une salle à l'autre, un bienfait à choisir entre deux salles.
+  // On peut recommencer autant qu'on veut ; seule la meilleure profondeur du jour est récompensée (et comparée).
+  const BIENFAITS = [
+    { id: 'source', nom: 'Source de Déméter', emoji: '🌾', desc: 'Toute l\'équipe récupère 35 % de ses PV.', soin: 0.35 },
+    { id: 'ares', nom: "Bénédiction d'Arès", emoji: '⚔️', desc: '+10 % d\'attaque pour toute la descente.', appliquer: u => { u.attaque = Math.round(u.attaque * 1.1); } },
+    { id: 'hermes', nom: "Ailes d'Hermès", emoji: '🪽', desc: '+8 vitesse pour toute la descente.', appliquer: u => { u.vitesse += 8; } },
+    { id: 'egide', nom: 'Égide', emoji: '🛡️', desc: '+12 % de PV max pour toute la descente (et autant de soin).', appliquer: u => { u.pvMax = Math.round(u.pvMax * 1.12); }, soinMax: 0.12 },
+    { id: 'nectar', nom: 'Nectar', emoji: '🍯', desc: 'Les héros tombés reviennent avec 50 % de leurs PV.', ranime: 0.5 },
+    { id: 'pythie', nom: 'Œil de la Pythie', emoji: '🧿', desc: '+6 % de critique pour toute la descente.', appliquer: u => { u.critBonus = (u.critBonus || 0) + 0.06; } }
+  ];
+  function salleLabyrinthe(profil, n, graine) {
+    const h = hasardDe('laby|' + graine + '|' + n), vus = Object.keys(profil.codex || {}).filter(id => profil.codex[id].vu && D.ENNEMIS[id]);
+    const pool = vus.filter(id => !D.ENNEMIS[id].gardien), gardiens = vus.filter(id => D.ENNEMIS[id].gardien && id !== 'hydre_eveillee');
+    const base = pool.length ? pool : ['satyre', 'harpie', 'loup'].filter(id => D.ENNEMIS[id]);
+    const ids = [];
+    if (n % 5 === 0 && gardiens.length) ids.push(gardiens[Math.floor(h() * gardiens.length)]);
+    const nb = Math.min(3, 2 + (n >= 4 ? 1 : 0)) - ids.length;
+    for (let i = 0; i < nb; i++) ids.push(base[Math.floor(h() * base.length)]);
+    const jour = Math.max(4, profil.joursJoues || 4) + 2 * (n - 1);
+    const ennemis = P.ennemisPourJoueur({ ennemis: ids }, profil, jour).map(e => Object.assign(e, { liable: false },
+      e.gardien ? { pvMax: Math.round(e.pvMax * 0.55), attaque: Math.round(e.attaque * 0.9) } : {}));
+    return { n, nom: n % 5 === 0 ? 'Salle ' + n + ' : la Gardienne d\'écho' : 'Salle ' + n, ennemis };
+  }
+  function deuxBienfaits(n, graine) {
+    const h = hasardDe('bienfait|' + graine + '|' + n), l = BIENFAITS.slice(), r = [];
+    while (r.length < 2) r.push(l.splice(Math.floor(h() * l.length), 1)[0]);
+    return r;
+  }
+  function etatLabyrinthe(profil, date) {
+    const l = profil.activites.labyrinthe;
+    if (!l || l.date !== date) profil.activites.labyrinthe = { date, best: 0, descentes: 0, record: (l && l.record) || 0 };
+    return profil.activites.labyrinthe;
+  }
+  function gainsProfondeur(p) {
+    return { drachmes: 8 * p + (p >= 5 ? 20 : 0) + (p >= 10 ? 40 : 0), materiaux: Object.assign({}, p >= 3 ? { airain: Math.floor(p / 3) } : {}, p >= 6 ? { eclat: Math.floor(p / 6) } : {}, p >= 10 ? { perle: 1 } : {}) };
+  }
+  // Fin d'une descente : récompense seulement l'amélioration du meilleur du jour
+  function finLabyrinthe(profil, date, profondeur) {
+    const l = etatLabyrinthe(profil, date), avant = l.best;
+    l.descentes++; l.record = Math.max(l.record || 0, profondeur);
+    if (profondeur <= avant) return { profondeur, best: avant, gains: null };
+    l.best = profondeur;
+    const g1 = gainsProfondeur(profondeur), g0 = gainsProfondeur(avant), gains = { drachmes: g1.drachmes - g0.drachmes, materiaux: {} };
+    Object.keys(g1.materiaux).forEach(k => { const d = g1.materiaux[k] - (g0.materiaux[k] || 0); if (d > 0) gains.materiaux[k] = d; });
+    profil.drachmes += gains.drachmes; ajouterMateriaux(profil, gains.materiaux);
+    if (profondeur >= 5) noterPenchant(profil, 'honneur', 1);
+    return { profondeur, best: profondeur, gains, nouveau: true };
+  }
+
+  // ====================== LES ASTRAGALES D'HERMÈS ======================
+  // Quatre osselets à quatre faces (1, 3, 4, 6). Le coup de Vénus (quatre faces différentes) bat tout ; le Chien (quatre 1) perd tout.
+  const MISE = 10, PARTIES_MAX = 10;
+  const FACES = [1, 3, 4, 6];
+  function lancer(h) { return [0, 0, 0, 0].map(() => FACES[Math.floor(h() * 4)]); }
+  function valeurCoup(c) {
+    if (new Set(c).size === 4) return { nom: 'Coup de Vénus', score: 100 };
+    if (c.every(x => x === 1)) return { nom: 'Le Chien', score: -1 };
+    if (c.every(x => x === c[0])) return { nom: 'Quatre ' + c[0], score: 50 + c[0] };
+    return { nom: c.reduce((a, b) => a + b, 0) + ' points', score: c.reduce((a, b) => a + b, 0) };
+  }
+  function etatAstragales(profil, date) {
+    const x = profil.activites.astragales;
+    if (!x || x.date !== date) profil.activites.astragales = { date, parties: 0, bilan: 0 };
+    return profil.activites.astragales;
+  }
+  function jouerAstragales(profil, date, h) {
+    const x = etatAstragales(profil, date);
+    if (x.parties >= PARTIES_MAX || profil.drachmes < MISE) return null;
+    h = h || Math.random;
+    const toi = lancer(h), lui = lancer(h), vt = valeurCoup(toi), vh = valeurCoup(lui);
+    let issue = vt.score > vh.score ? 'gagne' : vt.score < vh.score ? 'perdu' : 'egal';
+    const gain = issue === 'gagne' ? (vt.score === 100 ? 3 * MISE : MISE) : issue === 'perdu' ? -MISE : 0;
+    x.parties++; x.bilan += gain; profil.drachmes += gain;
+    return { toi, lui, vt, vh, issue, gain, restantes: PARTIES_MAX - x.parties };
   }
 
   // ====================== ARÈNE DES OMBRES ======================
@@ -480,7 +582,8 @@
     let n = 0;
     if (debloquee(profil, 'oracle') && !oracleFait(profil, date)) n++;
     if (debloquee(profil, 'arene') && !areneFaite(profil, date)) n++;
-    if (debloquee(profil, 'expedition') && (expeditionPrete(profil, date) || (!profil.activites.expedition && profil.activites.derniereExpedition !== date))) n++;
+    if (debloquee(profil, 'expedition') && (expeditionPrete(profil, date) || migrerExpeditions(profil).length < Math.min(PLACES_EXPEDITION, explorateursEnclos(profil).length))) n++;
+    if (debloquee(profil, 'labyrinthe') && !etatLabyrinthe(profil, date).descentes) n++;
     if (debloquee(profil, 'titan') && !titanFait(profil, date) && !(etatTitan(profil, date).paliers || []).includes(100)) n++;
     if (debloquee(profil, 'forge') && TALISMANS.some(t => peutForger(profil, t.id))) n++;
     if (debloquee(profil, 'marchand') && marchandNeuf(profil, date)) n++;
@@ -492,7 +595,9 @@
     initialiser, debloquee, ajouterMateriaux, joursDepuis,
     oracleDuJour, oracleFait, repondreOracle,
     talisman, coutForge, peutForger, forger, appliquerTalisman,
-    lieuxOuverts, explorateurs, partirExpedition, expeditionPrete, recolterExpedition,
+    lieuxOuverts, explorateurs, explorateursEnclos, migrerExpeditions, partirExpedition, expeditionPrete, expeditionsPretes, recolterExpedition, DUREES, PLACES_EXPEDITION,
+    BIENFAITS, salleLabyrinthe, deuxBienfaits, etatLabyrinthe, finLabyrinthe, gainsProfondeur,
+    MISE, PARTIES_MAX, valeurCoup, etatAstragales, jouerAstragales,
     ligue, equipeHorsChant, equipeOmbre, areneFaite, resultatArene,
     semaine, titanDeLaSemaine, etatTitan, titanFait, totalTitan, uniteTitan, enregistrerTitan, paliersAReclamer, reclamerPalier,
     enAttente,

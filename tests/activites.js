@@ -24,12 +24,48 @@ verifier(p.activites.talismans.athena === 3 && !A.peutForger(p, 'athena'), 'Forg
 const sans = A.equipeHorsChant(Object.assign(profil(), { activites: null })), avec = A.equipeHorsChant(p);
 verifier(avec[0].pvMax > sans[0].pvMax, 'Forge : le talisman renforce l\'équipe');
 
-// Expéditions
+// Expéditions (en parallèle)
 p = profil(); A.initialiser(p);
-verifier(A.partirExpedition(p, '2026-11-20', 'satyre', 'foret'), 'Expédition : départ');
-verifier(!A.recolterExpedition(p, '2026-11-20'), 'Expédition : pas de retour le jour même');
-const e = A.recolterExpedition(p, '2026-11-21');
-verifier(e && e.affine && Object.values(e.materiaux).reduce((x, y) => x + y, 0) >= 5, 'Expédition : butin (bonus d\'affinité)');
+p.liens = [{ uid: 'l1', espece: 'satyre', surnom: 'Bacchos' }, { uid: 'l2', espece: 'satyre', surnom: 'Silène' }, { uid: 'l3', espece: 'satyre', surnom: 'Pan' }];
+const t0 = Date.UTC(2026, 10, 20, 8);
+verifier(A.explorateursEnclos(p).length === 4, 'Expédition : Kelos + 3 liens explorateurs');
+verifier(A.partirExpedition(p, t0, 'l1', 'foret', 'court'), 'Expédition : départ courte');
+verifier(!A.partirExpedition(p, t0, 'l1', 'foret', 'long'), 'Expédition : une créature ne part pas deux fois');
+verifier(A.partirExpedition(p, t0, 'l2', 'foret', 'long') && A.partirExpedition(p, t0, 'griffon', 'foret', 'moyen'), 'Expédition : trois en parallèle');
+verifier(!A.partirExpedition(p, t0, 'l3', 'foret', 'court'), 'Expédition : trois places au maximum');
+const idc = p.activites.expeditions[0].id;
+verifier(!A.recolterExpedition(p, '2026-11-20', t0 + 3600e3, idc), 'Expédition : pas de retour avant 2 h');
+const e = A.recolterExpedition(p, '2026-11-20', t0 + 2 * 3600e3, idc);
+verifier(e && e.affine && Object.values(e.materiaux).reduce((x, y) => x + y, 0) >= 2, 'Expédition : butin de la courte (bonus d\'affinité)');
+verifier(A.partirExpedition(p, t0 + 2 * 3600e3, 'l3', 'foret', 'court'), 'Expédition : place libérée');
+const el = A.recolterExpedition(p, '2026-11-20', t0 + 9 * 3600e3, p.activites.expeditions.find(x => x.creature === 'l2').id);
+verifier(el && el.drachmes > e.drachmes && Object.values(el.materiaux).reduce((x, y) => x + y, 0) >= 5, 'Expédition : la longue rapporte plus');
+const anc = profil(); A.initialiser(anc); anc.activites.expedition = { creature: 'griffon', lieu: 'foret', date: '2026-11-19' };
+verifier(A.migrerExpeditions(anc).length === 1 && A.expeditionPrete(anc, '2026-11-20', t0), 'Expédition : l\'ancienne expédition est migrée et prête');
+
+// Labyrinthe
+p = profil(); A.initialiser(p); p.vus = { satyre: 1, sanglier: 1, harpie: 1 };
+const s1 = A.salleLabyrinthe(p, 1, 42), s5 = A.salleLabyrinthe(p, 5, 42);
+verifier(s1.ennemis.length > 0 && s5.ennemis.length > 0, 'Labyrinthe : des ennemis à chaque salle');
+verifier(JSON.stringify(A.salleLabyrinthe(p, 3, 42)) === JSON.stringify(A.salleLabyrinthe(p, 3, 42)), 'Labyrinthe : salle déterministe');
+const bf = A.deuxBienfaits(2, 42); verifier(bf.length === 2 && bf[0].id !== bf[1].id, 'Labyrinthe : deux bienfaits différents');
+const f3 = A.finLabyrinthe(p, '2026-11-20', 3), d0 = p.drachmes;
+verifier(f3.nouveau && f3.gains.drachmes > 0, 'Labyrinthe : première descente récompensée');
+const f2 = A.finLabyrinthe(p, '2026-11-20', 2);
+verifier(!f2.nouveau && p.drachmes === d0 && A.etatLabyrinthe(p, '2026-11-20').descentes === 2, 'Labyrinthe : une descente moins bonne ne rapporte rien');
+const hon = (p.histoire && p.histoire.penchants && p.histoire.penchants.honneur) || 0;
+A.finLabyrinthe(p, '2026-11-20', 6);
+verifier(A.etatLabyrinthe(p, '2026-11-20').best === 6 && p.drachmes > d0, 'Labyrinthe : amélioration récompensée');
+verifier(A.etatLabyrinthe(p, '2026-11-21').best === 0, 'Labyrinthe : remise à zéro le lendemain');
+
+// Astragales
+const sc = c => A.valeurCoup(c).score;
+verifier(sc([1, 3, 4, 6]) === 100 && sc([1, 1, 1, 1]) === -1 && sc([6, 6, 6, 6]) === 56 && sc([1, 3, 3, 6]) === 13, 'Astragales : valeur des coups');
+p = profil(); A.initialiser(p); p.drachmes = 1000;
+let n = 0; while (A.jouerAstragales(p, '2026-11-20')) n++;
+verifier(n === A.PARTIES_MAX, 'Astragales : dix parties par jour');
+const x = A.etatAstragales(p, '2026-11-20'); verifier(p.drachmes === 1000 + x.bilan, 'Astragales : bilan cohérent');
+p.drachmes = 5; verifier(!A.jouerAstragales(p, '2026-11-21'), 'Astragales : pas de partie sans la mise');
 
 // Arène : l'ombre joue et le combat se termine
 p = profil(); A.initialiser(p);

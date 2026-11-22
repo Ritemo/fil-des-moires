@@ -210,7 +210,7 @@
     const fait = profil.derniereDate === d && !(profil.rattrapage > 0);
     items.push({ id: 'epreuve', emo: '⚔️', nom: profil.rattrapage > 0 && profil.derniereDate === d ? 'Rattrapage' : 'Épreuve', fait });
     if (profil.joursJoues >= 1) items.push({ id: 'offrande', emo: '🏺', nom: 'Offrande', fait: !P.offrandeDisponible(profil, d) });
-    if (typeof A !== 'undefined' && profil.activites) ['oracle', 'arene', 'expedition', 'titan', 'marchand'].forEach(id => {
+    if (typeof A !== 'undefined' && profil.activites) ['oracle', 'arene', 'expedition', 'titan', 'labyrinthe', 'marchand'].forEach(id => {
       if (!A.debloquee(profil, id)) return;
       const e = etatTuile(id);
       if (id === 'marchand' && !e.pret) return;   // Hermès n'apparaît que lorsqu'il a du nouveau
@@ -332,14 +332,16 @@
     oracle: "Chaque jour, la Pythie pose une énigme sur les mythes grecs. La même pour tous les tisserands : comparez vos réponses ! Une bonne réponse rapporte 20 drachmes et un éclat d'oracle, utile à la Forge. Cinq bonnes réponses d'affilée : un éclat de plus.",
     forge: "Héphaïstos forge des talismans avec tes matériaux (airain, bois d'olivier, laine sacrée, éclats d'oracle, perles). Le talisman équipé renforce toute ton équipe, dans les épreuves comme dans l'Arène et contre le Titan. Chaque talisman a trois niveaux.",
     arene: "Une fois par jour, affronte l'ombre d'un autre tisserand : son équipe, ses cartes et son talisman, pilotés par l'ordinateur. Une victoire rapporte 30 trophées et 25 drachmes, une défaite en coûte 10. Les trophées font monter de ligue.",
-    expedition: "Envoie une créature explorer un lieu déjà traversé. Elle revient le lendemain avec des matériaux, des drachmes et une petite histoire. Si son affinité est celle du lieu, elle trouve davantage. Une expédition par jour.",
+    expedition: "Envoie tes créatures explorer les lieux déjà traversés : jusqu'à trois en même temps, pour 2, 4 ou 8 heures. Plus l'expédition est longue, plus le butin est riche. Si l'affinité de la créature est celle du lieu, elle trouve davantage. Reviens les récolter dans la journée !",
+    labyrinthe: "Sous l'Agora, un labyrinthe rejoue les échos de tes combats passés. Descends de salle en salle : tes PV se gardent, et après chaque salle tu choisis un bienfait. Tu peux recommencer autant que tu veux ; seule ta meilleure profondeur du jour est récompensée, et comparée à celle des autres tisserands.",
+    astragales: "Hermès adore les osselets. Mise 10 drachmes, lance quatre astragales, et fais mieux que lui. Dix parties par jour, pas plus : « Je ne veux pas te ruiner, mortel. Pas tout de suite. »",
     marchand: "Chaque lundi, Hermès déballe quatre articles : matériaux, cartes, Fils de réserve, et parfois un fragment de tapisserie. Chacun ne s'achète qu'une fois dans la semaine. Les drachmes que tu gagnes trouvent enfin preneur.",
     titan: "Chaque semaine, un Titan se réveille. Tous les tisserands le combattent ensemble : un assaut par jour, de " + A.ACTIONS_TITAN + " actions, et vos dégâts s'additionnent. À 25, 50, 75 et 100 % de l'objectif, chacun réclame sa récompense. Le Titan change le lundi."
   };
   const matHtml = (m, filtre) => Object.keys(A.MATERIAUX).filter(k => !filtre || m[k]).map(k => `<span class="puce">${A.MATERIAUX[k].emoji} ${filtre ? '+' : ''}${m[k] || 0}${filtre ? ' ' + A.MATERIAUX[k].nom.toLowerCase() : ''}</span>`).join('');
   function ouvrirModale(titre, html) { $('titreModale').textContent = titre; $('onglets').innerHTML = ''; $('lexiqueCorps').innerHTML = html; $('lexiqueCorps').scrollTop = 0; $('modale').classList.add('visible'); }
   // Les trois Moires se partagent le monde : Clotho file (épreuves, liens), Lachésis mesure (Oracle, Arène, Titan, hauts faits), Atropos coupe
-  const VOIX_ACT = { oracle: 'lachesis', arene: 'lachesis', titan: 'lachesis', expedition: 'clotho', forge: 'clotho', marchand: 'hermes' };
+  const VOIX_ACT = { oracle: 'lachesis', arene: 'lachesis', titan: 'lachesis', expedition: 'clotho', forge: 'clotho', marchand: 'hermes', labyrinthe: 'lachesis', astragales: 'hermes' };
   const parole = (qui, texte) => { const pe = C.PERSOS[qui] || C.PERSOS.clotho; return `<div class="parchemin"><b>${pe.emoji} ${pe.nom} :</b> ${texte}</div>`; };
   function introAct(id) {
     if (profil.vus['act_' + id]) return `<details class="explic"><summary>Comment ça marche ?</summary><p>${INTROS[id]}</p></details>`;
@@ -362,7 +364,7 @@
     if (r.erreur || !r.liste) return cacheAutres ? cacheAutres.liste : [];
     const moi = (S.conf() && S.conf().joueur) || '';
     const liste = r.liste.filter(j => j.joueur !== undefined ? j.joueur !== moi : j.nom !== profil.pseudo)
-      .map(j => ({ nom: j.nom, niveau: j.niveau, titan: j.act && j.act.titan, trophees: j.act && j.act.trophees, fiche: j.fiche ? Object.assign({}, j.fiche, { niveau: j.niveau, activites: j.act }) : null }));
+      .map(j => ({ nom: j.nom, niveau: j.niveau, titan: j.act && j.act.titan, trophees: j.act && j.act.trophees, labyrinthe: j.act && j.act.labyrinthe, fiche: j.fiche ? Object.assign({}, j.fiche, { niveau: j.niveau, activites: j.act }) : null }));
     cacheAutres = { date: aujourdhui(), t: Date.now(), liste };
     return liste;
   }
@@ -374,16 +376,19 @@
     if (id === 'forge') { const n = A.TALISMANS.filter(t => A.peutForger(profil, t.id)).length; const t = a.talisman && A.talisman(a.talisman);
       return n ? { txt: '⬆ ' + n + ' forge' + (n > 1 ? 's' : '') + ' possible' + (n > 1 ? 's' : ''), pret: true } : { txt: t ? t.emoji + ' ' + t.nom + ' niv. ' + a.talismans[t.id] : Object.values(a.materiaux).reduce((x, y) => x + y, 0) + ' matériaux' }; }
     if (id === 'arene') { const l = A.ligue(a.arene.trophees); return A.areneFaite(profil, d) ? { txt: '✅ ' + l.emoji + ' ' + a.arene.trophees + ' trophées' } : { txt: 'Un duel t\'attend · ' + l.emoji + ' ' + a.arene.trophees, pret: true }; }
-    if (id === 'expedition') { const e = a.expedition;
-      if (A.expeditionPrete(profil, d)) return { txt: '🎁 Ta créature est rentrée !', pret: true };
-      if (e) return { txt: '⏳ De retour demain' };
-      return a.derniereExpedition === d ? { txt: '✅ Butin récolté' } : { txt: 'Envoie une créature explorer', pret: true }; }
+    if (id === 'expedition') { const ex = A.migrerExpeditions(profil), now = Date.now(), pretes = ex.filter(e => e.fin <= now).length;
+      if (pretes) return { txt: '🎁 ' + pretes + ' de retour !', pret: true };
+      const libres = Math.min(A.PLACES_EXPEDITION, A.explorateursEnclos(profil).length) - ex.length;
+      if (libres > 0) return { txt: (ex.length ? ex.length + ' en route · ' : '') + libres + ' place' + (libres > 1 ? 's' : '') + ' libre' + (libres > 1 ? 's' : ''), pret: true };
+      const proche = Math.min(...ex.map(e => e.fin)); return { txt: '⏳ retour dans ' + dureeTexte(proche - now) }; }
+    if (id === 'labyrinthe') { const l = A.etatLabyrinthe(profil, d); return l.descentes ? { txt: '🌀 Meilleur du jour : salle ' + l.best } : { txt: 'Une descente t\'attend', pret: true }; }
+    if (id === 'astragales') { const x = A.etatAstragales(profil, d); return x.parties < A.PARTIES_MAX ? { txt: (A.PARTIES_MAX - x.parties) + ' parties · ' + (x.bilan >= 0 ? '+' : '') + x.bilan + ' 🪙' } : { txt: '✅ ' + (x.bilan >= 0 ? '+' : '') + x.bilan + ' 🪙 aujourd\'hui' }; }
     if (id === 'marchand') { const m = A.etatMarchand(profil, d); return !m.vu ? { txt: '🆕 Nouvel étalage cette semaine', pret: true } : { txt: m.achats.length + ' achat' + (m.achats.length > 1 ? 's' : '') + ' cette semaine' }; }
     if (id === 'titan') { const T = A.titanDeLaSemaine(d); return A.titanFait(profil, d) ? { txt: '✅ ' + T.emoji + ' assaut du jour fait' } : { txt: T.emoji + ' ' + T.nom.split(',')[0] + ' t\'attend', pret: true }; }
     return { txt: '' };
   }
   function agoraHtml() {
-    return feteHtml() + '<div class="agora">' + ['oracle', 'arene', 'expedition', 'titan', 'forge', 'marchand'].map(id => {
+    return feteHtml() + '<div class="agora">' + ['oracle', 'arene', 'expedition', 'titan', 'labyrinthe', 'astragales', 'forge', 'marchand'].map(id => {
       const e = etatTuile(id), n = A.NOMS[id];
       return `<button class="activite${e.ferme ? ' fermee' : ''}${e.pret ? ' prete' : ''}" data-act="${id}"><span class="ico">${e.ferme ? '🔒' : n.emoji}</span><b>${n.court}</b><span class="etat">${e.txt}</span></button>`;
     }).join('') + '</div>';
@@ -393,7 +398,7 @@
       const id = b.dataset.act;
       if (!A.debloquee(profil, id)) return ouvrirModale(A.NOMS[id].emoji + ' ' + A.NOMS[id].nom, `<p>${INTROS[id]}</p><p class="small">🔒 S'ouvre quand tu auras terminé le jour ${A.DEBLOCAGE[id]}.</p>`);
       SON.jouer('page');
-      ({ oracle: ouvrirOracle, forge: ouvrirForge, arene: ouvrirArene, expedition: ouvrirExpedition, titan: ouvrirTitan, marchand: ouvrirMarchand })[id]();
+      ({ oracle: ouvrirOracle, forge: ouvrirForge, arene: ouvrirArene, expedition: () => ouvrirExpedition(), titan: ouvrirTitan, marchand: ouvrirMarchand, labyrinthe: ouvrirLabyrinthe, astragales: () => ouvrirAstragales() })[id]();
     });
   }
   const rafraichirAgora = () => { if ($('tresors').classList.contains('actif')) ouvrirTresors(); majBandeau(); listeAujourdhui(); };
@@ -443,37 +448,105 @@
     $('lexiqueCorps').querySelectorAll('[data-equipe]').forEach(b => b.onclick = () => { a.talisman = b.dataset.equipe; SON.jouer('clic'); sauver(); ouvrirForge(); rafraichirAgora(); });
   }
 
-  // ----- Expéditions -----
-  function ouvrirExpedition() {
-    const d = aujourdhui(), a = profil.activites;
-    if (A.expeditionPrete(profil, d)) {
-      const r = A.recolterExpedition(profil, d); sauver(); SON.jouer('amphore');
-      ouvrirModale('🗺️ Retour d\'expédition', `<div class="ficheEp gagne"><div class="ficheMotif">${r.creature.emoji || '🐾'}</div><div><b>${r.lieu.emoji} ${r.lieu.nom}</b><div class="small">${r.recit}</div></div></div>
-        ${r.affine ? '<p class="small">🌟 Le lieu convenait à son affinité : butin plus généreux.</p>' : ''}
-        ${r.fete ? '<p class="small">🍇 Les Dionysies : 3 matériaux de plus !</p>' : ''}${fragHtml(r.fragment)}
-        <div class="bourse"><span>🪙 +${r.drachmes} drachmes</span>${matHtml(r.materiaux, true)}</div>
-        <button class="principal" id="expeEncore" style="width:100%">Préparer la prochaine expédition</button>`);
-      $('expeEncore').onclick = ouvrirExpedition; rafraichirAgora(); return;
-    }
-    if (a.expedition) { const e = a.expedition, l = A.LIEUX.find(x => x.id === e.lieu), c = A.explorateurs(profil).find(x => x.id === e.creature) || {};
-      return ouvrirModale('🗺️ Les Expéditions', `${introAct('expedition')}<p>⏳ ${c.emoji || ''} <b>${c.nom || 'Ta créature'}</b> explore ${l.emoji} ${l.nom}. Elle rentrera demain.</p>`); }
-    if (a.derniereExpedition === d) return ouvrirModale('🗺️ Les Expéditions', `${introAct('expedition')}<p>Une expédition par jour : prépare la prochaine demain.</p>`);
-    const ex = A.explorateurs(profil), lieux = A.lieuxOuverts(profil);
-    if (!ex.length) return ouvrirModale('🗺️ Les Expéditions', `${introAct('expedition')}<p>Il te faut une créature : Kelos, ou une créature liée.</p>`);
-    let choixC = ex[0].id, choixL = lieux[0].id;
-    const rendre = () => {
-      const c = ex.find(x => x.id === choixC);
-      ouvrirModale('🗺️ Les Expéditions', `${introAct('expedition')}<div class="sousTitre">Qui envoyer ?</div>
-        <div class="choixLigne">${ex.map(x => `<button data-c="${x.id}" class="${x.id === choixC ? 'on' : ''}">${x.emoji} ${x.nom}<span class="small">${aff(x.affinite).icone}</span></button>`).join('')}</div>
-        <div class="sousTitre">Où ?</div>
-        ${lieux.map(l => `<button class="lieu${l.id === choixL ? ' on' : ''}" data-l="${l.id}"><span class="ico">${l.emoji}</span><span><b>${l.nom}</b><span class="small">${[...new Set(l.butin)].map(m => A.MATERIAUX[m].emoji).join(' ')} · affinité ${aff(l.affinite).icone} ${aff(l.affinite).nom}${c.affinite === l.affinite ? ' · 🌟 bonus' : ''}</span></span></button>`).join('')}
-        ${A.LIEUX.length > lieux.length ? `<p class="small">🔒 D'autres lieux s'ouvriront quand tu les auras atteints dans le Chant.</p>` : ''}
-        <button class="principal" id="expePartir" style="width:100%">Partir en expédition</button>`);
-      $('lexiqueCorps').querySelectorAll('[data-c]').forEach(b => b.onclick = () => { choixC = b.dataset.c; rendre(); });
-      $('lexiqueCorps').querySelectorAll('[data-l]').forEach(b => b.onclick = () => { choixL = b.dataset.l; rendre(); });
-      $('expePartir').onclick = () => { if (A.partirExpedition(profil, d, choixC, choixL)) { SON.jouer('action'); sauver(); ouvrirExpedition(); rafraichirAgora(); } };
+  // ----- Expéditions (jusqu'à 3 en même temps, 2, 4 ou 8 heures) -----
+  const dureeTexte = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0') : m + ' min'; };
+  function ouvrirExpedition(choix) {
+    const d = aujourdhui(), now = Date.now(), ex = A.migrerExpeditions(profil), tous = A.explorateursEnclos(profil), lieux = A.lieuxOuverts(profil);
+    if (!tous.length) return ouvrirModale('🗺️ Les Expéditions', `${introAct('expedition')}<p>Il te faut une créature : Kelos, ou une créature de l'Enclos.</p>`);
+    const libres = tous.filter(x => !ex.some(e => e.creature === x.uid));
+    choix = choix || {};
+    const c = libres.find(x => x.uid === choix.c) || libres[0], l = lieux.find(x => x.id === choix.l) || lieux[0], du = A.DUREES.find(x => x.id === choix.d) || A.DUREES[1];
+    const enRoute = ex.map(e => { const lieu = A.LIEUX.find(x => x.id === e.lieu) || A.LIEUX[0], cr = D.HEROS.concat(D.CREATURES).find(x => x.id === e.espece) || {}, pret = e.fin <= now;
+      const pct = e.fin > e.depart ? Math.min(100, Math.round(100 * (now - e.depart) / (e.fin - e.depart))) : 100;
+      return `<div class="talisman"><div class="ico">${cr.emoji || '🐾'}</div><div class="txt"><b>${e.nom || cr.nom}</b> · ${lieu.emoji} ${lieu.nom}
+        <div class="barreTitan"><i style="width:${pct}%"></i></div>
+        <div class="boutons">${pret ? `<button class="principal" data-recolte="${e.id}">🎁 Récolter</button>` : `<span class="small">⏳ retour dans ${dureeTexte(e.fin - now)}</span>`}</div></div></div>`; }).join('');
+    const places = A.PLACES_EXPEDITION - ex.length;
+    const formulaire = places > 0 && libres.length ? `<div class="sousTitre">Nouvelle expédition (${places} place${places > 1 ? 's' : ''} libre${places > 1 ? 's' : ''})</div>
+      <div class="choixLigne">${libres.map(x => `<button data-c="${x.uid}" class="${x.uid === c.uid ? 'on' : ''}">${x.modele.emoji} ${x.nom}<span class="small">${aff(x.modele.affinite).icone}</span></button>`).join('')}</div>
+      ${lieux.map(x => `<button class="lieu${x.id === l.id ? ' on' : ''}" data-l="${x.id}"><span class="ico">${x.emoji}</span><span><b>${x.nom}</b><span class="small">${[...new Set(x.butin)].map(m => A.MATERIAUX[m].emoji).join(' ')} · affinité ${aff(x.affinite).icone} ${aff(x.affinite).nom}${c.modele.affinite === x.affinite ? ' · 🌟 bonus' : ''}</span></span></button>`).join('')}
+      <div class="choixLigne">${A.DUREES.map(x => `<button data-d="${x.id}" class="${x.id === du.id ? 'on' : ''}">${x.nom} · ${x.heures} h<span class="small"> ${x.n}+ matériaux</span></button>`).join('')}</div>
+      <button class="principal" id="expePartir" style="width:100%;margin-top:8px">Envoyer ${c.nom} (${du.heures} h)</button>`
+      : (places > 0 ? '<p class="small">Toutes tes créatures sont déjà en route.</p>' : '<p class="small">Les trois places sont prises : récolte une expédition pour en libérer une.</p>');
+    ouvrirModale('🗺️ Les Expéditions', `${introAct('expedition')}${ex.length ? '<div class="sousTitre">En route</div>' + enRoute : ''}${formulaire}<div id="expeRes"></div>`);
+    const L = $('lexiqueCorps');
+    L.querySelectorAll('[data-c]').forEach(b => b.onclick = () => ouvrirExpedition({ c: b.dataset.c, l: l.id, d: du.id }));
+    L.querySelectorAll('[data-l]').forEach(b => b.onclick = () => ouvrirExpedition({ c: c.uid, l: b.dataset.l, d: du.id }));
+    L.querySelectorAll('[data-d]').forEach(b => b.onclick = () => ouvrirExpedition({ c: c.uid, l: l.id, d: b.dataset.d }));
+    if ($('expePartir')) $('expePartir').onclick = () => { if (A.partirExpedition(profil, Date.now(), c.uid, l.id, du.id)) { SON.jouer('action'); sauver(); ouvrirExpedition(); rafraichirAgora(); } };
+    L.querySelectorAll('[data-recolte]').forEach(b => b.onclick = () => {
+      const r = A.recolterExpedition(profil, d, Date.now(), b.dataset.recolte); if (!r) return;
+      sauver(); SON.jouer('amphore'); ouvrirExpedition(); rafraichirAgora();
+      $('expeRes').innerHTML = `<div class="ficheEp gagne"><div class="ficheMotif">${r.creature.emoji || '🐾'}</div><div><b>${r.creature.nom} · ${r.lieu.emoji} ${r.lieu.nom}</b><div class="small">${r.recit}</div></div></div>
+        ${r.affine ? '<p class="small">🌟 Le lieu convenait à son affinité : butin plus généreux.</p>' : ''}${r.fete ? '<p class="small">🍇 Les Dionysies : des matériaux en plus !</p>' : ''}${fragHtml(r.fragment)}
+        <div class="bourse"><span>🪙 +${r.drachmes} drachmes</span>${matHtml(r.materiaux, true)}</div>`;
+      $('expeRes').scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  // ----- Le Labyrinthe des Échos -----
+  function ouvrirLabyrinthe() {
+    const d = aujourdhui(), l = A.etatLabyrinthe(profil, d);
+    const paliers = [3, 5, 6, 10].map(p => { const g = A.gainsProfondeur(p); return `<div class="palier ${l.best >= p ? 'fait' : ''}"><span class="ic">${l.best >= p ? '✅' : '🌀'}</span><span>Salle ${p} : 🪙 ${g.drachmes} ${Object.keys(g.materiaux).map(k => A.MATERIAUX[k].emoji + ' ' + g.materiaux[k]).join(' ')}</span></div>`; }).join('');
+    ouvrirModale('🌀 Le Labyrinthe des Échos', `${introAct('labyrinthe')}
+      <div class="bourse"><span>Aujourd'hui : <b>${l.best}</b> salle${l.best > 1 ? 's' : ''} · ${l.descentes} descente${l.descentes > 1 ? 's' : ''}</span><span>Record : ${l.record || 0}</span></div>
+      <div class="sousTitre">Récompenses du jour (cumulées, une fois)</div>${paliers}
+      <p class="small">Tes PV se gardent d'une salle à l'autre. Après chaque salle, choisis un bienfait. Tous les 5 salles, une gardienne d'écho.</p>
+      <div id="labyAutres"></div>
+      <button class="principal" id="labyGo" style="width:100%">Descendre</button>`);
+    $('labyGo').onclick = () => { $('modale').classList.remove('visible'); lancerLabyrinthe(); };
+    autresJoueurs().then(autres => {
+      const x = autres.filter(j => j.labyrinthe && j.labyrinthe.date === d);
+      if ($('labyAutres') && x.length) $('labyAutres').innerHTML = '<div class="sousTitre">Les autres tisserands aujourd\'hui</div>' + x.map(j => `<div class="small">🌀 ${j.nom} : salle ${j.labyrinthe.best}</div>`).join('');
+    });
+  }
+  function lancerLabyrinthe() {
+    const graine = Math.floor(Math.random() * 1e9);
+    lancerActivite('labyrinthe', { titre: 'Labyrinthe · Salle 1', ennemis: A.salleLabyrinthe(profil, 1, graine).ennemis });
+    partie.salle = 1; partie.grLaby = graine; partie.bienfaits = [];
+  }
+  function salleSuivante() {
+    const etat = partie.etat, choix = A.deuxBienfaits(partie.salle, partie.grLaby);
+    partie.reprise = {};
+    etat.unites.filter(u => u.camp === 'allie').forEach(u => { partie.reprise[u.id] = { pv: u.ko ? 0 : Math.min(u.pvMax, u.pv + Math.round(u.pvMax * 0.1)), energie: u.energie }; });
+    ouvrirModale('🌀 Salle ' + partie.salle + ' franchie !', `<p>Choisis un bienfait pour la suite de la descente :</p>` + choix.map(b => `<button class="lieu" data-bienfait="${b.id}"><span class="ico">${b.emoji}</span><span><b>${b.nom}</b><span class="small">${b.desc}</span></span></button>`).join('') +
+      `<button id="labyStop" style="width:100%;margin-top:8px">Remonter avec ${partie.salle} salle${partie.salle > 1 ? 's' : ''}</button>`);
+    $('modaleOk').style.display = 'none';
+    const fermer = () => { $('modaleOk').style.display = ''; $('modale').classList.remove('visible'); };
+    $('labyStop').onclick = () => { fermer(); partie.etat.fini = 'remonte'; terminerActivite(); };
+    $('lexiqueCorps').querySelectorAll('[data-bienfait]').forEach(b => b.onclick = () => {
+      const bf = A.BIENFAITS.find(x => x.id === b.dataset.bienfait); fermer(); SON.jouer('evolue');
+      partie.bienfaits.push(bf.id);
+      if (bf.appliquer) partie.allies.forEach(u => bf.appliquer(u));
+      partie.allies.forEach(u => { const r = partie.reprise[u.id]; if (!r) return;
+        if (bf.soin && r.pv > 0) r.pv = Math.min(u.pvMax, r.pv + Math.round(u.pvMax * bf.soin));
+        if (bf.soinMax && r.pv > 0) r.pv = Math.min(u.pvMax, r.pv + Math.round(u.pvMax * bf.soinMax));
+        if (bf.ranime && r.pv <= 0) r.pv = Math.round(u.pvMax * bf.ranime); });
+      partie.salle++; partie.graine += 7919;
+      const s = A.salleLabyrinthe(profil, partie.salle, partie.grLaby);
+      partie.ennemis = s.ennemis; partie.ep.titre = 'Labyrinthe · ' + s.nom; partie.ep.rencontres = [{ nom: s.nom, ennemis: s.ennemis.map(e => e.id) }];
+      partie.totalEnnemis = s.ennemis.length;
+      presenterEnnemis();
+    });
+  }
+
+  // ----- Les Astragales d'Hermès -----
+  function ouvrirAstragales(dernier) {
+    const d = aujourdhui(), x = A.etatAstragales(profil, d);
+    const os = c => c.map(v => `<span class="osselet">${v}</span>`).join('');
+    const res = dernier ? `<div class="astra"><div><span class="small">Toi</span><div>${os(dernier.toi)}</div><b>${dernier.vt.nom}</b></div><div><span class="small">Hermès</span><div>${os(dernier.lui)}</div><b>${dernier.vh.nom}</b></div></div>
+      <p class="${dernier.issue === 'gagne' ? 'vert' : dernier.issue === 'perdu' ? 'rouge' : ''}"><b>${dernier.issue === 'gagne' ? '🎉 Gagné : +' + dernier.gain + ' drachmes' : dernier.issue === 'perdu' ? 'Perdu : ' + dernier.gain + ' drachmes' : 'Égalité : ta mise t\'est rendue'}</b></p>` : '';
+    ouvrirModale('🎲 Les Astragales d\'Hermès', `${introAct('astragales')}
+      <div class="bourse"><span>Parties : ${x.parties}/${A.PARTIES_MAX}</span><span>Bilan du jour : ${x.bilan >= 0 ? '+' : ''}${x.bilan} 🪙</span></div>
+      ${res}
+      <p class="small">Quatre osselets (faces 1, 3, 4, 6). Le plus gros total gagne. Le Coup de Vénus (quatre faces différentes) bat tout et rapporte le triple ; le Chien (quatre 1) perd tout.</p>
+      ${x.parties >= A.PARTIES_MAX ? '<p>Hermès range ses osselets : « Assez pour aujourd\'hui, mortel. Reviens demain. »</p>'
+        : `<button class="principal" id="astraGo" style="width:100%" ${profil.drachmes >= A.MISE ? '' : 'disabled'}>Lancer (mise ${A.MISE} 🪙)</button>`}`);
+    if ($('astraGo')) $('astraGo').onclick = () => {
+      const r = A.jouerAstragales(profil, d); if (!r) return;
+      SON.jouer(r.issue === 'gagne' ? 'victoire' : r.issue === 'perdu' ? 'rate' : 'clic'); sauver(); majBandeau(); ouvrirAstragales(r);
+      document.querySelectorAll('.osselet').forEach((o, i) => { o.style.animationDelay = (i * 60) + 'ms'; });
     };
-    rendre();
   }
 
   // ----- Arène -----
@@ -526,13 +599,20 @@
       ep: { titre: o.titre, rencontres: [{ nom: o.titre, ennemis: o.ennemis.map(e => e.id) }], gloire: false, equipe: {}, choix: null },
       rencontre: 0, reprise: null, gloire: 0, graine: Math.floor(Math.random() * 1e9), affUsage: {}, coupMax: null, kos: 0, vaincus: 0,
       totalEnnemis: o.ennemis.length, dernierEnnemi: null, pvAff: {}, allies, ennemis: o.ennemis, actions: 0 };
-    $('mode').textContent = mode === 'arene' ? 'Arène' : 'Titan';
+    $('mode').textContent = { arene: 'Arène', titan: 'Titan', labyrinthe: 'Labyrinthe' }[mode] || '';
     presenterEnnemis();
   }
   function terminerActivite() {
     const etat = partie.etat, d = aujourdhui();
     let titre, resume, parole, gains;
-    if (partie.mode === 'arene') {
+    if (partie.mode === 'labyrinthe') {
+      const prof = etat.fini === 'remonte' ? partie.salle : partie.salle - 1;
+      const r = A.finLabyrinthe(profil, d, prof);
+      gains = r.gains || { drachmes: 0, materiaux: {} };
+      titre = etat.fini === 'remonte' ? 'Tu remontes du Labyrinthe' : 'Le Labyrinthe t\'a recraché';
+      resume = prof + ' salle' + (prof > 1 ? 's' : '') + ' franchie' + (prof > 1 ? 's' : '') + '. ' + (r.nouveau ? 'Nouveau meilleur du jour !' : 'Ton meilleur du jour reste la salle ' + r.best + ' : pas de nouvelle récompense.');
+      parole = prof >= 10 ? 'Dix salles. Même Thésée aurait demandé une pelote de plus.' : 'Les échos ne s\'épuisent jamais. Toi, si. Repose-toi, puis recommence.';
+    } else if (partie.mode === 'arene') {
       const v = etat.fini === 'victoire';
       gains = A.resultatArene(profil, d, partie.adversaire, v);
       titre = v ? 'Victoire dans l\'Arène' : 'L\'ombre l\'emporte';
@@ -551,11 +631,11 @@
     ecran('fin');
     document.querySelector('#fin .tapis').style.display = 'none';
     $('finTitre').textContent = titre;
-    $('finEtoiles').textContent = partie.mode === 'arene' ? (etat.fini === 'victoire' ? '🏆' : '✕') : A.titanDeLaSemaine(d).emoji;
+    $('finEtoiles').textContent = partie.mode === 'arene' ? (etat.fini === 'victoire' ? '🏆' : '✕') : partie.mode === 'labyrinthe' ? '🌀' : A.titanDeLaSemaine(d).emoji;
     $('finGains').innerHTML = `<div class="bourse"><span>${resume}</span></div><div class="bourse"><span>🪙 +${gains.drachmes} drachmes</span>${matHtml(gains.materiaux || {}, true)}</div>`;
     $('finQui').textContent = 'Clotho :'; $('finClotho').textContent = parole;
     $('btnRetour').disabled = false;
-    SON.jouer(etat.fini === 'victoire' || partie.mode === 'titan' ? 'victoire' : 'defaite');
+    SON.jouer(etat.fini === 'victoire' || partie.mode === 'titan' || (partie.mode === 'labyrinthe' && gains.drachmes > 0) ? 'victoire' : 'defaite');
   }
 
   // ----- Annonce des nouveautés (une fois, à partir du 19 novembre 2026) -----
@@ -869,7 +949,7 @@
     };
     return true;
   }
-  $('versionJeu').innerHTML = 'Version 1.24.0 · illustrations Fluent Emoji (MIT)<br>Décors : peintures du domaine public (Chichkine, Friedrich, Böcklin, von Klenze), Wikimedia Commons';
+  $('versionJeu').innerHTML = 'Version 1.25.0 · illustrations Fluent Emoji (MIT)<br>Décors : peintures du domaine public (Chichkine, Friedrich, Böcklin, von Klenze), Wikimedia Commons';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -996,7 +1076,7 @@
   function lancerRencontre() {
     const r = partie.ep.rencontres[partie.rencontre];
     const copie = x => JSON.parse(JSON.stringify(x));
-    const fondCombat = partie.mode === 'arene' ? 'art/decor/agora.jpg' : partie.mode === 'titan' ? 'art/decor/fils.jpg' : decorDe(partie.ep, partie.jour);
+    const fondCombat = partie.mode === 'arene' ? 'art/decor/agora.jpg' : partie.mode === 'titan' ? 'art/decor/fils.jpg' : partie.mode === 'labyrinthe' ? 'art/decor/ruines.jpg' : decorDe(partie.ep, partie.jour);
     $('combat').style.setProperty('--decor', `url('${fondCombat}')`);
     partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101,
       allies: partie.mode ? copie(partie.allies) : A.appliquerTalisman(P.equipeDuJoueur(partie.ep, profil, partie.jour), profil.activites),
@@ -1060,6 +1140,7 @@
   }
 
   function finRencontre() {
+    if (partie.mode === 'labyrinthe' && partie.etat.fini === 'victoire') return salleSuivante();
     if (partie.mode) return terminerActivite();
     const etat = partie.etat;
     if (etat.fini === 'victoire' && partie.rencontre < partie.ep.rencontres.length - 1) {
