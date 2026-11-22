@@ -299,10 +299,11 @@
     if (e.drachmes) profil.drachmes += e.drachmes;
     if (e.fil) profil.filsReserve = Math.min(3, (profil.filsReserve || 0) + e.fil);
     if (e.carte && !profil.cartes[e.carte]) profil.cartes[e.carte] = { niveau: 1, doublons: 0 };
-    if (e.talisman && profil.activites) { // Héphaïstos bénit le talisman équipé (ou offre l'Amulette d'Athéna)
+    if (e.talisman && profil.activites) { // Héphaïstos bénit le talisman de l'Errant (ou lui offre l'Amulette d'Athéna)
       const a = profil.activites; a.talismans = a.talismans || {};
-      const id = a.talisman || 'athena';
-      a.talismans[id] = Math.min(3, (a.talismans[id] || 0) + e.talisman); if (!a.talisman) a.talisman = id;
+      const portes = a.portes || (a.talisman ? { errant: a.talisman } : {}), id = portes.errant || a.talisman || 'athena';
+      a.talismans[id] = Math.min(3, (a.talismans[id] || 0) + e.talisman);
+      if (!Object.values(portes).includes(id)) { a.portes = Object.assign({}, portes, { errant: id }); a.talisman = id; }
     }
     if (e.liberer && (profil.liens || []).length) { // la créature liée la plus récente (hors créature active si possible) part tenir le Sceau
       const l = profil.liens.filter(x => x.uid !== profil.lienActif).slice(-1)[0] || profil.liens.slice(-1)[0];

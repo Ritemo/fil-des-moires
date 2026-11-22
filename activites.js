@@ -36,6 +36,7 @@
     a.materiaux = Object.assign({ airain: 0, olivier: 0, laine: 0, eclat: 0, perle: 0 }, a.materiaux || {});
     a.talismans = a.talismans || {};
     if (a.talisman === undefined) a.talisman = null;
+    if (!a.portes) a.portes = a.talisman ? { errant: a.talisman } : {};
     a.oracle = a.oracle || { serie: 0, justes: 0 };
     a.expedition = a.expedition || null;
     a.arene = a.arene || { trophees: 0, journal: [] };
@@ -149,23 +150,24 @@
   }
 
   // ====================== FORGE D'HÉPHAÏSTOS ======================
-  // Un talisman équipé donne un bonus à toute l'équipe (épreuves, Arène, Titan). Trois niveaux.
+  // Chaque héros porte un talisman (l'Errant, Phaéna et la créature de l'équipe) : il renforce son porteur
+  // dans les épreuves, l'Arène et contre le Titan. Un talisman ne se porte que par un héros à la fois. Trois niveaux.
   const TALISMANS = [
-    { id: 'athena', nom: "Amulette d'Athéna", emoji: '🪬', effet: n => 'PV de l\'équipe +' + [6, 10, 15][n - 1] + ' %',
+    { id: 'athena', nom: "Amulette d'Athéna", emoji: '🪬', effet: n => 'PV du porteur +' + [10, 15, 22][n - 1] + ' %',
       cout: [{ airain: 3, olivier: 2, drachmes: 40 }, { airain: 5, olivier: 4, eclat: 1, drachmes: 90 }, { airain: 8, olivier: 6, perle: 1, drachmes: 160 }],
-      appliquer: (u, n) => { u.pvMax = Math.round(u.pvMax * (1 + [0.06, 0.10, 0.15][n - 1])); } },
-    { id: 'zeus', nom: 'Plume de Zeus', emoji: '🪶', effet: n => 'Attaque de l\'équipe +' + [5, 8, 12][n - 1] + ' %',
+      appliquer: (u, n) => { u.pvMax = Math.round(u.pvMax * (1 + [0.10, 0.15, 0.22][n - 1])); } },
+    { id: 'zeus', nom: 'Plume de Zeus', emoji: '🪶', effet: n => 'Attaque du porteur +' + [8, 12, 18][n - 1] + ' %',
       cout: [{ airain: 2, eclat: 2, drachmes: 50 }, { airain: 4, eclat: 3, drachmes: 100 }, { airain: 6, eclat: 4, perle: 1, drachmes: 180 }],
-      appliquer: (u, n) => { u.attaque = Math.round(u.attaque * (1 + [0.05, 0.08, 0.12][n - 1])); } },
-    { id: 'hermes', nom: "Sandales d'Hermès", emoji: '🪽', effet: n => 'Vitesse de l\'équipe +' + [6, 10, 15][n - 1],
+      appliquer: (u, n) => { u.attaque = Math.round(u.attaque * (1 + [0.08, 0.12, 0.18][n - 1])); } },
+    { id: 'hermes', nom: "Sandales d'Hermès", emoji: '🪽', effet: n => 'Vitesse du porteur +' + [9, 15, 22][n - 1],
       cout: [{ laine: 3, olivier: 1, drachmes: 40 }, { laine: 5, olivier: 2, eclat: 1, drachmes: 90 }, { laine: 7, olivier: 3, perle: 1, drachmes: 160 }],
-      appliquer: (u, n) => { u.vitesse += [6, 10, 15][n - 1]; } },
-    { id: 'pythie', nom: 'Œil de la Pythie', emoji: '🧿', effet: n => 'Chance de critique +' + [5, 8, 12][n - 1] + ' %',
+      appliquer: (u, n) => { u.vitesse += [9, 15, 22][n - 1]; } },
+    { id: 'pythie', nom: 'Œil de la Pythie', emoji: '🧿', effet: n => 'Critique du porteur +' + [8, 12, 18][n - 1] + ' %',
       cout: [{ eclat: 3, laine: 1, drachmes: 50 }, { eclat: 4, laine: 3, drachmes: 100 }, { eclat: 6, laine: 4, perle: 1, drachmes: 180 }],
-      appliquer: (u, n) => { u.critBonus = (u.critBonus || 0) + [0.05, 0.08, 0.12][n - 1]; } },
-    { id: 'olivier', nom: "Couronne d'olivier", emoji: '🫒', effet: n => 'Soins +' + [10, 20, 30][n - 1] + ' %' + (n === 3 ? ', +1 énergie au départ' : ''),
+      appliquer: (u, n) => { u.critBonus = (u.critBonus || 0) + [0.08, 0.12, 0.18][n - 1]; } },
+    { id: 'olivier', nom: "Couronne d'olivier", emoji: '🫒', effet: n => 'Soins du porteur +' + [15, 30, 45][n - 1] + ' %' + (n === 3 ? ', +1 énergie au départ' : ''),
       cout: [{ olivier: 3, laine: 2, drachmes: 40 }, { olivier: 5, laine: 3, eclat: 1, drachmes: 90 }, { olivier: 7, laine: 5, perle: 1, drachmes: 160 }],
-      appliquer: (u, n) => { u.soinMult = (u.soinMult || 1) * (1 + [0.1, 0.2, 0.3][n - 1]); if (n === 3) u.energieDepart = (u.energieDepart != null ? u.energieDepart : 2) + 1; } }
+      appliquer: (u, n) => { u.soinMult = (u.soinMult || 1) * (1 + [0.15, 0.3, 0.45][n - 1]); if (n === 3) u.energieDepart = (u.energieDepart != null ? u.energieDepart : 2) + 1; } }
   ];
   function talisman(id) { return TALISMANS.find(t => t.id === id); }
   function coutForge(profil, id) { const t = talisman(id), n = profil.activites.talismans[id] || 0; return n >= 3 ? null : t.cout[n]; }
@@ -177,15 +179,36 @@
     if (!peutForger(profil, id)) return false;
     const c = coutForge(profil, id);
     Object.keys(c).forEach(k => { if (k === 'drachmes') profil.drachmes -= c[k]; else profil.activites.materiaux[k] -= c[k]; });
-    profil.activites.talismans[id] = (profil.activites.talismans[id] || 0) + 1;
-    if (!profil.activites.talisman) profil.activites.talisman = id;
-    return profil.activites.talismans[id];
+    const a = profil.activites;
+    a.talismans[id] = (a.talismans[id] || 0) + 1;
+    // un talisman tout neuf va au premier héros sans talisman
+    const portes = portesDe(a);
+    if (a.talismans[id] === 1 && !Object.values(portes).includes(id)) { const libre = PORTEURS.find(x => !portes[x]); if (libre) porter(profil, libre, id); }
+    return a.talismans[id];
   }
-  // Applique le talisman équipé à une équipe (liste d'unités du moteur)
+  // ---------- Qui porte quoi ----------
+  const PORTEURS = ['errant', 'phaena', 'compagnon'];
+  const porteurDe = u => (u.invite ? null : u.id === 'errant' || u.id === 'phaena' ? u.id : 'compagnon');
+  // Anciennes parties (et ombres d'un script plus ancien) : un seul talisman, porté par l'Errant
+  function portesDe(act) {
+    if (!act) return {};
+    if (act.portes) return act.portes;
+    return act.talisman ? { errant: act.talisman } : {};
+  }
+  function porter(profil, porteur, id) {
+    const a = profil.activites; a.portes = Object.assign({}, portesDe(a));
+    PORTEURS.forEach(x => { if (a.portes[x] === id) delete a.portes[x]; });
+    if (id) a.portes[porteur] = id; else delete a.portes[porteur];
+    a.talisman = a.portes.errant || a.portes.phaena || a.portes.compagnon || null; // pour les scripts de sauvegarde plus anciens
+    return a.portes;
+  }
+  // Applique à chaque héros le talisman qu'il porte
   function appliquerTalisman(equipe, act) {
-    const id = act && act.talisman, n = id && act.talismans && act.talismans[id];
-    const t = id && talisman(id);
-    if (t && n) equipe.forEach(u => t.appliquer(u, n));
+    const portes = portesDe(act);
+    equipe.forEach(u => {
+      const id = portes[porteurDe(u)], n = id && act.talismans && act.talismans[id], t = id && talisman(id);
+      if (t && n) { t.appliquer(u, n); u.talismanPorte = t.emoji; }
+    });
     return equipe;
   }
 
@@ -604,7 +627,7 @@
     DEBLOCAGE, NOMS, MATERIAUX, QUESTIONS, TALISMANS, LIEUX, TITANS, LIGUES, PALIERS, ACTIONS_TITAN, OBJECTIF_PAR_JOUEUR,
     initialiser, debloquee, ajouterMateriaux, joursDepuis,
     oracleDuJour, oracleFait, repondreOracle,
-    talisman, coutForge, peutForger, forger, appliquerTalisman,
+    talisman, coutForge, peutForger, forger, appliquerTalisman, PORTEURS, portesDe, porter,
     lieuxOuverts, explorateurs, explorateursEnclos, migrerExpeditions, partirExpedition, expeditionPrete, expeditionsPretes, recolterExpedition, DUREES, PLACES_EXPEDITION,
     BIENFAITS, salleLabyrinthe, deuxBienfaits, etatLabyrinthe, finLabyrinthe, gainsProfondeur,
     MISE, PARTIES_MAX, valeurCoup, etatAstragales, jouerAstragales,

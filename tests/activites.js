@@ -18,11 +18,17 @@ verifier(A.repondreOracle(p, '2026-11-20', 0) === null, 'Oracle : une seule rép
 
 // Forge
 p.activites.materiaux = { airain: 20, olivier: 20, laine: 20, eclat: 20, perle: 5 };
-verifier(A.forger(p, 'athena') === 1 && p.activites.talisman === 'athena', 'Forge : premier talisman équipé');
+verifier(A.forger(p, 'athena') === 1 && p.activites.portes.errant === 'athena', 'Forge : premier talisman porté par l\'Errant');
 A.forger(p, 'athena'); A.forger(p, 'athena');
 verifier(p.activites.talismans.athena === 3 && !A.peutForger(p, 'athena'), 'Forge : niveau 3 maximum');
 const sans = A.equipeHorsChant(Object.assign(profil(), { activites: null })), avec = A.equipeHorsChant(p);
-verifier(avec[0].pvMax > sans[0].pvMax, 'Forge : le talisman renforce l\'équipe');
+verifier(avec[0].pvMax > sans[0].pvMax && avec[1].pvMax === sans[1].pvMax, 'Forge : le talisman ne renforce que son porteur');
+A.forger(p, 'zeus'); verifier(p.activites.portes.phaena === 'zeus', 'Forge : le deuxième talisman va à Phaéna');
+A.porter(p, 'compagnon', 'athena'); verifier(!p.activites.portes.errant && p.activites.portes.compagnon === 'athena', 'Forge : un talisman ne se porte qu\'une fois');
+const eq3 = A.equipeHorsChant(p); verifier(eq3[2].pvMax > sans[2].pvMax && eq3[1].attaque > sans[1].attaque && eq3[0].pvMax === sans[0].pvMax, 'Forge : chacun son talisman');
+const vieux = profil(); vieux.activites = { talisman: 'athena', talismans: { athena: 2 } }; A.initialiser(vieux);
+verifier(vieux.activites.portes.errant === 'athena', 'Forge : ancienne partie, talisman donné à l\'Errant');
+verifier(A.equipeOmbre({ equipement: p.equipement, cartes: p.cartes, compagnons: p.compagnons, creature: 'griffon', niveau: 5, activites: { talisman: 'athena', talismans: { athena: 3 } } }, 'x').length === 3, 'Forge : ombre d\'un ancien script');
 
 // Expéditions (en parallèle)
 p = profil(); A.initialiser(p);
