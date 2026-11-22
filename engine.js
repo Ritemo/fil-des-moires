@@ -91,7 +91,7 @@
     if (options.reprise) {
       etat.unites.forEach(u => {
         const r = options.reprise[u.id];
-        if (r) { u.pv = r.pv; u.energie = r.energie; u.ko = u.pv <= 0; u.hubris = r.hubris || 0; }
+        if (r && u.camp === 'allie') { u.pv = r.pv; u.energie = r.energie; u.ko = u.pv <= 0; u.hubris = r.hubris || 0; } // seulement ton équipe : un ennemi de la même espèce garde toute sa vie
       });
     }
     etat.unites.forEach(u => { u.prochain = delai('normal', u.vitesse) * (0.4 + 0.6 * hasard()); });
