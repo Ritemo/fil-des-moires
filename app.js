@@ -272,8 +272,15 @@
     III: { ciel: ['#c39be0', '#33204e'], loin: '#5a3c74', pres: '#22162e', astre: '#ffd27a', deco: 'fils' },
     IV: { ciel: ['#33426a', '#0c1222'], loin: '#1e2a44', pres: '#0d1424', astre: '#f2f0dc', deco: 'etang' }
   };
+  // Décors : peintures du domaine public (Wikimedia Commons), une par chapitre
+  const DECORS = { I: 'foret', II: 'ruines', III: 'fils', IV: 'etang' };
+  function decorDe(ep, jour) {
+    if (ep && ep.chapitre && DECORS[ep.chapitre.num]) return 'art/decor/' + DECORS[ep.chapitre.num] + '.jpg';
+    return 'art/decor/' + ['foret', 'ruines', 'fils', 'etang'][((jour || 1) - 1) % 4] + '.jpg';
+  }
   function vignetteSvg(ep, fait) {
     const P_ = PAYSAGES[ep.chapitre ? ep.chapitre.num : 'IV'];
+    const fond = decorDe(ep, ep.jour);
     const h = (a, b) => { let x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return x - Math.floor(x); };
     let deco = '';
     if (P_.deco === 'foret') {
@@ -307,11 +314,11 @@
       <defs><linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P_.ciel[1]}"/><stop offset="1" stop-color="${P_.ciel[0]}"/></linearGradient>
         <filter id="ombre"><feColorMatrix type="matrix" values="0 0 0 0 0.05  0 0 0 0 0.03  0 0 0 0 0.02  0 0 0 1 0"/></filter>
         <radialGradient id="halo"><stop offset="0" stop-color="${P_.astre}" stop-opacity=".9"/><stop offset="1" stop-color="${P_.astre}" stop-opacity="0"/></radialGradient></defs>
-      <rect width="360" height="190" fill="url(#ciel)"/>${etoiles}
-      <circle cx="300" cy="48" r="44" fill="url(#halo)"/><circle cx="300" cy="48" r="16" fill="${P_.astre}"/>
-      <path d="M0 120 Q60 88 120 112 T240 104 T360 116 V190 H0Z" fill="${P_.loin}"/>
-      ${deco}
-      <path d="M0 160 Q90 140 180 158 T360 152 V190 H0Z" fill="${P_.pres}"/>
+      <rect width="360" height="190" fill="url(#ciel)"/>
+      <image href="${fond}" width="360" height="190" preserveAspectRatio="xMidYMid slice"/>
+      <linearGradient id="sol" x1="0" y1="0" x2="0" y2="1"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".75"/></linearGradient>
+      <rect width="360" height="190" fill="url(#sol)"/>
+      <path d="M0 168 Q90 156 180 166 T360 162 V190 H0Z" fill="${P_.pres}" opacity=".55"/>
       ${foes}
       ${equipe.map((e, k) => emo(e, 64 + k * 42, 170 - (k % 2) * 5, 36)).join('')}
       ${fait ? '<rect width="360" height="190" fill="#000" opacity=".35"/><text x="180" y="104" font-size="20" text-anchor="middle" fill="#f6ead2" font-family="Georgia">Épreuve accomplie</text>' : ''}
@@ -746,7 +753,7 @@
   // ---------- Onglet Trésors ----------
   function ouvrirTresors() {
     ecran('tresors');
-    $('agora').innerHTML = agoraHtml(); brancherAgora($('agora'));
+    $('agora').innerHTML = '<div class="bandeauAgora"></div>' + agoraHtml(); brancherAgora($('agora'));
     afficherOffrande();
     const ch = P.choixEnAttente(profil);
     $('choixAttente').style.display = ch ? 'flex' : 'none';
@@ -862,7 +869,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.23.0 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').innerHTML = 'Version 1.24.0 · illustrations Fluent Emoji (MIT)<br>Décors : peintures du domaine public (Chichkine, Friedrich, Böcklin, von Klenze), Wikimedia Commons';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -989,6 +996,8 @@
   function lancerRencontre() {
     const r = partie.ep.rencontres[partie.rencontre];
     const copie = x => JSON.parse(JSON.stringify(x));
+    const fondCombat = partie.mode === 'arene' ? 'art/decor/agora.jpg' : partie.mode === 'titan' ? 'art/decor/fils.jpg' : decorDe(partie.ep, partie.jour);
+    $('combat').style.setProperty('--decor', `url('${fondCombat}')`);
     partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101,
       allies: partie.mode ? copie(partie.allies) : A.appliquerTalisman(P.equipeDuJoueur(partie.ep, profil, partie.jour), profil.activites),
       ennemis: partie.mode ? copie(partie.ennemis) : P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire,

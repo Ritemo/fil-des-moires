@@ -100,6 +100,12 @@ Une épreuve par jour, mais un oubli ne pénalise pas : chaque jour manqué donn
 - **Fêtes** : tous les 9 jours, 2 jours de fête communs à tous (Panathénées : Arène doublée ; Dionysies : expéditions plus riches ; Nuit de Séléné : Oracle doublé).
 - **Hauts faits** : 14 exploits (Codex), avec des titres à afficher dans le classement (script version 11).
 
+## Décors et effets de combat
+
+- **Décors** : peintures du domaine public (Wikimedia Commons) dans `art/decor/`, téléchargées par le robot « Décors » (`outils/decors.py`, lancement manuel) : Chichkine (forêt, chapitre I), Friedrich (abbaye en ruine, chapitre II ; voyageur au-dessus de la mer de nuages, chapitre III et Titan), Böcklin (L'Île des morts, chapitre IV), von Klenze (l'Acropole, Agora et Arène). Pour en changer, modifier la liste dans `outils/decors.py` et relancer le robot.
+- **Effets de combat** : projectiles aux couleurs de l'affinité (entaille pour l'airain et la roc), onde de choc, tampon CRITIQUE, éclair d'écran, ralenti sur le coup final. Désactivés si le téléphone demande de réduire les animations.
+- **Aujourd'hui** : la ligne de pastilles en haut de l'accueil résume ce qui reste à faire dans la journée.
+
 ## L'Enclos de Chiron (créatures liées)
 
 On peut lier plusieurs fois la même espèce. Chaque créature liée a sa fiche dans l'Enclos (onglet Cartes, 10 places) : un surnom modifiable, un trait tiré au hasard (Vif, Robuste, Féroce, Placide, Fidèle) qui la rend un peu différente, sa date de liaison. Une seule créature accompagne l'équipe (choix dans l'Enclos ou pendant la Préparation). On peut libérer une créature. Enclos plein : une nouvelle liaison renforce seulement les cartes de l'espèce.
