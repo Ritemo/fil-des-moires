@@ -476,6 +476,45 @@
   .toast.part { opacity: 0; transform: translateY(-10px); }
   .toast img.emo { width: 1.2em; height: 1.2em; vertical-align: -0.25em; }
   @keyframes toastIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+  /* Effets de combat */
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+  .projectile { position: absolute; left: 0; top: 0; font-size: 26px; filter: drop-shadow(0 0 8px var(--c)) drop-shadow(0 0 14px var(--c)); will-change: transform; }
+  .projectile.fort { font-size: 34px; }
+  .projectile img.emo { width: 1em; height: 1em; }
+  .trainee { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); opacity: .8; animation: trainee .38s forwards; }
+  @keyframes trainee { to { transform: scale(.1); opacity: 0; } }
+  .ondeChoc { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 3px solid var(--c); box-shadow: 0 0 16px var(--c), inset 0 0 12px var(--c); animation: ondeChoc .5s ease-out forwards; }
+  .ondeChoc.fort { border-width: 5px; animation-duration: .6s; }
+  .ondeChoc.soin { border-style: dashed; animation: ondeSoin .6s ease-out forwards; }
+  @keyframes ondeChoc { from { transform: scale(.2); opacity: 1; } to { transform: scale(3); opacity: 0; } }
+  @keyframes ondeSoin { from { transform: scale(2.4); opacity: 0; } 40% { opacity: 1; } to { transform: scale(.6); opacity: 0; } }
+  .entaille { position: absolute; width: 110px; height: 6px; margin: -3px 0 0 -55px; border-radius: 3px; background: linear-gradient(90deg, transparent, #fff, var(--c), transparent); box-shadow: 0 0 12px var(--c); transform: rotate(-35deg) scaleX(0); animation: entaille .36s ease-out forwards; }
+  @keyframes entaille { 30% { transform: rotate(-35deg) scaleX(1); opacity: 1; } to { transform: rotate(-35deg) scaleX(1.1); opacity: 0; } }
+  .tamponCrit { position: absolute; transform: translate(-50%, -50%); font: 900 24px/1 Georgia, serif; color: #ffd34d; letter-spacing: 1px; text-shadow: 0 0 10px #ff8a00, 0 3px 0 #7a3a00, 0 0 2px #000; animation: tampon .9s ease-out forwards; white-space: nowrap; }
+  @keyframes tampon { 0% { transform: translate(-50%, -50%) scale(2.6) rotate(-14deg); opacity: 0; } 18% { transform: translate(-50%, -50%) scale(1) rotate(-8deg); opacity: 1; } 75% { opacity: 1; } 100% { transform: translate(-50%, -80%) scale(1.05) rotate(-8deg); opacity: 0; } }
+  .unite.flash { animation: flashCoup .28s, secousse .3s; }
+  @keyframes flashCoup { 0% { filter: brightness(3) saturate(0); } 100% { filter: none; } }
+  .unite.aura { animation: aura .7s; }
+  @keyframes aura { 30% { box-shadow: 0 0 0 3px var(--aura), 0 0 22px var(--aura); } }
+  #combat.eclairEcran::after { content: ''; position: fixed; inset: 0; background: #fff; pointer-events: none; z-index: 59; animation: eclairEcran .22s forwards; }
+  @keyframes eclairEcran { from { opacity: .55; } to { opacity: 0; } }
+  #combat.zoomCoup .zone { animation: zoomCoup .3s ease-out; }
+  @keyframes zoomCoup { 40% { transform: scale(1.035); } }
+  #combat.ralenti .zone { animation: ralenti 1.2s ease-out; }
+  @keyframes ralenti { 0% { filter: saturate(1.6) brightness(1.3); transform: scale(1.05); } 100% { filter: none; transform: none; } }
+  .flottant.crit { font-size: 32px; color: #ffd34d; animation-name: monteCrit; }
+  .flottant.gros { font-size: 30px; }
+  @keyframes monteCrit { 0% { transform: translate(-50%, 0) scale(2); } 15% { transform: translate(-50%, -8px) scale(.9); } 25% { transform: translate(-50%, -10px) scale(1.1); } 100% { transform: translate(-50%, -54px) scale(1); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .projectile, .trainee, .ondeChoc, .entaille, .tamponCrit { display: none; } #combat.eclairEcran::after { display: none; } }
+  .aujourdhui { display: flex; align-items: center; gap: 5px; overflow-x: auto; padding: 2px 0 6px; flex: none; }
+  .aujourdhui .titreAuj { font-size: 12px; color: var(--or); font-variant: small-caps; white-space: nowrap; margin-right: 2px; }
+  .puceAuj { position: relative; flex: none; width: 38px; height: 38px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: 19px; box-shadow: none; border: 2px solid var(--or); background: radial-gradient(circle, #4a3420, #2a1f18); }
+  .puceAuj span img.emo { width: 1em; height: 1em; }
+  .puceAuj.fait { border-color: #4f6b3f; opacity: .55; filter: grayscale(.5); }
+  .puceAuj:not(.fait) { animation: pulseAuj 2.4s ease-in-out infinite; }
+  @keyframes pulseAuj { 50% { box-shadow: 0 0 10px rgba(246,210,122,.55); } }
+  .puceAuj i { position: absolute; right: -3px; bottom: -3px; font-style: normal; font-size: 11px; background: #4f6b3f; color: #fff; border-radius: 50%; width: 15px; height: 15px; line-height: 15px; display: none; }
+  .puceAuj.fait i { display: block; }
   .classe { cursor: pointer; }
   .ligneCoche { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 4px; font-size: 14px; line-height: 1.4; }
   .ligneCoche input { width: 20px; height: 20px; flex: none; accent-color: var(--or); margin: 1px 0 0; }
@@ -535,6 +574,7 @@
 
   <!-- Onglet Épreuve (accueil) -->
   <section class="ecran actif onglet" id="accueil">
+    <div class="aujourdhui" id="aujourdhui"></div>
     <div class="vignette" id="vignette"></div>
     <div class="parchemin" id="parchAccueil">
       <div class="chapitre" id="chapitreAccueil"></div>

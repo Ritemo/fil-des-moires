@@ -203,9 +203,36 @@
   })[b.dataset.onglet]());
 
   // ---------- Accueil ----------
+  // ---------- « Aujourd'hui » : ce qui reste à faire, en une ligne sur l'accueil ----------
+  function listeAujourdhui() {
+    const d = aujourdhui(), el = $('aujourdhui'); if (!el) return;
+    const items = [];
+    const fait = profil.derniereDate === d && !(profil.rattrapage > 0);
+    items.push({ id: 'epreuve', emo: '⚔️', nom: profil.rattrapage > 0 && profil.derniereDate === d ? 'Rattrapage' : 'Épreuve', fait });
+    if (profil.joursJoues >= 1) items.push({ id: 'offrande', emo: '🏺', nom: 'Offrande', fait: !P.offrandeDisponible(profil, d) });
+    if (typeof A !== 'undefined' && profil.activites) ['oracle', 'arene', 'expedition', 'titan', 'marchand'].forEach(id => {
+      if (!A.debloquee(profil, id)) return;
+      const e = etatTuile(id);
+      if (id === 'marchand' && !e.pret) return;   // Hermès n'apparaît que lorsqu'il a du nouveau
+      items.push({ id, emo: A.NOMS[id].emoji, nom: A.NOMS[id].court, fait: !e.pret });
+    });
+    const nMsg = typeof corbeau !== 'undefined' && S.conf() ? corbeau.liste.filter(m => m.de !== moiCorbeau() && m.t > luCorbeau() && m.type !== 'reaction').length : 0;
+    if (nMsg) items.push({ id: 'corbeau', emo: '🐦‍⬛', nom: nMsg + ' message' + (nMsg > 1 ? 's' : ''), fait: false });
+    const n = items.filter(x => x.fait).length;
+    el.innerHTML = `<span class="titreAuj">Aujourd'hui ${n}/${items.length}</span>` + items.map(x => `<button class="puceAuj${x.fait ? ' fait' : ''}" data-auj="${x.id}" title="${x.nom}"><span>${x.emo}</span><i>${x.fait ? '✓' : ''}</i></button>`).join('');
+    el.querySelectorAll('[data-auj]').forEach(b => b.onclick = () => {
+      const id = b.dataset.auj; SON.jouer('clic');
+      if (id === 'epreuve') { if (!b.classList.contains('fait')) $('btnJouer').click(); return; }
+      if (id === 'corbeau') return ouvrirCorbeau();
+      ouvrirTresors();
+      if (id === 'offrande') { if (P.offrandeDisponible(profil, d)) ouvrirAmphore(); return; }
+      const t = document.querySelector('[data-act=' + id + ']'); if (t) t.click();
+    });
+  }
   function accueil() {
     ecran('accueil');
     partie = null;
+    setTimeout(listeAujourdhui, 0);
     const rattraper = profil.derniereDate === aujourdhui() && (profil.rattrapage || 0) > 0;
     const fait = profil.derniereDate === aujourdhui() && !rattraper;
     const jour = fait ? Math.max(1, profil.joursJoues) : profil.joursJoues + 1;
@@ -362,7 +389,7 @@
       ({ oracle: ouvrirOracle, forge: ouvrirForge, arene: ouvrirArene, expedition: ouvrirExpedition, titan: ouvrirTitan, marchand: ouvrirMarchand })[id]();
     });
   }
-  const rafraichirAgora = () => { if ($('tresors').classList.contains('actif')) ouvrirTresors(); majBandeau(); };
+  const rafraichirAgora = () => { if ($('tresors').classList.contains('actif')) ouvrirTresors(); majBandeau(); listeAujourdhui(); };
 
   // ----- Oracle -----
   function ouvrirOracle() {
@@ -553,6 +580,7 @@
     const n = corbeau.liste.filter(m => m.de !== moiCorbeau() && m.t > luCorbeau() && m.type !== 'reaction').length;
     $('pastilleCorbeau').textContent = n ? (n > 9 ? '9+' : n) : '';
     $('pastilleCorbeau').style.display = n ? '' : 'none';
+    if ($('accueil').classList.contains('actif')) listeAujourdhui();
   }
   async function relever() {
     if (!S.conf()) { majPastilleCorbeau(); return false; }
@@ -834,7 +862,7 @@
     };
     return true;
   }
-  $('versionJeu').textContent = 'Version 1.22.2 · illustrations Fluent Emoji (MIT)';
+  $('versionJeu').textContent = 'Version 1.23.0 · illustrations Fluent Emoji (MIT)';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -1615,6 +1643,58 @@
   function ajouterEffet(t, fort) { const b = $('banniere'); const e = b.querySelector('.eff'); if (e && !e.textContent.includes(t)) e.textContent += (e.textContent ? ' · ' : '') + t; if (fort) b.classList.add('fort'); }
   function cacherBanniere() { $('banniere').classList.remove('visible', 'fort'); }
 
+  // ---------- Effets de combat : projectiles, impacts, critiques (le « punch ») ----------
+  // Corps à corps (airain, roc) : une entaille sur la cible. À distance : un projectile qui vole de la carte qui attaque à sa cible.
+  const CORPS_A_CORPS = ['airain', 'roc'];
+  const centre = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  function calqueFx() { let z = document.getElementById('fx'); if (!z) { z = document.createElement('div'); z.id = 'fx'; document.body.appendChild(z); } return z; }
+  function projectile(srcEl, cibleEl, affinite, fort) {
+    if (!srcEl || !cibleEl || CORPS_A_CORPS.includes(affinite)) return;
+    const a = aff(affinite), p0 = centre(srcEl), p1 = centre(cibleEl), z = calqueFx();
+    const b = document.createElement('div'); b.className = 'projectile'; b.textContent = a.icone;
+    b.style.setProperty('--c', a.couleur); if (fort) b.classList.add('fort');
+    z.appendChild(b);
+    const d = T_(230);
+    const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180 / Math.PI;
+    if (b.animate) b.animate([
+      { transform: `translate(${p0.x}px, ${p0.y}px) translate(-50%, -50%) rotate(${angle}deg) scale(.5)`, opacity: .4 },
+      { transform: `translate(${(p0.x + p1.x) / 2}px, ${(p0.y + p1.y) / 2 - 18}px) translate(-50%, -50%) rotate(${angle}deg) scale(1.15)`, opacity: 1 },
+      { transform: `translate(${p1.x}px, ${p1.y}px) translate(-50%, -50%) rotate(${angle}deg) scale(1.4)`, opacity: 1 }
+    ], { duration: d, easing: 'ease-in' });
+    // traînée
+    for (let i = 1; i <= 4; i++) setTimeout(() => {
+      const t = document.createElement('div'); t.className = 'trainee'; t.style.setProperty('--c', a.couleur);
+      const k = i / 5; t.style.left = (p0.x + (p1.x - p0.x) * k) + 'px'; t.style.top = (p0.y + (p1.y - p0.y) * k - 18 * Math.sin(Math.PI * k)) + 'px';
+      z.appendChild(t); setTimeout(() => t.remove(), T_(380));
+    }, d * i / 5);
+    setTimeout(() => b.remove(), d + 20);
+  }
+  function impact(cibleEl, affinite, fort, critique) {
+    if (!cibleEl) return;
+    const a = aff(affinite), p = centre(cibleEl), z = calqueFx();
+    const onde = document.createElement('div'); onde.className = 'ondeChoc' + (fort ? ' fort' : '');
+    onde.style.setProperty('--c', a.couleur); onde.style.left = p.x + 'px'; onde.style.top = p.y + 'px';
+    z.appendChild(onde); setTimeout(() => onde.remove(), T_(520));
+    if (CORPS_A_CORPS.includes(affinite)) {
+      const e = document.createElement('div'); e.className = 'entaille'; e.style.setProperty('--c', a.couleur);
+      e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; z.appendChild(e); setTimeout(() => e.remove(), T_(380));
+    }
+    rejouer(cibleEl, 'flash');
+    if (critique) {
+      const s = document.createElement('div'); s.className = 'tamponCrit'; s.textContent = 'CRITIQUE !';
+      s.style.left = p.x + 'px'; s.style.top = (p.y - 34) + 'px'; z.appendChild(s); setTimeout(() => s.remove(), T_(900));
+      rejouer($('combat'), 'eclairEcran');
+    }
+    if (affinite === 'foudre' && fort) rejouer($('combat'), 'eclairEcran');
+    if (fort) rejouer($('combat'), 'zoomCoup');
+  }
+  function poussiere(el) { if (el) particules(el, '💨', 6); }
+  function auraSoin(el, couleur) {
+    if (!el) return; const p = centre(el), z = calqueFx();
+    const o = document.createElement('div'); o.className = 'ondeChoc soin'; o.style.setProperty('--c', couleur || '#7fdc7f');
+    o.style.left = p.x + 'px'; o.style.top = p.y + 'px'; z.appendChild(o); setTimeout(() => o.remove(), T_(600));
+  }
+
   // Joue les événements un par un. Renvoie la durée totale (ms, vitesse incluse).
   function animer(evenements) {
     const etat = partie.etat;
@@ -1630,6 +1710,7 @@
             banniere(src.emoji + ' ' + src.nom, aff(comp.affinite).icone + ' ' + comp.nom, '');
             SON.jouer('action');
             rejouer(carteEl(e.source), src.camp === 'allie' ? 'elan-haut' : 'elan-bas');
+            const ce = carteEl(e.source); if (ce) { ce.style.setProperty('--aura', aff(comp.affinite).couleur); rejouer(ce, 'aura'); }
             journal(src.nom + ' : ' + comp.nom);
             partie.actionCourante = comp.nom;
           });
@@ -1637,14 +1718,17 @@
         }
         case 'degats': {
           const fort = e.critique || e.mult > 1;
-          plus(fort ? 700 : 450, () => {
+          // le projectile part, puis l'impact (avec un court arrêt sur image pour un critique)
+          if (!CORPS_A_CORPS.includes(e.affinite)) plus(230, () => projectile(carteEl(e.source), carteEl(e.cible), e.affinite, fort));
+          plus(fort ? (e.critique ? 820 : 700) : 450, () => {
             const c = carteEl(e.cible);
             const src = M.unite(etat, e.source);
             rejouer(c, 'touche');
+            impact(c, e.affinite, fort, e.critique);
             SON.coup(e.affinite, fort, e.critique);
             particules(c, aff(e.affinite).icone, fort ? 9 : 5);
             if (e.degats >= 40 || fort) rejouer($('app'), 'tremble');
-            flotter(c, '-' + e.degats + (e.critique ? ' !' : ''), e.mult > 1 ? 'fort' : e.mult < 1 ? 'faible' : '');
+            flotter(c, '-' + e.degats + (e.critique ? ' !' : ''), (e.mult > 1 ? 'fort' : e.mult < 1 ? 'faible' : '') + (e.critique ? ' crit' : '') + (e.degats >= 60 ? ' gros' : ''));
             if (e.mult > 1) { ajouterEffet('Efficace x1,5', true); if (src.camp === 'allie') clotho('efficace'); }
             if (e.mult < 1) { ajouterEffet('Peu efficace x0,67'); if (src.camp === 'allie') clotho('peuEfficace'); }
             if (e.critique) ajouterEffet('Critique !', true);
@@ -1660,11 +1744,11 @@
           break;
         }
         case 'rate': plus(350, () => { SON.jouer('rate'); flotter(carteEl(e.cible), 'Raté', 'faible'); ajouterEffet('Raté'); }); break;
-        case 'soin': plus(450, () => { SON.jouer('soin'); const c = carteEl(e.cible); flotter(c, '+' + e.soin, 'soin'); particules(c, '✨', 5); journal(N(e.cible) + ' récupère ' + e.soin + ' PV'); }); break;
+        case 'soin': plus(450, () => { SON.jouer('soin'); const c = carteEl(e.cible); flotter(c, '+' + e.soin, 'soin'); particules(c, '✨', 5); auraSoin(c); journal(N(e.cible) + ' récupère ' + e.soin + ' PV'); }); break;
         case 'brulure': plus(550, () => { SON.coup('flamme', false); banniere('🔥 Brûlure', N(e.cible), '-' + e.degats + ' PV'); const c = carteEl(e.cible); rejouer(c, 'touche'); particules(c, '🔥', 4); flotter(c, '-' + e.degats); }); break;
         case 'etat': plus(250, () => { if (e.etat === 'etourdi') { flotter(carteEl(e.cible), '💫 Étourdi', 'info'); ajouterEffet('Étourdi !'); } if (e.etat === 'brulure') ajouterEffet('Brûlure 2 tours'); }); break;
-        case 'interception': plus(400, () => { SON.jouer('garde'); flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
-        case 'garde': plus(350, () => { SON.jouer('garde'); flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
+        case 'interception': plus(400, () => { SON.jouer('garde'); auraSoin(carteEl(e.gardien), '#8fc6ff'); rejouer(carteEl(e.gardien), 'touche'); flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
+        case 'garde': plus(350, () => { SON.jouer('garde'); auraSoin(carteEl(e.cible), '#8fc6ff'); flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
         case 'presage': plus(350, () => { flotter(carteEl(e.cible), '⏩ joue ensuite', 'info'); ajouterEffet(N(e.cible) + ' joue juste après'); }); break;
         case 'bouclier': plus(220, () => { SON.jouer('garde'); flotter(carteEl(e.cible), '🔰', 'info'); ajouterEffet('Bouclier levé'); }); break;
         case 'bouclierUse': plus(200, () => { flotter(carteEl(e.cible), '🔰 amorti', 'info'); }); break;
@@ -1685,7 +1769,8 @@
         case 'recul': plus(300, () => { flotter(carteEl(e.cible), '⏪ recule', 'info'); ajouterEffet('Recule dans la File'); }); break;
         case 'ko': plus(800, () => {
           const u = M.unite(etat, e.cible);
-          rejouer(carteEl(e.cible), 'effiloche'); SON.jouer('ko');
+          rejouer(carteEl(e.cible), 'effiloche'); SON.jouer('ko'); poussiere(carteEl(e.cible));
+          if (u.camp === 'ennemi' && (u.gardien || M.vivants(etat, 'ennemi').length === 0)) rejouer($('combat'), 'ralenti');
           ajouterEffet(N(e.cible) + ' tombe');
           journal(N(e.cible) + ' tombe.');
           if (u.camp === 'allie') { partie.kos++; clotho('ko'); } else { P.noterCodex(profil, u.id, 'vaincu'); partie.vaincus++; $('filProgres').style.width = Math.round(100 * partie.vaincus / partie.totalEnnemis) + '%'; }
