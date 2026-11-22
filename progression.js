@@ -193,7 +193,7 @@
   function ennemisPourJoueur(r, profil, jour) {
     const e = D.ennemisDeRencontre(r);
     if (jour <= 3) return e;
-    const m = 1.04 + 0.07 * (profil.niveau - 1) + 0.012 * (jour - 4);
+    const m = 1.04 + 0.07 * (profil.niveau - 1) + 0.012 * (Math.min(jour, 30) - 4) + 0.004 * Math.max(0, jour - 30); // après le Chant I, la pente ralentit
     return e.map(x => Object.assign(x, { pvMax: Math.round(x.pvMax * m), attaque: Math.round(x.attaque * m) }));
   }
 
@@ -282,6 +282,11 @@
     Object.keys(profil.codex || {}).forEach(id => { b[id] = Math.min(0.3, 0.05 * profil.codex[id].vaincus); });
     return b;
   }
+  // Invité de passage (Chant II) : à la force de l'équipe
+  function invite(id, profil) {
+    const m = multiplicateurEquipe(profil.niveau) * (1 + 0.012 * Math.max(0, (profil.joursJoues || 0) - 30)), x = JSON.parse(JSON.stringify(D.INVITES[id]));
+    return Object.assign(x, { pvMax: Math.round(x.pvMax * m), attaque: Math.round(x.attaque * m) });
+  }
   // ---------- Récit : choix du Chant ----------
   // option : { id, jauge, effet: { drachmes, xp, fil } }. Renvoie le nombre de niveaux gagnés.
   function appliquerChoix(profil, cle, option) {
@@ -293,6 +298,17 @@
     const e = option.effet || {};
     if (e.drachmes) profil.drachmes += e.drachmes;
     if (e.fil) profil.filsReserve = Math.min(3, (profil.filsReserve || 0) + e.fil);
+    if (e.carte && !profil.cartes[e.carte]) profil.cartes[e.carte] = { niveau: 1, doublons: 0 };
+    if (e.talisman && profil.activites) { // Héphaïstos bénit le talisman équipé (ou offre l'Amulette d'Athéna)
+      const a = profil.activites; a.talismans = a.talismans || {};
+      const id = a.talisman || 'athena';
+      a.talismans[id] = Math.min(3, (a.talismans[id] || 0) + e.talisman); if (!a.talisman) a.talisman = id;
+    }
+    if (e.liberer && (profil.liens || []).length) { // la créature liée la plus récente (hors créature active si possible) part tenir le Sceau
+      const l = profil.liens.filter(x => x.uid !== profil.lienActif).slice(-1)[0] || profil.liens.slice(-1)[0];
+      h.offerte = { espece: l.espece, surnom: l.surnom };
+      libererLien(profil, l.uid);
+    }
     return e.xp ? ajouterXp(profil, e.xp) : 0;
   }
   // Applique les bonus du jour (fêtes, dieux, finale) aux gains
@@ -307,7 +323,7 @@
     const heros = herosDisponibles(profil);
     const options = [];
     // 1. Une carte inédite, si possible
-    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && !carteInfo(id).carte.voie && heros.includes(carteInfo(id).heros.id));
+    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && !carteInfo(id).carte.voie && !carteInfo(id).carte.secret && heros.includes(carteInfo(id).heros.id));
     if (inedites.length && hasard() < 0.5) options.push({ type: 'carte', id: inedites[Math.floor(hasard() * inedites.length)] });
     // 2. Des doublons d'une carte équipée (ou possédée)
     const equipees = heros.flatMap(h => profil.equipement[h] || []).filter(id => profil.cartes[id] && profil.cartes[id].niveau < NIVEAU_MAX_CARTE);
@@ -352,7 +368,7 @@
     const q = QUALITES[qualite], hasard = M.creerHasard(graine), objets = [];
     const heros = herosDisponibles(profil);
     const equipees = heros.flatMap(h => profil.equipement[h] || []).filter(id => profil.cartes[id] && profil.cartes[id].niveau < NIVEAU_MAX_CARTE);
-    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && !carteInfo(id).carte.voie && heros.includes(carteInfo(id).heros.id));
+    const inedites = Object.keys(D.RARETES).filter(id => !profil.cartes[id] && !carteInfo(id).carte.voie && !carteInfo(id).carte.secret && heros.includes(carteInfo(id).heros.id));
     objets.push({ type: 'drachmes', nombre: q.drachmes[0] + Math.floor(hasard() * (q.drachmes[1] - q.drachmes[0] + 1)) });
     for (let i = 1; i < q.objets; i++) {
       if (inedites.length && hasard() < q.inedite) { const id = inedites.splice(Math.floor(hasard() * inedites.length), 1)[0]; objets.push({ type: 'carte', id }); continue; }
@@ -418,7 +434,7 @@
     NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, LIENS_MAX, TRAITS, trait, lienActif, choisirLien, libererLien, NOMS_RARETE, COULEURS_RARETE,
     initialiser, rarete, carteInfo, coutAmelioration, peutAmeliorer, ameliorer, basculerEquipement,
     equipeDuJoueur, ennemisPourJoueur, butin, xpPourNiveau, gains, ajouterXp, herosDisponibles, genererDon, appliquerDon,
-    multiplicateurCarte, multiplicateurEquipe
+    multiplicateurCarte, multiplicateurEquipe, invite
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Progression;
   else racine.Progression = Progression;

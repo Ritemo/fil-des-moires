@@ -82,6 +82,7 @@
       unites: [],
       journal: [],
       premieresFois: options.premieresFois || {},
+      chaleur: options.chaleur ? { compte: 0, niveau: 0 } : null,
       fini: null
     };
     options.allies.forEach((m, i) => etat.unites.push(creerUnite(m, 'allie', i)));
@@ -137,6 +138,19 @@
     if (!acteur) return { acteur: null, evenements, passe: true };
     etat.temps = acteur.prochain;
     etat.tour++;
+    // Chaleur des Forges : toutes les 9 actions (environ 3 tours de chacun), la chaleur monte et brûle tout le monde, sauf l'Onde
+    if (etat.chaleur && etat.tour % 9 === 0) {
+      etat.chaleur.niveau++;
+      const pct = Math.min(0.12, 0.04 + 0.02 * etat.chaleur.niveau);
+      evenements.push({ type: 'chaleur', niveau: etat.chaleur.niveau });
+      vivants(etat).filter(u => u.affinite !== 'onde' && u.affinite !== 'flamme').forEach(u => {
+        const d = Math.max(1, Math.round(u.pvMax * pct));
+        u.pv = Math.max(0, u.pv - d);
+        evenements.push({ type: 'brulure', cible: u.uid, degats: d, chaleur: true });
+        if (u.pv <= 0) tomber(etat, u, evenements);
+      });
+      if (verifierFin(etat) || acteur.ko) { if (acteur.ko) finTour(etat, acteur, 'normal'); return { acteur, evenements, passe: true }; }
+    }
     // une Garde dure jusqu'au prochain tour du gardien
     etat.unites.forEach(u => { if (u.gardePar === acteur.uid) u.gardePar = null; });
     acteur.energie = Math.min(acteur.energieMax, acteur.energie + 1);
@@ -178,6 +192,9 @@
     }
     u.ko = true; u.pv = 0; u.etats = {};
     evenements.push({ type: 'ko', cible: u.uid });
+    if (u.chaine && !vivants(etat, u.camp).some(x => x.chaine)) vivants(etat, u.camp).filter(x => x.mecanique === 'campe' && !x.enrage).forEach(x => {
+      x.enrage = true; evenements.push({ type: 'phase2', cible: x.uid });
+    });
     if (u.camp === 'ennemi') gagnerGloire(etat, 20, evenements);
   }
 
@@ -220,6 +237,8 @@
     let d = comp.puissance * attaquant.attaque / (attaquant.attaque + cible.defense) * 1.6;
     d = d * mult * (critique ? 1.5 : 1) * variation;
     if (attaquant.vengeance && etat.unites.some(u => u.camp === attaquant.camp && u.ko)) d *= 1.15;
+    if (cible.etats && cible.etats.fissure) d *= 1.5;
+    if (attaquant.enrage) d *= 1.25;
     return { degats: Math.max(1, Math.round(d)), mult, critique };
   }
 
@@ -241,6 +260,9 @@
     }
     const r = calculerDegats(etat, attaquant, cible, comp);
     if (cible.etats.bouclier) { reduction *= 0.5; delete cible.etats.bouclier; evenements.push({ type: 'bouclierUse', cible: cible.uid }); }
+    // Campé : tant qu'une chaîne tient, elle ne prend que 35 % des dégâts
+    if (cible.mecanique === 'campe' && vivants(etat, cible.camp).some(u => u.chaine)) { reduction *= 0.35; evenements.push({ type: 'chaines', cible: cible.uid }); }
+    if (cible.etats.fissure && comp.affinite !== 'onde') { cible.etats.fissure--; if (cible.etats.fissure <= 0) delete cible.etats.fissure; }
     const degats = Math.max(1, Math.round(r.degats * reduction));
     cible.pv = Math.max(0, cible.pv - degats);
     evenements.push({ type: 'degats', source: attaquant.uid, cible: cible.uid, degats, mult: r.mult, critique: r.critique, affinite: comp.affinite });
@@ -271,6 +293,16 @@
         evenements.push({ type: 'tete', cible: cible.uid, tetes: cible.tetes });
       }
     }
+    // Soif de la Kère : elle boit une part des dégâts
+    if (comp.drain && attaquant.pv > 0) {
+      const soin = Math.min(attaquant.pvMax - attaquant.pv, Math.round(degats * comp.drain));
+      if (soin > 0) { attaquant.pv += soin; evenements.push({ type: 'soin', source: attaquant.uid, cible: attaquant.uid, soin }); }
+    }
+    // Mécanique de Talos : l'Onde refroidit son bronze et le fend
+    if (cible.mecanique === 'talos' && comp.affinite === 'onde' && cible.pv > 0) {
+      cible.etats.fissure = 2;
+      evenements.push({ type: 'fissure', cible: cible.uid });
+    }
     // Mécanique du Cyclope : la Lumière l'aveugle
     if (cible.mecanique === 'cyclope' && comp.affinite === 'lumiere' && cible.pv > 0 && !cible.etats.aveugle) {
       cible.etats.aveugle = true;
@@ -293,6 +325,7 @@
       const cibles = comp.zone ? ciblesPossibles(etat, acteur, comp) : [cible];
       const coups = comp.coups || 1;
       cibles.forEach(c => { for (let i = 0; i < coups && !c.ko; i++) infliger(etat, acteur, c, comp, evenements); });
+      if (comp.bouclierSoi && !acteur.ko) { acteur.etats.bouclier = true; evenements.push({ type: 'bouclier', cible: acteur.uid }); }
     } else if (comp.type === 'soin') {
       const cibles = comp.zone ? vivants(etat, acteur.camp) : [cible];
       cibles.forEach(c => {

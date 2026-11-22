@@ -477,6 +477,9 @@
       page: "Je mesure tout ce qui est, et je n'arrive plus à mesurer les Effilés. Leur fil n'est pas coupé : il est tiré, maille après maille, vers le bas de la tapisserie. Quelque chose, sous le Métier, tire. Les Sceaux de Maïa le retiennent. Il en reste six." },
     { id: 'atropos', nom: "Le Fil d'Atropos", emoji: '✂️', qui: 'atropos',
       page: "Ma sœur croit que je coupe par plaisir. Je coupe ce qui pourrit, avant que la pourriture ne gagne le reste. Il y a eu un Errant avant toi. Clotho ne te l'a pas dit ? Son fil aussi était sans destin. Je n'ai pas eu à le couper. Il s'est défait tout seul. Demande-toi pourquoi." }
+,
+    { id: 'premier', nom: 'Le premier Errant', emoji: '🗿', qui: 'clotho', apres: 'maia',
+      page: "Il s'appelait Alastor. Je l'avais filé au quatrième fuseau, comme toi, un soir où le monde avait froid. Il a tenu trois Sceaux. Au quatrième, il a voulu voir ce qui tirait les fils vers le bas. Il est descendu. Quand il est remonté, il ne se souvenait plus de son nom, et Héphaïstos a effacé son visage pour que personne ne le reconnaisse. Je ne te laisserai pas descendre seul, Errant." }
   ];
   const FRAGMENTS = [
     ['metier', 1, "« ...un métier plus vaste que le ciel, et quatre fuseaux de bronze... »"],
@@ -490,10 +493,15 @@
     ['atropos', 1, "« ...les ciseaux d'Atropos sont faits d'une étoile tombée... »"],
     ['atropos', 2, "« ...elle a pleuré, une fois, en coupant un fil. Personne ne sait lequel... »"],
     ['atropos', 3, "« ...un autre fil sans destin, bien avant celui de l'Errant... »"],
-    ['atropos', 4, "« ...son nom a été effacé de la tapisserie. Il en reste un trou, en haut à gauche... »"]
+    ['atropos', 4, "« ...son nom a été effacé de la tapisserie. Il en reste un trou, en haut à gauche... »"],
+    ['premier', 1, "« ...une statue de bronze, un glaive, et un visage effacé au burin... »"],
+    ['premier', 2, "« ...il a tenu trois Sceaux, puis il a voulu savoir ce qui tirait les fils... »"],
+    ['premier', 3, "« ...Héphaïstos a pleuré en tenant le burin. Il l'appelait \"mon ami\"... »"],
+    ['premier', 4, "« ...celui qui descend sous le dernier Sceau ne remonte jamais tout à fait le même... »"]
   ].map(([serie, n, texte]) => ({ id: serie + n, serie, n, texte }));
   function donnerFragment(profil, h) {
-    const a = profil.activites, manquants = FRAGMENTS.filter(f => !(a.fragments || []).includes(f.id));
+    const sceaux = (profil.histoire && profil.histoire.sceaux) || [];
+    const a = profil.activites, manquants = FRAGMENTS.filter(f => !(a.fragments || []).includes(f.id) && (!(SERIES.find(x => x.id === f.serie) || {}).apres || sceaux.includes(SERIES.find(x => x.id === f.serie).apres)));
     if (!manquants.length) return null;
     const f = manquants[Math.floor((typeof h === 'function' ? h() : Math.random()) * manquants.length)];
     a.fragments = (a.fragments || []).concat(f.id);
@@ -556,7 +564,9 @@
     { id: 'hermes', nom: "Ami d'Hermès", titre: "Ami d'Hermès", desc: '5 achats chez le Marchand.', test: p => (p.activites.achatsTotal || 0) >= 5 },
     { id: 'fragments', nom: 'Lecteur de fils', titre: 'Lecteur de fils', desc: 'Compléter une série de fragments.', test: p => SERIES.some(s => FRAGMENTS.filter(f => f.serie === s.id).every(f => (p.activites.fragments || []).includes(f.id))) },
     { id: 'penchant', nom: 'Un fil qui penche', titre: null, desc: 'Avoir un penchant affirmé (Honneur, Ruse ou Piété).', test: p => !!(p.histoire && p.histoire.dominante) },
-    { id: 'hydre', nom: "Vainqueur de l'Hydre", titre: "Vainqueur de l'Hydre", desc: 'Achever le Chant I.', test: p => ((p.histoire || {}).sceaux || []).includes('maia') }
+    { id: 'hydre', nom: "Vainqueur de l'Hydre", titre: "Vainqueur de l'Hydre", desc: 'Achever le Chant I.', test: p => ((p.histoire || {}).sceaux || []).includes('maia') },
+    { id: 'campe', nom: 'Briseur de chaînes', titre: 'Briseur de chaînes', desc: 'Achever le Chant II : vaincre Campé, la Geôlière.', test: p => ((p.histoire || {}).sceaux || []).includes('campe') },
+    { id: 'forge', nom: "Ami d'Héphaïstos", titre: "Ami d'Héphaïstos", desc: 'Lier une créature des Forges (Salamandre, Chien de cendre ou Automate).', test: p => (p.liens || []).some(l => ['salamandre', 'chien_cendre', 'automate'].includes(l.espece)) }
   ];
   function verifierHautsFaits(profil, date) {
     const a = profil.activites; a.hautsFaits = a.hautsFaits || {};

@@ -15,7 +15,8 @@ sync.js     la sauvegarde commune entre appareils
 tapisserie.js le dessin de la Tapisserie
 progression.js cartes, niveaux, XP, drachmes, Don des Moires, Offrande, série, Route, Voies, Serments, créatures liées, Codex
 chant1.js    le Chant I écrit : 30 jours, scènes, répliques de fin, choix et leurs conséquences
-epreuves.js  l'épreuve du jour (le Chant I, puis des épreuves générées en attendant le Chant II)
+chant2.js    le Chant II écrit : « La Forge sous la Montagne », jours 31 à 60 du récit
+epreuves.js  l'épreuve du jour (Chant I, Chant II, puis des épreuves générées en attendant le Chant III)
 sauvegarde/ le script Google Apps Script de sauvegarde
 voix.js     les voix : fichiers pré-enregistrés (art/voix/), sinon la synthèse vocale de l'appareil
 outils/     repliques.js (liste des répliques) et voix.py (enregistrement), utilisés par le robot Voix
@@ -84,7 +85,7 @@ Les personnages, créatures et cartes utilisent les émoticônes 3D **Fluent Emo
 
 ## Voix de l'histoire
 
-Le robot **Voix** (GitHub Actions, `.github/workflows/voix.yml`) enregistre chaque réplique de l'histoire avec une voix neuronale par personnage (service de lecture à voix haute de Microsoft Edge, via `edge-tts`, gratuit et sans clé). Il se lance tout seul quand `chant1.js` change, ou à la main : onglet *Actions* > *Voix* > *Run workflow*. Les fichiers vont dans `art/voix/` ; seules les répliques nouvelles ou modifiées sont enregistrées. Les voix de chaque personnage se règlent dans `outils/voix.py`. Si un fichier manque, le jeu utilise la voix de l'appareil.
+Le robot **Voix** (GitHub Actions, `.github/workflows/voix.yml`) enregistre chaque réplique de l'histoire avec une voix neuronale par personnage (service de lecture à voix haute de Microsoft Edge, via `edge-tts`, gratuit et sans clé). Il se lance tout seul quand `chant1.js` ou `chant2.js` change, ou à la main : onglet *Actions* > *Voix* > *Run workflow*. Les fichiers vont dans `art/voix/` ; seules les répliques nouvelles ou modifiées sont enregistrées. Les voix de chaque personnage se règlent dans `outils/voix.py`. Si un fichier manque, le jeu utilise la voix de l'appareil.
 
 ## Rattrapage des jours manqués
 
@@ -147,10 +148,23 @@ ntfy refuse souvent les messages venant de Google (erreur 429 : les serveurs de 
 
 Vérification : `<adresse du script>/exec?version=1` affiche le journal des derniers envois (200 = envoyé directement, « confié au robot » puis « robot réveillé -> 204 » = passé par GitHub). Quand le jeton expire, le journal affiche « robot réveillé -> 401 » : en générer un nouveau.
 
+## Le Chant II : « La Forge sous la Montagne »
+
+Il commence le lendemain de la victoire sur l'Hydre éveillée (le jeu note ce jour dans `histoire.debutChant2` : si la finale a dû être rejouée, le Chant II ne saute aucun jour). Ses jours sont numérotés 31 à 60 dans le récit (`jc`), et ses choix sont gardés sous `j41`, `j48` et `j57`.
+
+- Chapitres : V Les Cendres du Nord, VI Les Forges éteintes, VII Le Labyrinthe de lave, VIII Les Portes du Tartare.
+- Gardiens : la Chimère des Forges (jour 37), Argès (44), Lysandre à la lame d'étoile (48), Talos (51), Campé la Geôlière (60, en deux phases : ses Chaînes la protègent, puis elle enrage).
+- Nouveaux ennemis : Salamandre, Chien de cendre et Automate de bronze (on peut les lier), Kère (esprit de mort, elle boit la vie), Chaîne du Tartare.
+- Nouveau personnage : Cédalion, l'apprenti d'Héphaïstos. Invités de passage selon les choix : Brontès (jours 42 à 44), Ismène, l'ancienne Lysandre (jours 58 et 60).
+- Règle d'environnement : la **Chaleur des Forges** (toutes les 9 actions, brûle tout le monde sauf l'Onde et la Flamme), sur six épreuves.
+- Une deuxième tapisserie (motif : Campé, fond de lave) ; celle du Chant I reste dans la Chronique. Quatre fragments « Le premier Errant » (disponibles après le Sceau de Maïa) et deux hauts faits.
+- Décors : quatre peintures du domaine public téléchargées par le robot Décors (`outils/decors.py`, il les cherche sur Wikimedia Commons).
+- Si Campé n'est pas vaincue au jour 60 du récit, la finale revient chaque jour (un peu plus facile à chaque tentative). Ensuite, des épreuves générées avec les ennemis des Forges, en attendant le Chant III.
+
 ## Feuille de route (idées pour les saisons suivantes)
 
 - Saison 2 ou 3 : Voie secondaire complète (avec son passif, ou un passif réduit), au lieu des deux seules cartes données au niveau 10.
 - Saison 2 ou 3 : avec deux Voies maîtrisées, un emplacement d'attaques porté de 4 à 6 cartes par héros (vérifier l'équilibrage et l'affichage du combat).
 - Saison 2 : la Chimère sur mesure. Recueillir du sang de Titan (Titan de la semaine) et, au bout d'un moment, forger sa propre créature à partir des créatures liées : une tête, un corps, des pattes, une queue et un attribut en plus (ailes, cornes...). Chaque morceau apporte une capacité de la créature d'origine (ex. Vol avec les ailes de la chauve-souris, Battement de queue avec la queue du griffon). Les créatures utilisées sont sacrifiées : on perd ces alliés, mais la Chimère reprend leur force : chaque sacrifice lui donne des bonus selon le niveau des cartes de la créature sacrifiée. On peut lier plusieurs exemplaires d'une même créature (plusieurs satyres...), dans la limite de 10 liaisons.
 - Saison 3 : combos secrets de la Chimère (ex. tête de manticore + ailes d'aigle = dragon).
-- Chant II à écrire avant le jour 30 du Chant I.
+- Chant III à écrire avant le jour 60 du récit (le prix caché du chemin d'Hermès, choix `j57=ruse`, y sera révélé).

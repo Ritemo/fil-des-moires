@@ -18,7 +18,7 @@
   window.addEventListener('resize', majHauteur);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', majHauteur);
   window.addEventListener('pageshow', majHauteur);
-  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves, C = window.Chant1, A = window.Activites;
+  const M = window.Moteur, D = window.Donnees, T = window.Tapisserie, S = window.Sync, P = window.Progression, E = window.Epreuves, C = window.Chant1, C2 = window.Chant2, A = window.Activites;
   const $ = id => document.getElementById(id);
 
   // ---------- Stockage (protégé : peut être indisponible) ----------
@@ -270,16 +270,20 @@
     I: { ciel: ['#f4b26a', '#8a3f2c'], loin: '#7a3a24', pres: '#3a1e14', astre: '#ffe1a0', deco: 'foret' },
     II: { ciel: ['#b9c9d6', '#45566c'], loin: '#5f6f7e', pres: '#2c3640', astre: '#f4f1e4', deco: 'ruines' },
     III: { ciel: ['#c39be0', '#33204e'], loin: '#5a3c74', pres: '#22162e', astre: '#ffd27a', deco: 'fils' },
-    IV: { ciel: ['#33426a', '#0c1222'], loin: '#1e2a44', pres: '#0d1424', astre: '#f2f0dc', deco: 'etang' }
+    IV: { ciel: ['#33426a', '#0c1222'], loin: '#1e2a44', pres: '#0d1424', astre: '#f2f0dc', deco: 'etang' },
+    V: { ciel: ['#9a8a80', '#3a302c'], loin: '#5a4c46', pres: '#2a221e', astre: '#ffb070', deco: 'ruines' },
+    VI: { ciel: ['#e0763a', '#3a1408'], loin: '#6a2a14', pres: '#2a0e06', astre: '#ffd27a', deco: 'ruines' },
+    VII: { ciel: ['#d24a1c', '#200806'], loin: '#5a1a0c', pres: '#1a0604', astre: '#ffb040', deco: 'fils' },
+    VIII: { ciel: ['#3a2a44', '#08040c'], loin: '#22162a', pres: '#0a060e', astre: '#c890ff', deco: 'etang' }
   };
   // Décors : peintures du domaine public (Wikimedia Commons), une par chapitre
-  const DECORS = { I: 'foret', II: 'ruines', III: 'fils', IV: 'etang' };
+  const DECORS = { I: 'foret', II: 'ruines', III: 'fils', IV: 'etang', V: 'cendres', VI: 'forge', VII: 'lave', VIII: 'tartare' };
   function decorDe(ep, jour) {
     if (ep && ep.chapitre && DECORS[ep.chapitre.num]) return 'art/decor/' + DECORS[ep.chapitre.num] + '.jpg';
     return 'art/decor/' + ['foret', 'ruines', 'fils', 'etang'][((jour || 1) - 1) % 4] + '.jpg';
   }
   function vignetteSvg(ep, fait) {
-    const P_ = PAYSAGES[ep.chapitre ? ep.chapitre.num : 'IV'];
+    const P_ = PAYSAGES[ep.chapitre ? ep.chapitre.num : 'IV'] || PAYSAGES.IV;
     const fond = decorDe(ep, ep.jour);
     const h = (a, b) => { let x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return x - Math.floor(x); };
     let deco = '';
@@ -852,15 +856,15 @@
   function ouvrirTapisserie() {
     ecran('tapisserie');
     const r = T.dessiner($('tapisAccueil'), profil.rangs);
-    $('tapisCompte').textContent = r.tisses + ' / 30 rangs';
+    $('tapisCompte').textContent = 'Chant ' + r.chant + ' · ' + r.tisses + ' / 30 rangs';
     $('tapisLegende').textContent = !r.tisses ? 'Ta tapisserie est vierge. Chaque épreuve y tisse un rang, de bas en haut.'
       : r.splendide ? '✨ Aucun accroc : ta tapisserie est splendide. Touche un rang pour revoir ta journée.' : 'Touche un rang pour revoir ta journée. Chaque victoire parfaite la rend plus belle.';
   }
-  $('btnChroniqueModale').onclick = () => { $('titreModale').textContent = '📜 Chronique du Chant I'; $('onglets').innerHTML = ''; $('lexiqueCorps').innerHTML = chroniqueHtml(); $('modale').classList.add('visible'); };
+  $('btnChroniqueModale').onclick = () => { $('titreModale').textContent = '📜 Chronique'; $('onglets').innerHTML = ''; $('lexiqueCorps').innerHTML = chroniqueHtml(); $('modale').classList.add('visible'); };
   $('tapisAccueil').onclick = e => {
     const t = T.rangTouche($('tapisAccueil'), profil.rangs, e);
     if (!t) return;
-    const r = t.rang, j = C.JOURS[t.jour], ch = j && j.choix, opt = ch && ch.options.find(o => o.id === profil.histoire.choix['j' + t.jour]);
+    const r = t.rang, j = jourDuRecit(t.jour), ch = j && j.choix, opt = ch && ch.options.find(o => o.id === profil.histoire.choix['j' + t.jour]);
     $('titreModale').textContent = 'Jour ' + t.jour + (r ? ' · ' + r.titre : '');
     $('onglets').innerHTML = '';
     $('lexiqueCorps').innerHTML = !r ? `<div class="ligne">Ce rang n'est pas encore tissé.${t.jour > profil.joursJoues + 1 ? ' Il le sera dans ' + (t.jour - profil.joursJoues - 1) + ' jour(s).' : ' C\'est celui de ton épreuve du jour.'}</div>`
@@ -949,7 +953,7 @@
     };
     return true;
   }
-  $('versionJeu').innerHTML = 'Version 1.25.0 · illustrations Fluent Emoji (MIT)<br>Décors : peintures du domaine public (Chichkine, Friedrich, Böcklin, von Klenze), Wikimedia Commons';
+  $('versionJeu').innerHTML = 'Version 1.26.0 · illustrations Fluent Emoji (MIT)<br>Décors : peintures du domaine public (Chichkine, Friedrich, Böcklin, von Klenze), Wikimedia Commons';
   $('reglagesOk').onclick = () => { if (partie && ecranAvantReglages) ecran(ecranAvantReglages); else accueil(); };
   $('reglageClotho').onchange = e => { profil.clotho = e.target.value; sauver(); };
 
@@ -958,7 +962,7 @@
     const ep = E.epreuve(jour, aujourdhui(), profil.histoire);
     const graine = echo ? Math.floor(Math.random() * 1e9) : M.graineDuJour(aujourdhui() + '|' + jour);
     const totalEnnemis = ep.rencontres.reduce((n, r) => n + r.ennemis.length, 0);
-    partie = { lies: [], echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? Math.min(100, P.gloireDepart(profil) + (ep.gloireBonus || 0)) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
+    partie = { lies: [], echo, jour, ep, rencontre: 0, reprise: null, gloire: ep.gloire ? Math.max(0, Math.min(100, P.gloireDepart(profil) + (ep.gloireBonus || 0))) : 0, graine, affUsage: {}, coupMax: null, kos: 0, vaincus: 0, totalEnnemis, dernierEnnemi: null, pvAff: {} };
     $('mode').textContent = echo ? 'Écho' : 'Jour ' + jour;
     majAmbChapitre(ep);
     if (jour === 4 && !echo) clotho('discret');
@@ -1007,7 +1011,7 @@
   }
   // Choix de fin d'épreuve : enregistré dans profil.histoire, avec son effet
   function montrerChoix(ep, suite) {
-    const ch = ep.choix, cle = 'j' + ep.jour;
+    const ch = ep.choix, cle = ep.cle || 'j' + ep.jour;
     $('sceneChap').textContent = nomChapitre(ep);
     $('sceneTitre').textContent = 'Un choix';
     const f = partie.ep.fin && partie.ep.fin[partie.etat.fini === 'victoire' ? 'victoire' : 'defaite'];
@@ -1031,21 +1035,30 @@
     });
     ecran('scene');
   }
+  const jourDuRecit = jj => (jj > C.DERNIER_JOUR && C2 ? C2.JOURS[jj] : C.JOURS[jj]);
   function chroniqueHtml() {
     const h = profil.histoire;
     const rangs = profil.rangs.filter(r => !r.echo);
     const ligneJour = r => {
-      const j = C.JOURS[r.jour], ch = j && j.choix, pris = h.choix['j' + r.jour];
+      const jj = r.jc || r.jour, j = r.chant === 'II' ? C2.JOURS[jj] : (jj <= C.DERNIER_JOUR ? C.JOURS[jj] : null), ch = j && j.choix, pris = h.choix['j' + jj];
       const opt = ch && ch.options.find(o => o.id === pris);
       return `<div class="chroJour"><div class="t">Jour ${r.jour} · ${r.titre} ${r.victoire ? '★'.repeat(r.etoiles) : '✕'}</div>${r.recit || r.resume}${opt ? `<div class="c">🔀 Ton choix : ${opt.texte}.</div>` : ''}</div>`;
     };
-    let html = `<div class="bourse" style="margin-top:8px"><span>📜 Chronique du Chant I</span><span>${h.sceaux.includes('maia') ? '✨ Sceau de Maïa : tenu' : '🌑 Sceau de Maïa : menacé'}</span></div>`;
+    const deux = rangs.filter(r => r.chant === 'II'), un = rangs.filter(r => r.chant !== 'II' && r.jour <= C.DERNIER_JOUR), finale = rangs.filter(r => r.chant !== 'II' && r.jour > C.DERNIER_JOUR);
+    let html = '';
+    if (deux.length || h.sceaux.includes('maia')) {
+      html += `<div class="bourse" style="margin-top:8px"><span>📜 Chronique du Chant II</span><span>${h.sceaux.includes('campe') ? '✨ Sceau des Monts : tenu' : '🌑 Sceau des Monts : menacé'}</span></div>`;
+      C2.CHAPITRES.forEach(c => {
+        const liste = deux.filter(r => r.jc >= c.debut && r.jc <= c.fin);
+        html += `<div class="chroChap">Chapitre ${c.num} : ${c.titre}</div>` + (liste.length ? liste.map(ligneJour).join('') : '<div class="chroVide">Pas encore tissé.</div>');
+      });
+    }
+    html += `<div class="bourse" style="margin-top:8px"><span>📜 Chronique du Chant I</span><span>${h.sceaux.includes('maia') ? '✨ Sceau de Maïa : tenu' : '🌑 Sceau de Maïa : menacé'}</span></div>`;
     C.CHAPITRES.forEach(c => {
-      const liste = rangs.filter(r => r.jour >= c.debut && r.jour <= c.fin);
+      const liste = un.filter(r => r.jour >= c.debut && r.jour <= c.fin);
       html += `<div class="chroChap">Chapitre ${c.num} : ${c.titre}</div>` + (liste.length ? liste.map(ligneJour).join('') : '<div class="chroVide">Pas encore tissé.</div>');
     });
-    const apres = rangs.filter(r => r.jour > C.DERNIER_JOUR);
-    if (apres.length) html += '<div class="chroChap">Après le Chant</div>' + apres.map(ligneJour).join('');
+    if (finale.length) html += '<div class="chroChap">La finale, rejouée</div>' + finale.map(ligneJour).join('');
     return html;
   }
 
@@ -1079,7 +1092,8 @@
     const fondCombat = partie.mode === 'arene' ? 'art/decor/agora.jpg' : partie.mode === 'titan' ? 'art/decor/fils.jpg' : partie.mode === 'labyrinthe' ? 'art/decor/ruines.jpg' : decorDe(partie.ep, partie.jour);
     $('combat').style.setProperty('--decor', `url('${fondCombat}')`);
     partie.etat = M.creerCombat({ graine: partie.graine + partie.rencontre * 101,
-      allies: partie.mode ? copie(partie.allies) : A.appliquerTalisman(P.equipeDuJoueur(partie.ep, profil, partie.jour), profil.activites),
+      allies: partie.mode ? copie(partie.allies) : A.appliquerTalisman(P.equipeDuJoueur(partie.ep, profil, partie.jour), profil.activites).concat(partie.ep.invite ? [P.invite(partie.ep.invite, profil)] : []),
+      chaleur: !partie.mode && !!partie.ep.chaleur,
       ennemis: partie.mode ? copie(partie.ennemis) : P.ennemisPourJoueur(r, profil, partie.jour), reprise: partie.reprise, gloire: partie.gloire,
       gloireActive: partie.mode ? false : partie.ep.gloire, secondSouffle: partie.mode ? false : P.secondSouffle(profil), lienBonus: partie.mode ? {} : lienDuJour() });
     const o = profil.activites && profil.activites.oracle;
@@ -1170,6 +1184,7 @@
     morceaux.push(partie.kos ? partie.kos + ' chute' + (partie.kos > 1 ? 's' : '') + ' dans l\'équipe' : 'aucun héros tombé');
     const rang = { jour: partie.jour, date: aujourdhui(), titre: partie.ep.titre.replace(/^Le Prologue : /, ''), victoire, etoiles,
       couleur, motif: (etat.unites.find(u => u.gardien) || cible).emoji, resume: morceaux.join(', ') + '.', echo: partie.echo || undefined };
+    if (partie.ep.chant === 'II') { rang.chant = 'II'; rang.jc = partie.ep.jc; }
     // Équipe de l'épreuve, pour la carte de joueur du classement
     rang.equipe = etat.unites.filter(u => u.camp === 'allie').map(u => ({ id: u.id, ko: !!u.ko,
       cartes: (u.competences || []).filter(c => c.type !== 'garde' && c.type !== 'lier' && !c.prouesse).map(c => c.id) }));
@@ -1185,7 +1200,12 @@
       profil.rangs = rangs; profil.joursJoues = partie.jour; profil.derniereDate = auj;
       g = P.gains(victoire, etoiles);
       g = P.bonusDuJour(g, partie.ep);
-      if (victoire && partie.ep.final && !profil.histoire.sceaux.includes('maia')) profil.histoire.sceaux.push('maia');
+      const sceau = partie.ep.sceau || 'maia';
+      if (victoire && partie.ep.final && !profil.histoire.sceaux.includes(sceau)) {
+        profil.histoire.sceaux.push(sceau);
+        if (sceau === 'maia' && !profil.histoire.debutChant2) profil.histoire.debutChant2 = partie.jour + 1;
+        if (partie.ep.epilogue) partie.epilogue = partie.ep.epilogue;
+      }
       niveaux = P.ajouterXp(profil, g.xp);
       profil.drachmes += g.drachmes;
       if (victoire) { butin = P.butin(profil, partie.graine + 17, etoiles); dons = P.genererDon(profil, partie.graine + 29); }
@@ -1204,6 +1224,8 @@
     const pers = parole && (C.PERSOS[parole[0]] || C.PERSOS.narrateur);
     $('finQui').textContent = pers ? (pers.emoji + ' ' + (pers.nom || '')).trim() + ' :' : 'Clotho :';
     $('finClotho').textContent = parole ? parole[1] : D.CLOTHO[victoire ? 'victoire' : 'defaite'];
+    if (partie.epilogue) { const pe = C.PERSOS[partie.epilogue[0]]; $('finClotho').insertAdjacentHTML('afterend', `<div class="parchemin epilogue"><b>${pe.emoji} ${pe.nom} :</b> ${partie.epilogue[1]}</div>`); setTimeout(() => VOIX.dire(partie.epilogue[0], partie.epilogue[1]), T_(7000)); }
+    else document.querySelectorAll('#ecranFin .epilogue, .epilogue').forEach(x => x.remove());
     if (parole && !partie.echo) setTimeout(() => VOIX.dire(parole[0], parole[1]), T_(1800));
     $('btnRetour').disabled = true;
     SON.jouer(victoire ? 'victoire' : 'defaite');
@@ -1388,7 +1410,7 @@
     const boutonEnclos = !preparation && (profil.liens || []).length ? `<button class="enclosBtn" id="voirEnclos">🐾 L'Enclos de Chiron · ${profil.liens.length}/${P.LIENS_MAX} créatures</button>` : '';
     const groupes = D.HEROS.filter(h => heros.includes(h.id)).concat(D.CREATURES.filter(c => profil.creatures.includes(c.id)));
     $('colListe').innerHTML = boutonEnclos + blocCreature + groupes.map(h => {
-      const ids = h.competences.filter(c => c.type !== 'garde').map(c => c.id);
+      const ids = h.competences.filter(c => c.type !== 'garde' && (!c.secret || profil.cartes[c.id])).map(c => c.id);
       const eq = profil.equipement[h.id] || [];
       return `<h3>${h.emoji} ${h.nom} <span class="small">${eq.length}/${P.SLOTS} équipées</span></h3><div class="grille">` + ids.map(id => tuileCarte(id, { montrerEquipe: true })).join('') + '</div>';
     }).join('');
@@ -1835,7 +1857,12 @@
         }
         case 'rate': plus(350, () => { SON.jouer('rate'); flotter(carteEl(e.cible), 'Raté', 'faible'); ajouterEffet('Raté'); }); break;
         case 'soin': plus(450, () => { SON.jouer('soin'); const c = carteEl(e.cible); flotter(c, '+' + e.soin, 'soin'); particules(c, '✨', 5); auraSoin(c); journal(N(e.cible) + ' récupère ' + e.soin + ' PV'); }); break;
-        case 'brulure': plus(550, () => { SON.coup('flamme', false); banniere('🔥 Brûlure', N(e.cible), '-' + e.degats + ' PV'); const c = carteEl(e.cible); rejouer(c, 'touche'); particules(c, '🔥', 4); flotter(c, '-' + e.degats); }); break;
+        case 'chaleur': plus(900, () => { SON.coup('flamme', true); banniere('♨️ Chaleur des Forges', 'La chaleur monte (' + e.niveau + ')', 'sauf Onde et Flamme'); document.getElementById('combat').classList.add('chaud'); journal('La chaleur des Forges monte (' + e.niveau + ').'); }); break;
+        case 'chaines': plus(200, () => { flotter(carteEl(e.cible), '⛓️ protégée', 'info'); ajouterEffet('Les Chaînes protègent Campé'); }); break;
+        case 'phase2': plus(1100, () => { SON.jouer('tete'); banniere('🦂 Campé enrage', 'Ses chaînes sont brisées', '+25 % d\'attaque, plus de protection'); rejouer(carteEl(e.cible), 'touche'); journal('Les chaînes sont brisées : Campé enrage !'); }); break;
+        case 'fissure': plus(450, () => { flotter(carteEl(e.cible), '💧 bronze fendu', 'info'); ajouterEffet('Bronze fendu : +50 % de dégâts (2 coups)', true); journal('L\'Onde fend le bronze de Talos.'); }); break;
+        case 'brulure': if (e.chaleur) { plus(160, () => { const c = carteEl(e.cible); rejouer(c, 'touche'); particules(c, '♨️', 2); flotter(c, '-' + e.degats); }); break; }
+          plus(550, () => { SON.coup('flamme', false); banniere('🔥 Brûlure', N(e.cible), '-' + e.degats + ' PV'); const c = carteEl(e.cible); rejouer(c, 'touche'); particules(c, '🔥', 4); flotter(c, '-' + e.degats); }); break;
         case 'etat': plus(250, () => { if (e.etat === 'etourdi') { flotter(carteEl(e.cible), '💫 Étourdi', 'info'); ajouterEffet('Étourdi !'); } if (e.etat === 'brulure') ajouterEffet('Brûlure 2 tours'); }); break;
         case 'interception': plus(400, () => { SON.jouer('garde'); auraSoin(carteEl(e.gardien), '#8fc6ff'); rejouer(carteEl(e.gardien), 'touche'); flotter(carteEl(e.gardien), '🛡️ intercepte', 'info'); ajouterEffet(N(e.gardien) + ' intercepte'); journal(N(e.gardien) + ' intercepte le coup !'); }); break;
         case 'garde': plus(350, () => { SON.jouer('garde'); auraSoin(carteEl(e.cible), '#8fc6ff'); flotter(carteEl(e.cible), '🛡️ protégé', 'info'); ajouterEffet(N(e.cible) + ' est protégé'); }); break;
@@ -1891,7 +1918,7 @@
         <p class="small">La flèche veut dire « fort contre » : dégâts x1,5. Dans l'autre sens, c'est peu efficace : x0,67.<br><br>⚡ désigne l'affinité Foudre. L'Énergie, elle, se note 🔹.</p>`;
     } else if (ongletLexique === 'Héros') {
       h = D.HEROS.map(hh => `<div class="ligne"><b>${hh.emoji} ${hh.nom}</b> · ${hh.role} · ${aff(hh.affinite).icone} ${aff(hh.affinite).nom} · ❤️ ${hh.pvMax}<br>` +
-        hh.competences.map(c => `${aff(c.affinite).icone} <b>${c.nom}</b> (${resume(c).replace(/<\/?b>/g, '')}) : ${c.desc}`).join('<br>') + '</div>').join('');
+        hh.competences.filter(c => !c.secret || profil.cartes[c.id]).map(c => `${aff(c.affinite).icone} <b>${c.nom}</b> (${resume(c).replace(/<\/?b>/g, '')}) : ${c.desc}`).join('<br>') + '</div>').join('');
     } else if (ongletLexique === 'Ennemis') {
       h = Object.values(D.ENNEMIS).filter(e => profil.codex[e.id] && profil.codex[e.id].vu).map(e => `<div class="ligne"><b>${e.emoji} ${e.nom}</b> · ${aff(e.affinite).icone} ${aff(e.affinite).nom} · ❤️ ${e.pvMax}<br>
         Faible contre : ${listeAff(faiblesses(e.affinite))}. Résiste à : ${listeAff(forces(e.affinite))}.<br><span class="small">${e.special}</span></div>`).join('') + '<p class="small">Les ennemis apparaissent ici une fois croisés.</p>';
@@ -2061,7 +2088,7 @@
     VOIX.stop();
     if (partie && partie.mode) { partie = null; return ouvrirTresors(); }
     const suivante = () => { const id = partie && partie.aPresenter && partie.aPresenter.shift(); if (id) presenterCompagnon(id, suivante, true); else accueil(); };
-    const ch = partie && !partie.echo && partie.ep.choix, cle = partie && 'j' + partie.ep.jour;
+    const ch = partie && !partie.echo && partie.ep.choix, cle = partie && (partie.ep.cle || 'j' + partie.ep.jour);
     if (ch && !profil.histoire.choix[cle]) {
       if (partie.etat.fini === 'victoire' || !ch.seulementVictoire) return montrerChoix(partie.ep, suivante);
       profil.histoire.choix[cle] = ch.defaut; sauver();

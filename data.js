@@ -23,6 +23,7 @@
         { id: 'pluie', art: '🌧️', nom: 'Pluie de flèches', voie: 'chasseur', type: 'attaque', cible: 'ennemi', zone: true, puissance: 30, cout: 2, poids: 'normal', affinite: 'vent', desc: 'Vent. Touche tous les ennemis.' },
         { id: 'lameombre', art: '🌑', nom: "Lame d'ombre", voie: 'mystique', type: 'attaque', cible: 'ennemi', puissance: 54, cout: 1, poids: 'normal', affinite: 'ombre', desc: 'Ombre, forte contre la Lumière.' },
         { id: 'benediction', art: '🕊️', nom: 'Bénédiction', voie: 'mystique', type: 'benediction', cible: 'allie', puissance: 36, cout: 2, poids: 'normal', affinite: 'lumiere', desc: 'Soigne un allié (environ 36 PV) et rend son prochain coup critique.' },
+        { id: 'marteau', art: '🔨', nom: 'Marteau-tonnerre', secret: true, type: 'attaque', cible: 'ennemi', puissance: 64, cout: 2, poids: 'normal', affinite: 'foudre', etourdit: 0.3, desc: 'Foudre. Le marteau volé à Brontès : frappe fort, 30 % d\'étourdir.' },
         garde,
         { id: 'prouesse', art: '🏛️', nom: 'Phalange des Moires', type: 'attaque', cible: 'ennemi', zone: true, puissance: 85, cout: 0, poids: 'normal', affinite: 'airain', prouesse: true, desc: 'Prouesse (Gloire pleine) : toute l\'équipe frappe tous les ennemis.' }
       ]
@@ -179,6 +180,114 @@
         { id: 'jet', nom: "Jet d'eau", type: 'attaque', cible: 'ennemi', puissance: 38, poids: 'normal', affinite: 'onde' },
         { id: 'deluge', nom: 'Déluge', type: 'attaque', cible: 'ennemi', zone: true, puissance: 46, poids: 'lourd', affinite: 'onde', chaque: 3 }
       ]
+    },
+    // ---------- Chant II : la Forge sous la Montagne ----------
+    salamandre: {
+      id: 'salamandre', nom: 'Salamandre des braises', emoji: '🦎', affinite: 'flamme', pvMax: 135, attaque: 28, defense: 14, vitesse: 108,
+      comportement: 'aleatoire',
+      desc: "Elle vivait dans le foyer d'Héphaïstos. Depuis que la Forge déborde, elle brûle tout ce qu'elle touche.",
+      special: "Sa Langue de feu brûle 2 tours. Tous les 3 tours, Gerbe d'étincelles sur toute l'équipe. L'Onde l'éteint.",
+      competences: [
+        { id: 'queue_s', nom: 'Coup de queue', type: 'attaque', cible: 'ennemi', puissance: 30, poids: 'normal', affinite: 'airain' },
+        { id: 'langue', nom: 'Langue de feu', type: 'attaque', cible: 'ennemi', puissance: 30, brulure: { tours: 2, degats: 7 }, poids: 'normal', affinite: 'flamme' },
+        { id: 'gerbe', nom: "Gerbe d'étincelles", type: 'attaque', cible: 'ennemi', zone: true, puissance: 18, poids: 'normal', affinite: 'flamme', chaque: 3 }
+      ]
+    },
+    chien_cendre: {
+      id: 'chien_cendre', nom: 'Chien de cendre', emoji: '🐕', affinite: 'ombre', pvMax: 120, attaque: 29, defense: 11, vitesse: 138,
+      comportement: 'agressif',
+      desc: "Un chien de garde des Forges, fait de suie et de braise froide. Il chasse en meute et ne lâche jamais.",
+      special: "Très rapide, il vise le plus faible. Sa Morsure sombre frappe deux fois. La Lumière le dissipe.",
+      competences: [
+        { id: 'croc_c', nom: 'Croc de suie', type: 'attaque', cible: 'ennemi', puissance: 30, poids: 'leger', affinite: 'airain' },
+        { id: 'morsure_c', nom: 'Morsure sombre', type: 'attaque', cible: 'ennemi', puissance: 18, coups: 2, poids: 'normal', affinite: 'ombre' }
+      ]
+    },
+    kere: {
+      id: 'kere', nom: 'Kère', emoji: '👻', affinite: 'ombre', pvMax: 125, attaque: 27, defense: 12, vitesse: 118,
+      comportement: 'agressif', mortel: true,
+      desc: "Un esprit de mort violente, fille de la Nuit. Les Kères boivent la vie des blessés sur les champs de bataille.",
+      special: "Sa Soif rend à la Kère la moitié des dégâts infligés. Ce n'est pas une bête : on ne lie pas un esprit de mort. La Lumière la brûle.",
+      competences: [
+        { id: 'griffe_k', nom: 'Griffe froide', type: 'attaque', cible: 'ennemi', puissance: 28, poids: 'normal', affinite: 'airain' },
+        { id: 'soif', nom: 'Soif de la Kère', type: 'attaque', cible: 'ennemi', puissance: 32, drain: 0.5, poids: 'normal', affinite: 'ombre' }
+      ]
+    },
+    automate: {
+      id: 'automate', nom: 'Automate de bronze', emoji: '🤖', affinite: 'airain', pvMax: 160, attaque: 27, defense: 22, vitesse: 90,
+      comportement: 'aleatoire',
+      desc: "Une servante d'Héphaïstos, forgée pour porter ses outils. Sans maître, elle garde les galeries et frappe tout ce qui bouge.",
+      special: "Lente et solide. Tous les 3 tours, Engrenage : elle se protège (moitié moins de dégâts au prochain coup reçu) et frappe.",
+      competences: [
+        { id: 'poing_a', nom: 'Poing de bronze', type: 'attaque', cible: 'ennemi', puissance: 36, poids: 'normal', affinite: 'airain' },
+        { id: 'vapeur', nom: 'Jet de vapeur', type: 'attaque', cible: 'ennemi', puissance: 30, poids: 'normal', affinite: 'onde' },
+        { id: 'engrenage', nom: 'Engrenage', type: 'attaque', cible: 'ennemi', puissance: 34, bouclierSoi: true, poids: 'lourd', affinite: 'airain', chaque: 3 }
+      ]
+    },
+    chimere_forges: {
+      id: 'chimere_forges', nom: 'Chimère des Forges', emoji: '🦁', affinite: 'flamme', pvMax: 980, attaque: 45, defense: 20, vitesse: 115,
+      comportement: 'aleatoire', gardien: true,
+      desc: "La Chimère qu'Aëlis avait vue descendre vers le Nord. Elle a bu à la fournaise des Forges, et ses trois têtes crachent du métal fondu.",
+      special: "Ses Crocs frappent deux fois. Tous les 3 tours, Coulée de bronze sur toute l'équipe (brûlure 3 tours). L'Onde la blesse.",
+      competences: [
+        { id: 'crocs', nom: 'Crocs jumeaux', type: 'attaque', cible: 'ennemi', puissance: 24, coups: 2, poids: 'normal', affinite: 'airain' },
+        { id: 'cornes', nom: 'Cornes de chèvre', type: 'attaque', cible: 'ennemi', puissance: 36, poids: 'normal', affinite: 'flamme' },
+        { id: 'coulee', nom: 'Coulée de bronze', type: 'attaque', cible: 'ennemi', zone: true, puissance: 32, brulure: { tours: 3, degats: 8 }, poids: 'lourd', affinite: 'flamme', chaque: 3 }
+      ]
+    },
+    arges: {
+      id: 'arges', nom: 'Argès, Cyclope de la lueur', emoji: '👹', affinite: 'foudre', pvMax: 1150, attaque: 52, defense: 24, vitesse: 92,
+      mecanique: 'cyclope', comportement: 'agressif', gardien: true,
+      desc: "Le plus jeune des trois Cyclopes d'Héphaïstos, celui qui forgeait la lueur des éclairs. Un fil tiré vers le bas lui a volé la raison.",
+      special: "Foudre : le Roc lui résiste, le Vent le fuit. Comme tout Cyclope, un coup de Lumière l'aveugle. Tous les 3 tours, Arc de lueur sur toute l'équipe (étourdit 20 %).",
+      competences: [
+        { id: 'marteau_a', nom: 'Marteau de forge', type: 'attaque', cible: 'ennemi', puissance: 46, poids: 'lourd', affinite: 'airain' },
+        { id: 'eclat_a', nom: 'Éclat de foudre', type: 'attaque', cible: 'ennemi', puissance: 40, poids: 'normal', affinite: 'foudre' },
+        { id: 'arc', nom: 'Arc de lueur', type: 'attaque', cible: 'ennemi', zone: true, puissance: 34, etourdit: 0.2, poids: 'lourd', affinite: 'foudre', chaque: 3 }
+      ]
+    },
+    lysandre_lame: {
+      id: 'lysandre_lame', nom: 'Lysandre à la lame d\'étoile', emoji: '✂️', affinite: 'ombre', pvMax: 960, attaque: 46, defense: 22, vitesse: 120,
+      comportement: 'agressif', gardien: true, mortel: true,
+      desc: "Lysandre revient avec une lame forgée dans un éclat des ciseaux d'Atropos. Quelque chose s'est fissuré en elle, mais sa main ne tremble pas.",
+      special: "Ombre : la Lumière la blesse. Sa Lame d'étoile frappe deux fois. Tous les 3 tours, Coupe du destin sur toute l'équipe (25 % d'oublier son tour).",
+      competences: [
+        { id: 'lame_e', nom: "Lame d'étoile", type: 'attaque', cible: 'ennemi', puissance: 24, coups: 2, poids: 'normal', affinite: 'ombre' },
+        { id: 'oubli', nom: 'Oubli', type: 'attaque', cible: 'ennemi', puissance: 32, etourdit: 0.3, poids: 'normal', affinite: 'ombre' },
+        { id: 'coupedestin', nom: 'Coupe du destin', type: 'attaque', cible: 'ennemi', zone: true, puissance: 34, etourdit: 0.25, poids: 'lourd', affinite: 'ombre', chaque: 3 }
+      ]
+    },
+    talos: {
+      id: 'talos', nom: 'Talos, le géant de bronze', emoji: '🗿', affinite: 'airain', pvMax: 1600, attaque: 58, defense: 30, vitesse: 85,
+      mecanique: 'talos', comportement: 'aleatoire', gardien: true,
+      desc: "Le gardien de bronze qu'Héphaïstos avait forgé pour la Crète. Une seule veine court en lui, fermée par un clou à la cheville.",
+      special: "Très solide. Un coup d'Onde le refroidit et fend son bronze : les 2 coups suivants lui font 50 % de dégâts en plus. Tous les 3 tours, Étreinte brûlante sur toute l'équipe.",
+      competences: [
+        { id: 'poing_t', nom: 'Poing de bronze', type: 'attaque', cible: 'ennemi', puissance: 46, poids: 'lourd', affinite: 'airain' },
+        { id: 'rocher_t', nom: 'Rocher lancé', type: 'attaque', cible: 'ennemi', puissance: 40, poids: 'normal', affinite: 'roc' },
+        { id: 'etreinte', nom: 'Étreinte brûlante', type: 'attaque', cible: 'ennemi', zone: true, puissance: 34, brulure: { tours: 2, degats: 8 }, poids: 'lourd', affinite: 'flamme', chaque: 3 }
+      ]
+    },
+    chaine: {
+      id: 'chaine', nom: 'Chaîne du Tartare', emoji: '⛓️', affinite: 'roc', pvMax: 260, attaque: 30, defense: 22, vitesse: 95,
+      comportement: 'aleatoire', mortel: true, chaine: true,
+      desc: "Une des chaînes qui tenaient les Cyclopes au fond du Tartare. Elle obéit à sa Geôlière et la protège.",
+      special: "Tant qu'une chaîne tient, Campé ne prend que 35 % des dégâts. Brise les chaînes d'abord. Le Vent les ébranle.",
+      competences: [
+        { id: 'fouet_c', nom: 'Fouet de fer', type: 'attaque', cible: 'ennemi', puissance: 30, poids: 'normal', affinite: 'airain' },
+        { id: 'entrave', nom: 'Entrave', type: 'attaque', cible: 'ennemi', puissance: 22, etourdit: 0.35, poids: 'normal', affinite: 'roc' }
+      ]
+    },
+    campe: {
+      id: 'campe', nom: 'Campé, la Geôlière', emoji: '🦂', affinite: 'ombre', pvMax: 1000, attaque: 46, defense: 24, vitesse: 104,
+      mecanique: 'campe', comportement: 'agressif', gardien: true,
+      desc: "La geôlière du Tartare. Femme jusqu'à la taille, dragon en dessous, une queue de scorpion dressée au-dessus d'elle. Elle garde le deuxième Sceau.",
+      special: "Phase 1 : ses Chaînes la protègent (elle ne prend que 35 % des dégâts). Phase 2, chaînes brisées : elle enrage (+25 % d'attaque). Son Dard empoisonne. Tous les 3 tours, Queue de scorpion sur toute l'équipe. La Lumière la blesse.",
+      competences: [
+        { id: 'dard', nom: 'Dard', type: 'attaque', cible: 'ennemi', puissance: 36, brulure: { tours: 3, degats: 8 }, poids: 'normal', affinite: 'ombre' },
+        { id: 'griffes_c', nom: 'Griffes de dragonne', type: 'attaque', cible: 'ennemi', puissance: 44, poids: 'lourd', affinite: 'airain' },
+        { id: 'queue_c', nom: 'Queue de scorpion', type: 'attaque', cible: 'ennemi', zone: true, puissance: 36, poids: 'lourd', affinite: 'ombre', chaque: 3 }
+      ]
     }
   };
 
@@ -221,6 +330,33 @@
         { id: 'epines_l', art: '🌵', nom: 'Épines', type: 'attaque', cible: 'ennemi', puissance: 42, cout: 1, poids: 'normal', affinite: 'sylve', desc: 'Sylve, forte contre l\'Onde (et l\'Hydre).' },
         { id: 'seve_l', art: '🌿', nom: 'Sève verte', type: 'soin', cible: 'allie', puissance: 46, cout: 2, poids: 'normal', affinite: 'sylve', desc: 'Rend environ 46 PV à un allié.' },
         { id: 'racines_l', art: '🌳', nom: 'Racines', type: 'attaque', cible: 'ennemi', zone: true, puissance: 20, cout: 3, poids: 'normal', affinite: 'sylve', etourdit: 0.25, desc: 'Sylve. Touche tous les ennemis, 25 % d\'étourdir chacun.' }
+      ] },
+    { id: 'salamandre', nom: 'Salamandre', emoji: '🦎', role: 'Créature liée', titre: 'la braise apprivoisée', affinite: 'flamme',
+      pvMax: 125, attaque: 31, defense: 13, vitesse: 112, energieDepart: 2,
+      bio: "Ton fil l'a refroidie juste assez pour qu'elle se souvienne du foyer d'Héphaïstos. Elle dort dans les cendres de ton feu de camp.",
+      apport: 'La Flamme de l\'équipe : brûlures, dégâts contre la Sylve, et une gerbe qui touche tous les ennemis.',
+      competences: [
+        { id: 'langue_l', art: '🔥', nom: 'Langue de feu', type: 'attaque', cible: 'ennemi', puissance: 38, cout: 1, poids: 'normal', affinite: 'flamme', brulure: { tours: 2, degats: 8 }, desc: 'Flamme. Brûle la cible 2 tours.' },
+        { id: 'queue_l', art: '🦎', nom: 'Coup de queue', type: 'attaque', cible: 'ennemi', puissance: 40, cout: 0, poids: 'leger', affinite: 'airain', desc: 'Léger. Un coup vif.' },
+        { id: 'gerbe_l', art: '✨', nom: "Gerbe d'étincelles", type: 'attaque', cible: 'ennemi', zone: true, puissance: 26, cout: 3, poids: 'normal', affinite: 'flamme', brulure: { tours: 2, degats: 6 }, desc: 'Flamme. Touche et brûle tous les ennemis.' }
+      ] },
+    { id: 'chien_cendre', nom: 'Chien de cendre', emoji: '🐕', role: 'Créature liée', titre: 'le fidèle de suie', affinite: 'ombre',
+      pvMax: 115, attaque: 32, defense: 11, vitesse: 140, energieDepart: 2,
+      bio: "Un chien de garde des Forges qui a trouvé un nouveau maître. Il dort contre Kelos, qui fait semblant de ne pas aimer ça.",
+      apport: 'Le chasseur rapide : il joue souvent, frappe deux fois et protège ses alliés.',
+      competences: [
+        { id: 'morsure_l', art: '🐕', nom: 'Morsure sombre', type: 'attaque', cible: 'ennemi', puissance: 22, coups: 2, cout: 1, poids: 'normal', affinite: 'ombre', desc: 'Ombre. Frappe deux fois, forte contre la Lumière.' },
+        { id: 'croc_l', art: '🦷', nom: 'Croc de suie', type: 'attaque', cible: 'ennemi', puissance: 36, cout: 0, poids: 'leger', affinite: 'airain', desc: 'Léger. Il joue très vite.' },
+        { id: 'meute_l', art: '🐾', nom: 'Hurlement de meute', type: 'attaque', cible: 'ennemi', zone: true, puissance: 22, cout: 3, poids: 'normal', affinite: 'ombre', etourdit: 0.2, desc: 'Ombre. Touche tous les ennemis, 20 % d\'étourdir chacun.' }
+      ] },
+    { id: 'automate', nom: 'Automate de bronze', emoji: '🤖', role: 'Créature liée', titre: 'la servante sans maître', affinite: 'airain',
+      pvMax: 165, attaque: 27, defense: 22, vitesse: 92, energieDepart: 2,
+      bio: "Ton fil s'est enroulé autour de ses engrenages. Elle t'appelle « maître » et porte ton bagage sans qu'on lui demande.",
+      apport: 'Le rempart de bronze : beaucoup de PV, une bonne défense, et un jet de vapeur d\'Onde contre la Flamme.',
+      competences: [
+        { id: 'poing_l', art: '🤖', nom: 'Poing de bronze', type: 'attaque', cible: 'ennemi', puissance: 42, cout: 0, poids: 'normal', affinite: 'airain', desc: 'Un coup lourd de bronze.' },
+        { id: 'vapeur_l', art: '♨️', nom: 'Jet de vapeur', type: 'attaque', cible: 'ennemi', puissance: 44, cout: 1, poids: 'normal', affinite: 'onde', desc: 'Onde, forte contre la Flamme (et les Forges).' },
+        { id: 'bouclier_l', art: '🛡️', nom: 'Engrenage', type: 'bouclier', cible: 'aucune', zone: true, cout: 2, poids: 'normal', affinite: 'airain', desc: 'Toute l\'équipe prend moitié moins de dégâts au prochain coup reçu.' }
       ] }
   ];
 
@@ -271,7 +407,8 @@
     mur: 'epique', coupbouclier: 'rare', fleche: 'rare', pluie: 'epique', lameombre: 'rare', benediction: 'epique',
     frappe: 'commune', torche: 'commune', pommeau: 'commune', charge: 'rare', ralliement: 'rare', ares: 'epique', prouesse: 'legendaire',
     rayon: 'commune', ronces: 'rare', soin: 'rare', aube: 'rare', presage: 'epique', oeil: 'epique',
-    serres: 'commune', cri: 'commune', eclair: 'rare', rafale: 'rare', pique: 'epique'
+    serres: 'commune', cri: 'commune', eclair: 'rare', rafale: 'rare', pique: 'epique',
+    langue_l: 'commune', queue_l: 'commune', gerbe_l: 'epique', morsure_l: 'rare', croc_l: 'commune', meute_l: 'epique', poing_l: 'commune', vapeur_l: 'rare', bouclier_l: 'rare', marteau: 'epique'
   };
   // Les Voies de l'Errant : un passif et deux cartes exclusives
   const VOIES = {
@@ -294,6 +431,24 @@
          { id: 'nemesis', nom: 'Serment de Némésis', icone: '🎯', desc: '+8 % de chance de critique pour toute l\'équipe.' }],
     20: [{ id: 'or', nom: "Serment d'Or", icone: '👑', desc: 'La Prouesse est plus puissante de 30 %.' },
          { id: 'souffle', nom: 'Second Souffle', icone: '💨', desc: 'Une fois par combat, le premier héros qui tombe se relève avec 25 % de ses PV.' }]
+  };
+
+  // Invités de passage : ils rejoignent l'équipe pour quelques épreuves du Chant II
+  const INVITES = {
+    brontes: { id: 'brontes', nom: 'Brontès', emoji: '👹', role: 'Cyclope du tonnerre (invité)', affinite: 'foudre', invite: true,
+      pvMax: 240, attaque: 34, defense: 24, vitesse: 82, energieDepart: 2,
+      competences: [
+        { id: 'tonnerre_b', art: '⚡', nom: 'Coup de tonnerre', type: 'attaque', cible: 'ennemi', puissance: 52, cout: 0, poids: 'lourd', affinite: 'foudre', desc: 'Foudre. Lourd.' },
+        { id: 'grondement_b', art: '🌩️', nom: 'Grondement', type: 'attaque', cible: 'ennemi', zone: true, puissance: 26, cout: 2, poids: 'lourd', affinite: 'foudre', etourdit: 0.2, desc: 'Foudre. Touche tous les ennemis.' },
+        garde
+      ] },
+    lysandre_amie: { id: 'lysandre_amie', nom: 'Lysandre', emoji: '✂️', role: 'Celle qui se souvient (invitée)', affinite: 'ombre', invite: true,
+      pvMax: 200, attaque: 36, defense: 18, vitesse: 120, energieDepart: 2,
+      competences: [
+        { id: 'lame_la', art: '✂️', nom: "Lame d'étoile", type: 'attaque', cible: 'ennemi', puissance: 24, coups: 2, cout: 0, poids: 'normal', affinite: 'ombre', desc: 'Ombre. Frappe deux fois.' },
+        { id: 'coupe_la', art: '🌘', nom: 'Coupe des fils', type: 'attaque', cible: 'ennemi', zone: true, puissance: 30, cout: 2, poids: 'normal', affinite: 'ombre', etourdit: 0.25, desc: 'Ombre. Touche tous les ennemis, 25 % d\'étourdir.' },
+        garde
+      ] }
   };
 
   // Cartes possédées au départ (les autres se découvrent)
@@ -391,7 +546,8 @@
   // Lexique consultable à tout moment
   const LEXIQUE = [
     { cat: 'Cartes', icone: '✦', terme: 'Évolution', texte: "Une carte au niveau 5 peut évoluer une fois, contre 300 drachmes : elle change de nom et d'illustration, et gagne un effet (critique, étourdissement, coût réduit, double coup...). Le détail est dans sa fiche." },
-    { cat: 'Récit', icone: '📜', terme: 'Chant', texte: "Une saison de 30 jours, dans une région, autour d'un Sceau. Le Chant I se passe dans les Vals d'Aelwen, en quatre chapitres. La Chronique (sur l'accueil) garde tout ce que tu y as vécu." },
+    { cat: 'Récit', icone: '📜', terme: 'Chant', texte: "Une saison de 30 jours, dans une région, autour d'un Sceau. Le Chant I se passe dans les Vals d'Aelwen, le Chant II sous les Monts du Nord (la Forge sous la Montagne), chacun en quatre chapitres. La Chronique (📜, sur la Tapisserie) garde tout ce que tu y as vécu." },
+    { cat: 'Récit', icone: '🤝', terme: 'Invité', texte: "Au Chant II, un allié de passage peut rejoindre ton équipe pour quelques épreuves, selon tes choix. Tu le diriges comme tes héros." },
     { cat: 'Récit', icone: '🔀', terme: 'Choix', texte: "Certains jours se terminent par un choix. Il est définitif : il change des répliques, des combats et parfois la fin du Chant." },
     { cat: 'Récit', icone: '✨', terme: 'Sceau', texte: "Une des sept pierres d'étoile qui enchaînent Kronar, le Titan qui dévore. Elles se fissurent. Celui du Chant I, le Sceau de Maïa, dort sous l'étang noir." },
     { cat: 'Récit', icone: '🥷', terme: 'Effilés', texte: "Le culte d'Atropos. Ces mortels se coupent eux-mêmes leurs souvenirs et veulent briser les Sceaux. On ne lie pas un fil humain." },
@@ -406,6 +562,9 @@
     { cat: 'Combat', icone: '🎯', terme: 'Intention', texte: "Au-dessus de chaque ennemi : ce qu'il fera à son prochain tour, sa cible et les dégâts estimés. ⚠️ signale un grand coup qui touche toute l'équipe." },
     { cat: 'Combat', icone: '◌', terme: 'Jeton fantôme', texte: "Le jeton en pointillés dans la File, quand tu choisis une compétence : là où ton héros rejouera ensuite." },
     { cat: 'Combat', icone: '💡', terme: 'Indice', texte: "Du jour 4 au jour 10, le bouton 💡 surligne une bonne action. Ensuite, à toi de jouer." },
+    { cat: 'Épreuve', icone: '♨️', terme: 'Chaleur des Forges', texte: "Dans certaines épreuves du Chant II, la chaleur monte toutes les 9 actions et brûle tout le monde, de plus en plus fort. Les unités d'Onde et de Flamme ne la craignent pas. Ne traîne pas." },
+    { cat: 'Combat', icone: '⛓️', terme: 'Chaînes de Campé', texte: "Tant qu'une Chaîne du Tartare tient, Campé ne prend que 35 % des dégâts. Brise les chaînes d'abord : elle enrage alors (+25 % d'attaque), mais elle n'est plus protégée." },
+    { cat: 'Combat', icone: '👻', terme: 'Soif', texte: "La Kère boit la vie : elle récupère la moitié des dégâts de sa Soif. Abats-la vite, ou frappe-la avec la Lumière." },
     { cat: 'Épreuve', icone: '🧵', terme: 'Tapisserie', texte: "Chaque épreuve tisse un rang. Fil d'or : 3 étoiles. Couleur de ton affinité favorite : victoire. Gris : défaite, mais l'histoire continue. Touche un rang pour revoir ta journée." },
     { cat: 'États', icone: '🔥', terme: 'Brûlure', texte: "Perd quelques PV au début de ses 2 prochains tours." },
     { cat: 'États', icone: '💫', terme: 'Étourdi', texte: "Perd son prochain tour." },
@@ -451,7 +610,7 @@
     { cat: 'Épreuve', icone: '🐦‍⬛', terme: "Corbeau d'Hermès", texte: "La messagerie entre tisserands (icône du bandeau) : messages, présages rapides et réactions aux épreuves des autres." }
   ];
 
-  const Donnees = { EVOLUTIONS, COUT_EVOLUTION, LIER, CREATURES, VOIES, SERMENTS, RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
+  const Donnees = { INVITES, EVOLUTIONS, COUT_EVOLUTION, LIER, CREATURES, VOIES, SERMENTS, RARETES, CARTES_DEPART, EQUIPEMENT_DEPART, HEROS, ENNEMIS, JOURS, CLOTHO, LEXIQUE, epreuveDuJour, equipeDuJour, ennemisDeRencontre, SOIN_ENTRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = Donnees;
   else racine.Donnees = Donnees;
 })(typeof window !== 'undefined' ? window : this);

@@ -16,15 +16,20 @@
 
   // ---------- Le motif : fond de nuit et d'eau, étoiles, et le Gardien du Chant ----------
   const motifs = {};
-  function motif(emoji) {
-    if (motifs[emoji]) return motifs[emoji];
+  function motif(emoji, forge) {
+    const cle = emoji + (forge ? '|forge' : '');
+    if (motifs[cle]) return motifs[cle];
     const g = []; let pret = true;
     for (let k = 0; k < JOURS; k++) {
       const ligne = [];
       for (let c = 0; c < COLS; c++) {
         const t = k / (JOURS - 1);
-        let col = mel([24, 30, 58], [40, 56, 84], t);
-        if (k >= JOURS - 7) { // l'étang
+        let col = forge ? mel([30, 18, 22], [70, 34, 24], t) : mel([24, 30, 58], [40, 56, 84], t);
+        if (forge && k >= JOURS - 7) { // la lave
+          const coulee = Math.sin(c * 0.5 + k * 1.7) > 0.45;
+          col = coulee ? [214, 96, 34] : [92, 30, 18];
+        } else if (forge) { if (k < 16 && hash(k, c) < 0.06) col = [255, 160, 70]; } // braises
+        else if (k >= JOURS - 7) { // l'étang
           const vague = Math.sin(c * 0.7 + k * 1.3) > 0.55;
           col = vague ? [58, 104, 120] : [22, 52, 70];
         } else if (k < 14 && hash(k, c) < 0.05) col = [232, 197, 106]; // étoiles
@@ -39,7 +44,7 @@
       const cv = document.createElement('canvas'); cv.width = COLS * 4; cv.height = JOURS * SH;
       const x = cv.getContext('2d');
       // L'image 3D du Gardien si elle est chargée ; sinon l'emoji en texte, et on redessinera une fois l'image arrivée
-      const img = racine.Emojis && racine.Emojis.image(emoji, () => { delete motifs[emoji]; if (dernierDessin) dessiner.apply(null, dernierDessin); });
+      const img = racine.Emojis && racine.Emojis.image(emoji, () => { delete motifs[cle]; if (dernierDessin) dessiner.apply(null, dernierDessin); });
       const t = Math.min(cv.width, cv.height) * 0.86;
       if (img && img.complete && img.naturalWidth) x.drawImage(img, (cv.width - t) / 2, (cv.height - t) / 2, t, t);
       else { x.font = Math.round(t) + 'px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(emoji, cv.width / 2, cv.height * 0.52); }
@@ -61,9 +66,16 @@
         }
       }
     }
-    if (pret) motifs[emoji] = g; // pas de mise en cache tant que l'image 3D n'est pas chargée
+    if (pret) motifs[cle] = g; // pas de mise en cache tant que l'image 3D n'est pas chargée
     return g;
   }
+
+  // ---------- Les rangs d'un Chant (le Chant II compte ses jours de 31 à 60 : on les ramène à 1..30) ----------
+  const chantDe = rangs => ((rangs || []).some(r => r.chant === 'II' && !r.echo) ? 'II' : 'I');
+  function duChant(rangs, chant) {
+    return chant === 'II' ? rangs.filter(r => r.chant === 'II').map(r => Object.assign({}, r, { jour: r.jc - 30 })) : rangs.filter(r => r.chant !== 'II');
+  }
+  const MOTIFS = { I: { emoji: '🐲', forge: false }, II: { emoji: '🦂', forge: true } };
 
   // ---------- Le meilleur rang de chaque jour (les Échos ne tissent pas ; la finale rejouée répare le dernier rang) ----------
   function rangsParJour(rangs) {
@@ -92,9 +104,11 @@
   function dessiner(canvas, rangs, progression, opts) {
     opts = opts || {};
     if (progression == null) dernierDessin = [canvas, rangs, null, opts];
+    const chant = opts.chant || chantDe(rangs);
+    rangs = duChant(rangs, chant);
     const { W, H, w, h } = dimensions(canvas);
     const x = canvas.getContext('2d');
-    const g = motif(opts.motif || '🐲');
+    const g = motif(opts.motif || MOTIFS[chant].emoji, MOTIFS[chant].forge);
     const parJour = rangsParJour(rangs);
     const dernier = rangs.filter(r => !r.echo).slice(-1)[0];
     const jourAnime = progression != null && dernier ? Math.min(dernier.jour, JOURS) : null;
@@ -154,18 +168,22 @@
     });
     x.strokeStyle = splendide ? '#f6d27a' : '#5a3a26'; x.lineWidth = splendide ? 3 : 2;
     x.strokeRect(CADRE - 2, CADRE - 1, W - 2 * CADRE + 4, H - 2 * CADRE + 2);
-    return { splendide, tisses: joues.length };
+    return { splendide, tisses: joues.length, chant };
   }
 
   // Renvoie le jour touché : { jour, rang } (rang absent si le jour n'est pas encore tissé)
-  function rangTouche(canvas, rangs, evenement) {
+  function rangTouche(canvas, rangs, evenement, chant) {
+    chant = chant || chantDe(rangs);
+    const decal = chant === 'II' ? 30 : 0;
+    rangs = duChant(rangs, chant);
     const b = canvas.getBoundingClientRect();
     const y = (evenement.clientY - b.top) * canvas.height / b.height;
     const { h } = dimensions(canvas);
     const k = Math.floor((y - CADRE) / h);
     if (k < 0 || k >= JOURS) return null;
     const jour = JOURS - k;
-    return { jour, rang: rangsParJour(rangs)[jour] || null };
+    const r = rangsParJour(rangs)[jour] || null;
+    return { jour: jour + decal, chant, rang: r ? Object.assign({}, r, { jour: r.jour + decal }) : null };
   }
 
   // Anime le tissage du rang du jour
@@ -179,5 +197,5 @@
     requestAnimationFrame(etape);
   }
 
-  racine.Tapisserie = { dessiner, rangTouche, tisser, JOURS };
+  racine.Tapisserie = { dessiner, rangTouche, tisser, chantDe, JOURS };
 })(window);

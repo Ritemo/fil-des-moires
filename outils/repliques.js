@@ -1,6 +1,6 @@
 /* Liste toutes les répliques de l'histoire à enregistrer (scènes, fins d'épreuve, résultats des choix).
    Usage : node outils/repliques.js > repliques.json   (utilisé par le robot « Voix ») */
-const C = require('../chant1.js');
+const C = require('../chant1.js'), C2 = require('../chant2.js');
 const { cleVoix, nettoyer } = require('../voix.js');
 const vues = new Map();
 const ajouter = (qui, texte) => {
@@ -9,7 +9,8 @@ const ajouter = (qui, texte) => {
   const id = cleVoix(q, texte);
   if (!vues.has(id)) vues.set(id, { id, qui: q, texte: nettoyer(texte) });
 };
-Object.values(C.JOURS).forEach(j => {
+Object.values(C.JOURS).concat(Object.values(C2.JOURS)).forEach(j => {
+  if (j.epilogue) ajouter(j.epilogue[0], j.epilogue[1]);
   const blocs = [j].concat(Object.values(j.variantes || {}));
   blocs.forEach(b => {
     (b.scene || []).forEach(l => ajouter(l[0], l[1]));

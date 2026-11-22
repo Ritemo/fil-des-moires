@@ -4,7 +4,7 @@ name: Voix
 on:
   push:
     branches: [main]
-    paths: ['chant1.js', 'voix.js', 'outils/**', '.github/workflows/voix.yml']
+    paths: ['chant1.js', 'chant2.js', 'voix.js', 'outils/**', '.github/workflows/voix.yml']
   workflow_dispatch:
 permissions:
   contents: write

@@ -19,6 +19,10 @@ VOIX = {
     'lysandre':  ('fr-FR-DeniseNeural', '-14%', '-18Hz'),
     'lachesis':  ('fr-FR-EloiseNeural', '-10%', '-8Hz'),
     'atropos':   ('fr-CA-SylvieNeural', '-16%', '-12Hz'),
+    'cedalion':  ('fr-FR-HenriNeural', '+8%', '+18Hz'),
+    'brontes':   ('fr-CA-JeanNeural', '-16%', '-20Hz'),
+    'steropes':  ('fr-CH-FabriceNeural', '-12%', '-14Hz'),
+    'campe':     ('fr-FR-EloiseNeural', '-18%', '-22Hz'),
 }
 
 async def enregistrer(r):
