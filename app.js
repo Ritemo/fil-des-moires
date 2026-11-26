@@ -335,8 +335,8 @@
   const INTROS = {
     oracle: "Chaque jour, la Pythie pose une énigme sur les mythes grecs. La même pour tous les tisserands : comparez vos réponses ! Une bonne réponse rapporte 20 drachmes et un éclat d'oracle, utile à la Forge. Cinq bonnes réponses d'affilée : un éclat de plus.",
     forge: "Héphaïstos forge des talismans avec tes matériaux (airain, bois d'olivier, laine sacrée, éclats d'oracle, perles). Chaque héros en porte un (l'Errant, Phaéna et ta créature) : il renforce son porteur, dans les épreuves comme dans l'Arène et contre le Titan. Chaque talisman a trois niveaux.",
-    arene: "Une fois par jour, affronte l'ombre d'un autre tisserand : son équipe, ses cartes et son talisman, pilotés par l'ordinateur. Une victoire rapporte 30 trophées et 25 drachmes, une défaite en coûte 10. Les trophées font monter de ligue.",
-    expedition: "Envoie tes créatures explorer les lieux déjà traversés : jusqu'à trois en même temps, pour 2, 4 ou 8 heures. Plus l'expédition est longue, plus le butin est riche. Si l'affinité de la créature est celle du lieu, elle trouve davantage. Reviens les récolter dans la journée !",
+    arene: "Une fois par jour, affronte l'ombre d'un autre tisserand (son équipe, ses cartes et ses talismans, pilotés par l'ordinateur) ou l'un des deux champions du jour, des personnages du récit. Une victoire rapporte 30 trophées et 25 drachmes, une défaite en coûte 10. Les trophées font monter de ligue.",
+    expedition: "Envoie tes créatures explorer les lieux déjà traversés : jusqu'à trois en même temps, pour 2, 4 ou 8 heures. Plus l'expédition est longue, plus le butin est riche. Si l'affinité de la créature est celle du lieu, elle trouve davantage. Chaque jour, un lieu est à l'honneur (⭐) : butin doublé, et une perle au retour d'une longue expédition. Reviens les récolter dans la journée !",
     labyrinthe: "Sous l'Agora, un labyrinthe rejoue les échos de tes combats passés. Descends de salle en salle : tes PV se gardent, et après chaque salle tu choisis un bienfait. Tu peux recommencer autant que tu veux ; seule ta meilleure profondeur du jour est récompensée, et comparée à celle des autres tisserands.",
     astragales: "Hermès adore les osselets. Mise 10 drachmes, lance quatre astragales, et fais mieux que lui. Dix parties par jour, pas plus : « Je ne veux pas te ruiner, mortel. Pas tout de suite. »",
     marchand: "Chaque lundi, Hermès déballe quatre articles : matériaux, cartes, Fils de réserve, et parfois un fragment de tapisserie. Chacun ne s'achète qu'une fois dans la semaine. Les drachmes que tu gagnes trouvent enfin preneur.",
@@ -407,6 +407,23 @@
   }
   const rafraichirAgora = () => { if ($('tresors').classList.contains('actif')) ouvrirTresors(); majBandeau(); listeAujourdhui(); };
 
+  // ----- Défi commun de la semaine -----
+  function defiHtml(e) {
+    const pct = Math.min(100, Math.round(100 * e.valeur / e.cible));
+    return `<div class="defi ${e.ok ? 'reussi' : ''}"><div class="t">${e.emoji} <b>Défi de la semaine : ${e.nom}</b></div><div class="small">${e.texte}</div>
+      <div class="barreTitan"><i style="width:${pct}%"></i></div>
+      <div class="small">${e.valeur}${e.unite} / ${e.cible}${e.unite}${e.detail.length > 1 ? ' · ' + e.detail.map(x => x.nom + ' ' + x.valeur).join(' · ') : ''}</div>
+      <div class="small">🎁 ${A.GAINS_DEFI.libelle}${e.pris ? ' · ✅ réclamé' : ''}</div>${e.ok && !e.pris ? '<button class="principal" id="defiGo">Réclamer</button>' : ''}</div>`;
+  }
+  async function afficherDefi() {
+    if (typeof A === 'undefined' || !profil.activites) return;
+    const d = aujourdhui(), poser = autres => { const z = $('defiSemaine'); if (!z) return; const e = A.etatDefi(profil, d, autres); z.innerHTML = defiHtml(e);
+      if ($('defiGo')) $('defiGo').onclick = () => { if (A.reclamerDefi(profil, d, autres)) { SON.jouer('amphore'); sauver(); toast('🎁 Défi réussi ensemble : ' + A.GAINS_DEFI.libelle); poser(autres); majBandeau(); } }; };
+    poser([]);
+    const autres = await autresJoueurs();
+    if (autres.length) poser(autres);
+  }
+
   // ----- Oracle -----
   function ouvrirOracle() {
     const d = aujourdhui(), q = A.oracleDuJour(d), o = profil.activites.oracle;
@@ -444,32 +461,34 @@
     const html = `${introAct('forge')}<div class="sousTitre">Tes matériaux</div><div>${matHtml(a.materiaux)}<span class="puce">🪙 ${profil.drachmes}</span></div>
       <p class="small">On en trouve à l'Oracle, en expédition, dans l'Arène et sur le Titan.</p>` +
       porteursHtml(a) +
-      A.TALISMANS.map(t => { const n = a.talismans[t.id] || 0, c = A.coutForge(profil, t.id), porteur = A.PORTEURS.find(x => portes[x] === t.id);
+      A.TALISMANS.map(t => { const n = a.talismans[t.id] || 0, c = A.coutForge(profil, t.id), porteur = Object.keys(portes).find(x => portes[x] === t.id);
         return `<div class="talisman${porteur ? ' equipe' : ''}"><div class="ico">${t.emoji}</div><div class="txt"><b>${t.nom}</b> ${n ? '<span class="small">niv. ' + n + '/3</span>' : ''}
           <div class="small">${n ? t.effet(n) : 'Pas encore forgé'}${c ? ' · ' + (n ? 'niv. ' + (n + 1) + ' : ' : '') + t.effet(n + 1) : ''}</div>
           ${c ? `<div>${cout(c)}</div>` : '<div class="small">✨ Niveau maximal</div>'}
           <div class="boutons">${c ? `<button data-forge="${t.id}" ${A.peutForger(profil, t.id) ? '' : 'disabled'}>${n ? 'Améliorer' : 'Forger'}</button>` : ''}
-          ${n ? A.PORTEURS.map(x => `<button class="porter${portes[x] === t.id ? ' on' : ''}" data-porter="${x}" data-t="${t.id}" title="${porteurNom(x)}">${porteurEmoji(x)}${portes[x] === t.id ? ' ✓' : ''}</button>`).join('') : ''}</div></div></div>`; }).join('');
+          ${n ? `<select class="porterSel" data-t="${t.id}"><option value="">Porté par personne</option>${A.porteursDe(profil).map(x => `<option value="${x}"${portes[x] === t.id ? ' selected' : ''}>${porteurNom(x)}${portes[x] && portes[x] !== t.id ? ' (a déjà : ' + A.talisman(portes[x]).nom + ')' : ''}</option>`).join('')}</select>` : ''}</div></div></div>`; }).join('');
     ouvrirModale('⚒️ La Forge d\'Héphaïstos', html);
     $('lexiqueCorps').querySelectorAll('[data-forge]').forEach(b => b.onclick = () => { const n = A.forger(profil, b.dataset.forge); if (n) { SON.jouer('evolue'); sauver(); ouvrirForge(); rafraichirAgora(); } });
-    $('lexiqueCorps').querySelectorAll('[data-porter]').forEach(b => b.onclick = () => {
-      const x = b.dataset.porter, id = b.dataset.t;
-      A.porter(profil, x, portes[x] === id ? null : id); SON.jouer('clic'); sauver(); ouvrirForge(); rafraichirAgora(); });
+    $('lexiqueCorps').querySelectorAll('.porterSel').forEach(sel => sel.onchange = () => {
+      const id = sel.dataset.t, x = sel.value, avant = Object.keys(portes).find(k => portes[k] === id);
+      if (x) A.porter(profil, x, id); else if (avant) A.porter(profil, avant, null);
+      SON.jouer('clic'); sauver(); ouvrirForge(); rafraichirAgora(); });
   }
-  // Les trois porteurs de talisman : l'Errant, Phaéna et la créature de l'équipe
+  // Les porteurs de talisman : l'Errant, Phaéna, Kelos et chaque créature liée
   function porteurModele(x) {
-    if (x !== 'compagnon') return D.HEROS.find(h => h.id === x);
-    const la = P.lienActif ? P.lienActif(profil) : null, id = profil.creature || 'griffon';
-    const m = D.HEROS.concat(D.CREATURES).find(h => h.id === id) || D.HEROS.find(h => h.id === 'griffon');
-    return Object.assign({}, m, la && la.espece === id && la.surnom ? { nom: la.surnom } : {});
+    const h = D.HEROS.find(h => h.id === x);
+    if (h) return x === 'griffon' ? Object.assign({}, h, { nom: 'Kelos' }) : h;
+    const l = (profil.liens || []).find(l => l.uid === x), m = l && D.CREATURES.find(c => c.id === l.espece);
+    return m ? Object.assign({}, m, { nom: l.surnom || m.nom }) : { emoji: '❔', nom: '?' };
   }
   const porteurEmoji = x => porteurModele(x).emoji;
   const porteurNom = x => porteurModele(x).nom;
+  const dansEquipe = x => x === 'errant' || (x === 'phaena' ? (profil.compagnons || []).includes('phaena') : x === (profil.lienActif || (profil.creature === 'griffon' ? 'griffon' : null)));
   function porteursHtml(a) {
-    const portes = A.portesDe(a);
-    return '<div class="sousTitre">Talismans portés</div><div class="porteurs">' + A.PORTEURS.map(x => { const t = portes[x] && A.talisman(portes[x]);
-      return `<div class="porteur"><span class="e">${porteurEmoji(x)}</span><b>${porteurNom(x)}</b><span class="small">${t ? t.emoji + ' ' + t.nom + ' niv. ' + a.talismans[t.id] : 'aucun'}</span></div>`; }).join('') +
-      '</div><p class="small">Chaque héros porte un talisman, qui ne renforce que lui. Touche un portrait sous un talisman pour le lui donner (ou le lui reprendre).</p>';
+    const portes = A.portesDe(a), avec = A.porteursDe(profil).filter(x => portes[x]);
+    return '<div class="sousTitre">Talismans portés</div>' + (avec.length ? '<div class="porteurs">' + avec.map(x => { const t = A.talisman(portes[x]);
+      return `<div class="porteur${dansEquipe(x) ? ' actif' : ''}"><span class="e">${porteurEmoji(x)}</span><b>${porteurNom(x)}</b><span class="small">${t.emoji} ${t.nom} niv. ${a.talismans[t.id]}</span>${dansEquipe(x) ? '<span class="small">⚔️ dans l\'équipe</span>' : '<span class="small">au repos</span>'}</div>`; }).join('') + '</div>' : '<p class="small">Aucun pour l\'instant.</p>') +
+      '<p class="small">Chaque personnage peut porter un talisman : l\'Errant, Phaéna, Kelos et chaque créature de l\'Enclos. Le talisman suit son porteur et ne sert que quand il combat. Choisis le porteur sous chaque talisman.</p>';
   }
 
   // ----- Expéditions (jusqu'à 3 en même temps, 2, 4 ou 8 heures) -----
@@ -479,16 +498,17 @@
     if (!tous.length) return ouvrirModale('🗺️ Les Expéditions', `${introAct('expedition')}<p>Il te faut une créature : Kelos, ou une créature de l'Enclos.</p>`);
     const libres = tous.filter(x => !ex.some(e => e.creature === x.uid));
     choix = choix || {};
-    const c = libres.find(x => x.uid === choix.c) || libres[0], l = lieux.find(x => x.id === choix.l) || lieux[0], du = A.DUREES.find(x => x.id === choix.d) || A.DUREES[1];
+    const vogue = A.lieuDuJour(profil, d);
+    const c = libres.find(x => x.uid === choix.c) || libres[0], l = lieux.find(x => x.id === choix.l) || vogue || lieux[0], du = A.DUREES.find(x => x.id === choix.d) || A.DUREES[1];
     const enRoute = ex.map(e => { const lieu = A.LIEUX.find(x => x.id === e.lieu) || A.LIEUX[0], cr = D.HEROS.concat(D.CREATURES).find(x => x.id === e.espece) || {}, pret = e.fin <= now;
       const pct = e.fin > e.depart ? Math.min(100, Math.round(100 * (now - e.depart) / (e.fin - e.depart))) : 100;
-      return `<div class="talisman"><div class="ico">${cr.emoji || '🐾'}</div><div class="txt"><b>${e.nom || cr.nom}</b> · ${lieu.emoji} ${lieu.nom}
+      return `<div class="talisman"><div class="ico">${cr.emoji || '🐾'}</div><div class="txt"><b>${e.nom || cr.nom}</b> · ${lieu.emoji} ${lieu.nom}${e.vogue ? ' ⭐' : ''}
         <div class="barreTitan"><i style="width:${pct}%"></i></div>
         <div class="boutons">${pret ? `<button class="principal" data-recolte="${e.id}">🎁 Récolter</button>` : `<span class="small">⏳ retour dans ${dureeTexte(e.fin - now)}</span>`}</div></div></div>`; }).join('');
     const places = A.PLACES_EXPEDITION - ex.length;
     const formulaire = places > 0 && libres.length ? `<div class="sousTitre">Nouvelle expédition (${places} place${places > 1 ? 's' : ''} libre${places > 1 ? 's' : ''})</div>
       <div class="choixLigne">${libres.map(x => `<button data-c="${x.uid}" class="${x.uid === c.uid ? 'on' : ''}">${x.modele.emoji} ${x.nom}<span class="small">${aff(x.modele.affinite).icone}</span></button>`).join('')}</div>
-      ${lieux.map(x => `<button class="lieu${x.id === l.id ? ' on' : ''}" data-l="${x.id}"><span class="ico">${x.emoji}</span><span><b>${x.nom}</b><span class="small">${[...new Set(x.butin)].map(m => A.MATERIAUX[m].emoji).join(' ')} · affinité ${aff(x.affinite).icone} ${aff(x.affinite).nom}${c.modele.affinite === x.affinite ? ' · 🌟 bonus' : ''}</span></span></button>`).join('')}
+      ${lieux.map(x => `<button class="lieu${x.id === l.id ? ' on' : ''}" data-l="${x.id}"><span class="ico">${x.emoji}</span><span><b>${x.nom}</b>${x.id === vogue.id ? ' <span class="vogue">⭐ Lieu du jour : butin double</span>' : ''}<span class="small">${[...new Set(x.butin)].map(m => A.MATERIAUX[m].emoji).join(' ')} · affinité ${aff(x.affinite).icone} ${aff(x.affinite).nom}${c.modele.affinite === x.affinite ? ' · 🌟 bonus' : ''}</span></span></button>`).join('')}
       <div class="choixLigne">${A.DUREES.map(x => `<button data-d="${x.id}" class="${x.id === du.id ? 'on' : ''}">${x.nom} · ${x.heures} h<span class="small"> ${x.n}+ matériaux</span></button>`).join('')}</div>
       <button class="principal" id="expePartir" style="width:100%;margin-top:8px">Envoyer ${c.nom} (${du.heures} h)</button>`
       : (places > 0 ? '<p class="small">Toutes tes créatures sont déjà en route.</p>' : '<p class="small">Les trois places sont prises : récolte une expédition pour en libérer une.</p>');
@@ -502,7 +522,7 @@
       const r = A.recolterExpedition(profil, d, Date.now(), b.dataset.recolte); if (!r) return;
       sauver(); SON.jouer('amphore'); ouvrirExpedition(); rafraichirAgora();
       $('expeRes').innerHTML = `<div class="ficheEp gagne"><div class="ficheMotif">${r.creature.emoji || '🐾'}</div><div><b>${r.creature.nom} · ${r.lieu.emoji} ${r.lieu.nom}</b><div class="small">${r.recit}</div></div></div>
-        ${r.affine ? '<p class="small">🌟 Le lieu convenait à son affinité : butin plus généreux.</p>' : ''}${r.fete ? '<p class="small">🍇 Les Dionysies : des matériaux en plus !</p>' : ''}${fragHtml(r.fragment)}
+        ${r.vogue ? '<p class="small">⭐ C\'était le lieu du jour : butin doublé' + (r.duree.id === 'long' ? ', et une perle de Thétis en prime.' : '.') + '</p>' : ''}${r.affine ? '<p class="small">🌟 Le lieu convenait à son affinité : butin plus généreux.</p>' : ''}${r.fete ? '<p class="small">🍇 Les Dionysies : des matériaux en plus !</p>' : ''}${fragHtml(r.fragment)}
         <div class="bourse"><span>🪙 +${r.drachmes} drachmes</span>${matHtml(r.materiaux, true)}</div>`;
       $('expeRes').scrollIntoView({ block: 'nearest' });
     });
@@ -577,23 +597,34 @@
   async function ouvrirArene() {
     const d = aujourdhui(), ar = profil.activites.arene, l = A.ligue(ar.trophees);
     const entete = `${introAct('arene')}<div class="bourse"><span>${l.emoji} ${l.nom}</span><span><b>${ar.trophees}</b> 🏆</span></div>`;
-    const journalHtml = (ar.journal || []).length ? '<div class="sousTitre">Derniers duels</div>' + ar.journal.slice(0, 5).map(j => `<div class="small">${j.victoire ? '✅' : '❌'} ${quandLe(j.date)} contre l'ombre de ${j.adversaire}</div>`).join('') : '';
+    const journalHtml = (ar.journal || []).length ? '<div class="sousTitre">Derniers duels</div>' + ar.journal.slice(0, 5).map(j => `<div class="small">${j.victoire ? '✅' : '❌'} ${quandLe(j.date)} contre ${A.CHAMPIONS.some(c => c.nom === j.adversaire) ? j.adversaire : 'l\'ombre de ' + j.adversaire}</div>`).join('') : '';
     if (A.areneFaite(profil, d)) return ouvrirModale('🏟️ L\'Arène des ombres', entete + '<p>Tu as déjà combattu aujourd\'hui. Reviens demain !</p>' + journalHtml);
     ouvrirModale('🏟️ L\'Arène des ombres', entete + '<p class="small">Recherche des ombres...</p>');
     const autres = (await autresJoueurs()).filter(j => j.fiche);
     const adv = autres.map(j => ({ nom: j.nom, fiche: j.fiche, niveau: j.niveau, trophees: j.trophees || 0 }));
     if (!adv.length) adv.push({ nom: profil.pseudo || 'toi', fiche: profil, niveau: profil.niveau, trophees: ar.trophees, soi: true });
-    ouvrirModale('🏟️ L\'Arène des ombres', entete + '<div class="sousTitre">Choisis ton adversaire</div>' + adv.map((x, k) => {
+    const champs = A.championsDuJour(profil, d).map(c => ({ champion: c, nom: c.nom }));
+    const tous = adv.concat(champs);
+    ouvrirModale('🏟️ L\'Arène des ombres', entete + '<div class="sousTitre">Choisis ton adversaire</div>' + tous.map((x, k) => {
+      if (x.champion) { const c = x.champion, eq = A.equipeChampion(profil, c);
+        return `<button class="lieu" data-k="${k}"><span class="ico">${eq.map(u => u.emoji).join('')}</span><span><b>${c.emoji} ${c.nom}</b><span class="small">champion du jour · ${eq.length > 1 ? eq.length + ' adversaires' : 'en duel'}</span></span></button>`; }
       const eq = A.equipeOmbre(x.fiche);
       return `<button class="lieu" data-k="${k}"><span class="ico">${eq.map(u => u.emoji).join('')}</span><span><b>${x.soi ? 'Ta propre ombre' : 'L\'ombre de ' + x.nom}</b><span class="small">niveau ${x.niveau} · ${A.ligue(x.trophees).emoji} ${x.trophees} trophées${x.fiche.activites ? Object.values(A.portesDe(x.fiche.activites)).map(id => ' ' + (A.talisman(id) || {}).emoji).join('') : ''}</span></span></button>`;
-    }).join('') + (autres.length ? '' : '<p class="small">Quand un autre tisserand partagera ta sauvegarde commune, tu affronteras son ombre.</p>') + journalHtml);
+    }).join('') + (autres.length ? '' : '<p class="small">Quand un autre tisserand partagera ta sauvegarde commune, tu affronteras son ombre.</p>') + '<p class="small">Les champions changent chaque jour. Un seul duel par jour, contre qui tu veux.</p>' + journalHtml);
     $('lexiqueCorps').querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
-      const x = adv[+b.dataset.k]; $('modale').classList.remove('visible');
+      const x = tous[+b.dataset.k]; $('modale').classList.remove('visible');
+      if (x.champion) { toast(x.champion.mot); return lancerActivite('arene', { titre: 'Arène · ' + x.champion.nom, adversaire: x.champion.nom, champion: true, ennemis: A.equipeChampion(profil, x.champion) }); }
       lancerActivite('arene', { titre: 'Arène · ombre de ' + (x.soi ? 'toi-même' : x.nom), adversaire: x.soi ? 'toi-même' : x.nom, ennemis: A.equipeOmbre(x.fiche, x.soi ? 'ombre' : x.nom) });
     });
   }
 
   // ----- Titan -----
+  function ensembleHtml(e) {
+    if (!e.actif) return '';
+    return `<div class="sousTitre">🤝 Tous ensemble</div><div class="palier ${e.pris ? 'fait' : e.ok ? 'prochain' : ''}"><span class="ic">${e.pris ? '✅' : e.ok ? '🎁' : '🤝'}</span>
+      <span>Chacun au moins ${A.ENSEMBLE.assauts} assauts cette semaine : ${A.ENSEMBLE.libelle}.<br><span class="small">${e.tous.map(x => x.nom + ' ' + Math.min(x.essais, A.ENSEMBLE.assauts) + '/' + A.ENSEMBLE.assauts).join(' · ')}</span></span>
+      ${e.ok && !e.pris ? '<button id="ensembleGo">Réclamer</button>' : ''}</div>`;
+  }
   async function ouvrirTitan() {
     const d = aujourdhui(), T = A.titanDeLaSemaine(d);
     const rendre = autres => {
@@ -604,10 +635,12 @@
         <div class="small">Toi : ${et.degats}${t.contributions.map(c => ' · ' + c.nom + ' : ' + c.degats).join('')}</div>
         <div class="sousTitre">Récompenses</div>` + A.PALIERS.map(p => { const atteint = t.total >= t.objectif * p.pct / 100, pris = et.paliers.includes(p.pct);
           return `<div class="palier ${pris ? 'fait' : atteint ? 'prochain' : ''}"><span class="ic">${pris ? '✅' : atteint ? '🎁' : '🔒'}</span><span>${p.pct} % : ${p.libelle}</span>${atteint && !pris ? `<button data-p="${p.pct}">Réclamer</button>` : ''}</div>`; }).join('') +
+        ensembleHtml(A.ensembleTitan(profil, d, autres)) +
         (t.total >= t.objectif ? '<p>🏆 ' + T.nom.split(',')[0] + ' est vaincu pour cette semaine ! Réclame tes récompenses ; un nouveau Titan se lèvera lundi.</p>'
           : A.titanFait(profil, d) ? '<p>✅ Ton assaut du jour est fait. Reviens demain !</p>' : `<button class="principal" id="titanGo" style="width:100%">Lancer l'assaut (${A.ACTIONS_TITAN} actions)</button>`);
       ouvrirModale('🗿 Le Titan de la semaine', html);
       $('lexiqueCorps').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const pr = A.reclamerPalier(profil, d, +b.dataset.p); if (pr) { SON.jouer('amphore'); sauver(); rendre(autres); if (pr.fragment) $('lexiqueCorps').insertAdjacentHTML('afterbegin', fragHtml(pr.fragment)); rafraichirAgora(); } });
+      if ($('ensembleGo')) $('ensembleGo').onclick = () => { if (A.reclamerEnsemble(profil, d, autres)) { SON.jouer('amphore'); sauver(); rendre(autres); rafraichirAgora(); } };
       if ($('titanGo')) $('titanGo').onclick = () => { $('modale').classList.remove('visible');
         lancerActivite('titan', { titre: 'Titan · ' + T.nom, ennemis: [A.uniteTitan(d, profil.niveau, t.objectif - t.total, t.objectif)] }); };
     };
@@ -639,12 +672,20 @@
     } else if (partie.mode === 'arene') {
       const v = etat.fini === 'victoire';
       gains = A.resultatArene(profil, d, partie.adversaire, v);
-      titre = v ? 'Victoire dans l\'Arène' : 'L\'ombre l\'emporte';
-      resume = (v ? 'Tu as vaincu l\'ombre de ' : 'L\'ombre de ' + partie.adversaire + ' t\'a vaincu. ') + (v ? partie.adversaire + '. ' : '') + 'Trophées : ' + (gains.trophees > 0 ? '+' : '') + gains.trophees + ' (total ' + profil.activites.arene.trophees + ', ' + A.ligue(profil.activites.arene.trophees).nom + ').';
+      const champ = A.CHAMPIONS.some(c => c.nom === partie.adversaire);
+      titre = v ? 'Victoire dans l\'Arène' : champ ? 'Le champion l\'emporte' : 'L\'ombre l\'emporte';
+      resume = (champ ? (v ? 'Tu as vaincu ' + partie.adversaire + '. ' : partie.adversaire + ' t\'a vaincu. ') : (v ? 'Tu as vaincu l\'ombre de ' : 'L\'ombre de ' + partie.adversaire + ' t\'a vaincu. ') + (v ? partie.adversaire + '. ' : '')) + 'Trophées : ' + (gains.trophees > 0 ? '+' : '') + gains.trophees + ' (total ' + profil.activites.arene.trophees + ', ' + A.ligue(profil.activites.arene.trophees).nom + ').';
       parole = v ? 'Une ombre n\'est qu\'un souvenir. Toi, tu avances.' : 'Même les ombres apprennent. Demain, tu l\'auras.';
     } else {
       const t = etat.unites.find(u => u.titan), degats = Math.max(0, (t.pvDepart || t.pvMax) - t.pv);
       A.enregistrerTitan(profil, d, degats);
+      // Un palier vient de tomber ? Le corbeau prévient les autres tisserands
+      if (degats > 0 && S.conf()) autresJoueurs().then(autres => {
+        if (!autres.length) return;
+        const tt = A.totalTitan(profil, d, autres), pct = A.palierFranchi(tt.total - degats, tt.total, tt.objectif);
+        const T = A.titanDeLaSemaine(d), nom = T.nom.split(',')[0];
+        if (pct) S.poster({ texte: pct >= 100 ? '🗿 ' + nom + ' est tombé ! Venez réclamer vos récompenses 🎉' : '🗿 ' + nom + ' a perdu ' + pct + ' % de sa vie ! Le prochain palier t\'attend 💪' });
+      });
       gains = { drachmes: 10 + Math.round(degats / 50), materiaux: t.pv <= 0 ? { perle: 1 } : {} };
       profil.drachmes += gains.drachmes; A.ajouterMateriaux(profil, gains.materiaux);
       titre = t.pv <= 0 ? 'Le Titan est tombé !' : 'Assaut terminé';
@@ -711,19 +752,23 @@
   function jourDe(t) { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function filCorbeau() {
     const moi = moiCorbeau(), reactions = {};
-    corbeau.liste.filter(m => m.type === 'reaction').forEach(r => { (reactions[r.cible] = reactions[r.cible] || []).push(r); });
+    // une seule réaction par personne et par message (la plus récente), même si d'anciens doublons traînent
+    corbeau.liste.filter(m => m.type === 'reaction').forEach(r => { const l = reactions[r.cible] = reactions[r.cible] || []; const k = l.findIndex(x => x.de === r.de); if (k >= 0) l.splice(k, 1); l.push(r); });
+    // les messages identiques envoyés deux fois de suite par la même personne (moins de 2 minutes) ne s'affichent qu'une fois
+    const vus = {};
+    const liste = corbeau.liste.filter(m => m.type !== 'reaction').filter(m => { const k = m.de + '|' + m.type + '|' + m.texte, avant = vus[k]; vus[k] = m.t; return !(avant && m.t - avant < 120000); });
     let jourCourant = '', h = '';
-    corbeau.liste.filter(m => m.type !== 'reaction').forEach(m => {
+    liste.forEach(m => {
       const j = jourDe(m.t);
       if (j !== jourCourant) { jourCourant = j; h += `<div class="jourMsg">${quandLe(j)}</div>`; }
       const reac = (reactions[m.id] || []).map(r => `<span title="${echapper(r.nom)}">${echapper(r.texte)}</span>`).join('');
       if (m.type === 'annonce') {
         h += `<div class="annonceMsg"><div>🧵 <b>${echapper(m.nom)}</b> ${echapper(m.texte)}</div><div class="small">${heure(m.t)}</div>
-          <div class="reacs">${reac}${m.de !== moi ? REACTIONS.map(e => `<button class="reagir" data-cible="${m.id}" data-e="${e}">${e}</button>`).join('') : ''}</div></div>`;
+          <div class="reacs">${reac}${m.de !== moi ? REACTIONS.map(e => { const mienne = (reactions[m.id] || []).some(r => r.de === moi && r.texte === e); return `<button class="reagir${mienne ? ' on' : ''}" data-cible="${m.id}" data-e="${e}" ${mienne ? 'disabled' : ''}>${e}</button>`; }).join('') : ''}</div></div>`;
       } else {
         const mien = m.de === moi;
         h += `<div class="bulle ${mien ? 'mienne' : ''}">${mien ? '' : `<div class="auteur">${echapper(m.nom)}</div>`}<div>${echapper(m.texte)}</div>
-          <div class="meta">${heure(m.t)}${reac ? ' · ' + reac : ''}${mien ? '' : ` <button class="reagir mini" data-cible="${m.id}" data-e="👏">👏</button>`}</div></div>`;
+          <div class="meta">${heure(m.t)}${reac ? ' · ' + reac : ''}${mien || (reactions[m.id] || []).some(r => r.de === moi) ? '' : ` <button class="reagir mini" data-cible="${m.id}" data-e="👏">👏</button>`}</div></div>`;
       }
     });
     return h || '<p class="small" style="text-align:center">Aucun message pour l\'instant. Le corbeau attend ton premier mot !</p>';
@@ -736,9 +781,13 @@
     const fil = $('filMsgs');
     const rafraichir = () => { const bas = fil.scrollHeight - fil.scrollTop - fil.clientHeight < 40; fil.innerHTML = filCorbeau(); brancher(); if (bas) fil.scrollTop = fil.scrollHeight;
       if (corbeau.liste.length) localStorage.setItem('fdm_lu', String(Math.max(luCorbeau(), corbeau.liste[corbeau.liste.length - 1].t))); majPastilleCorbeau(); };
+    let envoiEnCours = false;
     const envoyer = async (msg) => {
+      if (envoiEnCours) return false; // un seul envoi à la fois : pas de doublon si on appuie deux fois
+      envoiEnCours = true; fil.parentNode.querySelectorAll('.presages button, .reagir').forEach(b => b.disabled = true);
       $('etatMsg').textContent = '🐦‍⬛ Le corbeau s\'envole...';
-      const m = await S.poster(msg);
+      msg.cid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); // identifiant d'envoi : le script ignore un double
+      const m = await S.poster(msg).finally(() => { envoiEnCours = false; if ($('lexiqueCorps')) $('lexiqueCorps').querySelectorAll('.presages button').forEach(b => b.disabled = false); });
       if (!m) { $('etatMsg').textContent = '⚠️ Message non envoyé (réseau, ou script à mettre à jour en version 9).'; return false; }
       $('etatMsg').textContent = ''; SON.jouer('clic');
       await relever(); if (!corbeau.liste.some(x => x.id === m.id)) corbeau.liste.push(m);
@@ -800,6 +849,7 @@
       <div class="sousTitre">Ses cartes (communes à son espèce)</div><div>${cartes || '<span class="small">aucune</span>'}</div>
       <div class="sousTitre">Surnom</div><div class="saisieMsg"><input id="surnom" maxlength="20" value="${echapper(l.surnom)}"><button id="renommer">Renommer</button></div>
       <button class="principal" id="lienEquipe" style="width:100%;margin-top:10px" ${actif ? 'disabled' : ''}>${actif ? '⚔️ Déjà dans l\'équipe' : 'Mettre dans l\'équipe'}</button>
+      ${(() => { const tal = profil.activites && A.portesDe(profil.activites)[uid] && A.talisman(A.portesDe(profil.activites)[uid]); return `<p class="small">Talisman : ${tal ? tal.emoji + ' ' + tal.nom + ' (' + tal.effet(profil.activites.talismans[tal.id]) + ')' : 'aucun'}. On le choisit à la Forge.</p>`; })()}
       <button id="lienLiberer" style="width:100%;margin-top:8px">Libérer cette créature</button>
       <button class="lien" id="lienRetour" style="margin-top:8px">← L'Enclos</button>`);
     $('lienRetour').onclick = () => ouvrirEnclos(retour);
@@ -809,6 +859,7 @@
     $('lienLiberer').onclick = () => {
       if (!confirmer) { confirmer = true; $('lienLiberer').textContent = 'Confirmer : ' + l.surnom + ' retournera à la nature'; $('lienLiberer').classList.add('danger');
         $('lienLiberer').insertAdjacentHTML('beforebegin', parole('atropos', 'Un fil qu\'on dénoue ne se renoue pas. Tu es sûr de toi ? Moi, je le suis toujours.')); return; }
+      if (profil.activites && A.portesDe(profil.activites)[uid]) A.porter(profil, uid, null);
       P.libererLien(profil, uid); sauver(); SON.jouer('page'); ouvrirEnclos(retour);
     };
   }
@@ -857,7 +908,8 @@
   // ---------- Onglet Trésors ----------
   function ouvrirTresors() {
     ecran('tresors');
-    $('agora').innerHTML = '<div class="bandeauAgora"></div>' + agoraHtml(); brancherAgora($('agora'));
+    $('agora').innerHTML = '<div class="bandeauAgora"></div><div id="defiSemaine"></div>' + agoraHtml(); brancherAgora($('agora'));
+    afficherDefi();
     afficherOffrande();
     const ch = P.choixEnAttente(profil);
     $('choixAttente').style.display = ch ? 'flex' : 'none';

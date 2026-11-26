@@ -528,7 +528,13 @@
   .porteurs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0; }
   .porteur { background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; padding: 6px 4px; text-align: center; display: flex; flex-direction: column; gap: 2px; }
   .porteur .e { font-size: 24px; } .porteur b { font-weight: normal; font-size: 13px; color: var(--or); }
-  button.porter { min-width: 44px; } button.porter.on { border-color: var(--or); background: rgba(224,176,79,.18); }
+  .defi { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
+  .defi.reussi { border-color: var(--or); box-shadow: 0 0 12px rgba(224,176,79,.25); }
+  .defi .t { color: var(--or); } .defi button { margin-top: 4px; }
+  .vogue { color: var(--or); font-size: 12px; white-space: nowrap; }
+  .reagir.on { border-color: var(--or); background: rgba(224,176,79,.2); }
+  .porteur.actif { border-color: var(--or); }
+  select.porterSel { background: var(--carte); color: var(--texte); border: 1px solid var(--bord); border-radius: 8px; padding: 7px 6px; font: inherit; font-size: 14px; max-width: 100%; }
   .astra { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; margin: 8px 0; }
   .astra > div { background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; padding: 6px; }
   .astra b { color: var(--or); font-weight: normal; font-size: 13px; }

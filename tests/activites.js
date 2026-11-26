@@ -24,8 +24,14 @@ verifier(p.activites.talismans.athena === 3 && !A.peutForger(p, 'athena'), 'Forg
 const sans = A.equipeHorsChant(Object.assign(profil(), { activites: null })), avec = A.equipeHorsChant(p);
 verifier(avec[0].pvMax > sans[0].pvMax && avec[1].pvMax === sans[1].pvMax, 'Forge : le talisman ne renforce que son porteur');
 A.forger(p, 'zeus'); verifier(p.activites.portes.phaena === 'zeus', 'Forge : le deuxième talisman va à Phaéna');
-A.porter(p, 'compagnon', 'athena'); verifier(!p.activites.portes.errant && p.activites.portes.compagnon === 'athena', 'Forge : un talisman ne se porte qu\'une fois');
+A.porter(p, 'griffon', 'athena'); verifier(!p.activites.portes.errant && p.activites.portes.griffon === 'athena', 'Forge : un talisman ne se porte qu\'une fois');
 const eq3 = A.equipeHorsChant(p); verifier(eq3[2].pvMax > sans[2].pvMax && eq3[1].attaque > sans[1].attaque && eq3[0].pvMax === sans[0].pvMax, 'Forge : chacun son talisman');
+const v127 = profil(); v127.activites = { talismans: { athena: 1, zeus: 1 }, portes: { errant: 'zeus', compagnon: 'athena' } }; v127.liens = [{ uid: 'd1', espece: 'dryade', surnom: 'Dryade' }]; v127.lienActif = 'd1'; v127.creature = 'dryade'; v127.creatures = ['dryade']; A.initialiser(v127);
+verifier(v127.activites.portes.d1 === 'athena' && !v127.activites.portes.compagnon, 'Forge : l\'emplacement « compagnon » passe à la créature de l\'équipe');
+const eqd = A.equipeHorsChant(v127), sansD = (() => { const q = JSON.parse(JSON.stringify(v127)); q.activites.portes = {}; return A.equipeHorsChant(q); })();
+const dU = eqd.find(u => u.id === 'dryade'), dS = sansD.find(u => u.id === 'dryade');
+verifier(dU && dS && dU.pvMax > dS.pvMax, 'Forge : une créature liée porte son talisman en combat');
+A.porter(v127, 'griffon', 'zeus'); verifier(v127.activites.portes.griffon === 'zeus' && !v127.activites.portes.errant, 'Forge : Kelos peut porter un talisman même au repos');
 const vieux = profil(); vieux.activites = { talisman: 'athena', talismans: { athena: 2 } }; A.initialiser(vieux);
 verifier(vieux.activites.portes.errant === 'athena', 'Forge : ancienne partie, talisman donné à l\'Errant');
 verifier(A.equipeOmbre({ equipement: p.equipement, cartes: p.cartes, compagnons: p.compagnons, creature: 'griffon', niveau: 5, activites: { talisman: 'athena', talismans: { athena: 3 } } }, 'x').length === 3, 'Forge : ombre d\'un ancien script');
@@ -48,6 +54,47 @@ const el = A.recolterExpedition(p, '2026-11-20', t0 + 9 * 3600e3, p.activites.ex
 verifier(el && el.drachmes > e.drachmes && Object.values(el.materiaux).reduce((x, y) => x + y, 0) >= 5, 'Expédition : la longue rapporte plus');
 const anc = profil(); A.initialiser(anc); anc.activites.expedition = { creature: 'griffon', lieu: 'foret', date: '2026-11-19' };
 verifier(A.migrerExpeditions(anc).length === 1 && A.expeditionPrete(anc, '2026-11-20', t0), 'Expédition : l\'ancienne expédition est migrée et prête');
+
+// Lieu du jour
+{ const q = profil(); A.initialiser(q); q.joursJoues = 30; q.liens = [{ uid: 'a', espece: 'satyre', surnom: 'A' }, { uid: 'b', espece: 'satyre', surnom: 'B' }];
+  const t = Date.UTC(2026, 10, 20, 8), dl = new Date(t), dd = dl.getFullYear() + '-' + String(dl.getMonth() + 1).padStart(2, '0') + '-' + String(dl.getDate()).padStart(2, '0');
+  const v = A.lieuDuJour(q, dd), autre = A.lieuxOuverts(q).find(l => l.id !== v.id);
+  verifier(v && A.lieuDuJour(q, dd).id === v.id, 'Lieu du jour : stable dans la journée');
+  A.partirExpedition(q, t, 'a', v.id, 'long'); A.partirExpedition(q, t, 'b', autre.id, 'long');
+  const ra = A.recolterExpedition(q, dd, t + 9 * 3600e3, q.activites.expeditions[0].id), rb = A.recolterExpedition(q, dd, t + 9 * 3600e3, q.activites.expeditions[0].id);
+  const tot = r => Object.values(r.materiaux).reduce((x, y) => x + y, 0);
+  verifier(ra.vogue && !rb.vogue && tot(ra) > tot(rb) && ra.materiaux.perle >= 1, 'Lieu du jour : butin doublé et une perle'); }
+
+// Champions de l'Arène
+{ const q = profil(); A.initialiser(q); q.joursJoues = 12;
+  const c = A.championsDuJour(q, '2026-11-27');
+  verifier(c.length === 2 && c.every(x => x.jour <= 12) && JSON.stringify(A.championsDuJour(q, '2026-11-27')) === JSON.stringify(c), 'Arène : deux champions du jour, déjà rencontrés');
+  verifier(A.CHAMPIONS.every(x => A.equipeChampion(q, x).every(u => u.pvMax > 0 && u.attaque > 0 && u.liable === false)), 'Arène : équipes de champions valides'); }
+
+// Titan tous ensemble et paliers
+{ const q = profil(); A.initialiser(q); const d = '2026-11-26';
+  ['2026-11-23', '2026-11-24', '2026-11-25'].forEach(x => A.enregistrerTitan(q, x, 100));
+  const autres = [{ nom: 'Marion', titan: { semaine: A.semaine(d), degats: 300, essais: ['2026-11-23', '2026-11-25'] } }];
+  verifier(!A.ensembleTitan(q, d, autres).ok, 'Titan : pas de récompense commune si un tisserand a moins de 3 assauts');
+  autres[0].titan.essais.push('2026-11-26');
+  verifier(A.ensembleTitan(q, d, autres).ok && A.reclamerEnsemble(q, d, autres) && !A.reclamerEnsemble(q, d, autres), 'Titan : récompense commune réclamée une fois');
+  verifier(A.palierFranchi(400, 600, 2000) === 25 && A.palierFranchi(600, 700, 2000) === null && A.palierFranchi(900, 2000, 2000) === 100, 'Titan : palier franchi'); }
+
+// Défi de la semaine
+{ const q = profil(); A.initialiser(q); const d = '2026-11-26';
+  q.rangs = [1, 2, 3, 4].map(j => ({ jour: j, date: '2026-11-2' + (2 + j), victoire: true, etoiles: 3 })).concat([{ jour: 0, date: '2026-11-16', victoire: true, etoiles: 3 }]);
+  const autres = [{ nom: 'Marion', fiche: { recents: [{ date: '2026-11-24', victoire: true, etoiles: 2 }] } }];
+  const e = A.etatDefi(q, d, autres);
+  verifier(e.defi.id === 'etoiles' && e.valeur === 14 && e.cible === 28 && !e.ok, 'Défi : étoiles de la semaine comptées à deux');
+  q.rangs.push(...[5, 6, 7, 8, 9].map(j => ({ jour: j, date: '2026-11-26', victoire: true, etoiles: 3 })));
+  verifier(A.etatDefi(q, d, autres).ok && A.reclamerDefi(q, d, autres) && !A.reclamerDefi(q, d, autres), 'Défi : récompense réclamée une fois');
+  verifier(!A.etatDefi(q, '2026-11-30', autres).pris, 'Défi : nouveau défi le lundi'); }
+
+// Penchant : égalité départagée
+{ const q = profil(); A.initialiser(q); q.histoire = { choix: {}, jauges: { honneur: 1 }, echos: { ruse: 20, honneur: 10 }, sceaux: [] };
+  A.noterPenchant(q, 'ruse', 1); verifier(q.histoire.dominante === 'ruse', 'Penchant : en tête, la Ruse domine');
+  q.histoire = { choix: {}, jauges: { honneur: 1 }, echos: { ruse: 20, honneur: 10 }, sceaux: [] }; A.noterPenchant(q, 'honneur', 1);
+  verifier(q.histoire.dominante === 'honneur', 'Penchant : à égalité, le dernier qui a bougé l\'emporte'); }
 
 // Labyrinthe
 p = profil(); A.initialiser(p); p.vus = { satyre: 1, sanglier: 1, harpie: 1 };

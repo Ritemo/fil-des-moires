@@ -8,7 +8,7 @@
  */
 const NOM_FICHIER = 'fil-des-moires-sauvegarde.json';
 
-const VERSION_SCRIPT = 14;
+const VERSION_SCRIPT = 15;
 const NOM_MESSAGES = 'fil-des-moires-messagerie.json';
 const DEPOT = 'Ritemo/fil-des-moires';
 const ADRESSE_JEU = 'https://ritemo.github.io/fil-des-moires/';
@@ -239,14 +239,25 @@ function fichierMessages() {
   return l.hasNext() ? l.next() : DriveApp.createFile(NOM_MESSAGES, '[]', 'application/json');
 }
 function lireMessages() { try { return JSON.parse(fichierMessages().getBlob().getDataAsString()) || []; } catch (err) { return []; } }
+// Ajoute un message. Renvoie { m, nouveau } : un doublon (même joueur, même texte, moins de 2 minutes, ou même identifiant
+// d'envoi) n'est pas ajouté une deuxième fois. Une réaction remplace la réaction précédente du même joueur sur le même message.
 function ajouterMessage(m) {
   const verrou = LockService.getScriptLock(); verrou.waitLock(10000);
   try {
-    const liste = lireMessages();
-    m.t = Date.now(); m.id = m.t.toString(36) + Math.random().toString(36).slice(2, 6);
+    let liste = lireMessages();
+    const maintenant = Date.now();
+    const double = liste.filter(function (x) {
+      if (x.de !== m.de || x.type !== m.type) return false;
+      if (m.cid && x.cid === m.cid) return true;
+      if (m.type === 'reaction') return x.cible === m.cible && x.texte === m.texte;
+      return x.texte === m.texte && maintenant - x.t < 120000;
+    })[0];
+    if (double) return { m: double, nouveau: false };
+    if (m.type === 'reaction') liste = liste.filter(function (x) { return !(x.type === 'reaction' && x.de === m.de && x.cible === m.cible); });
+    m.t = maintenant; m.id = m.t.toString(36) + Math.random().toString(36).slice(2, 6);
     liste.push(m);
     fichierMessages().setContent(JSON.stringify(liste.slice(-200)));
-    return m;
+    return { m: m, nouveau: true };
   } finally { verrou.releaseLock(); }
 }
 function posterMessage(joueur, msg) {
@@ -256,12 +267,14 @@ function posterMessage(joueur, msg) {
     const emoji = String(msg.reaction).slice(0, 8), cible = String(msg.cible || '');
     const visee = lireMessages().filter(function (x) { return x.id === cible; })[0];
     if (!visee) return { ok: false, erreur: 'cible' };
-    m = ajouterMessage({ type: 'reaction', de: joueur, nom: nom, texte: emoji, cible: cible });
+    const r = ajouterMessage({ type: 'reaction', de: joueur, nom: nom, texte: emoji, cible: cible, cid: msg.cid || null });
+    m = r.m; if (!r.nouveau) return { ok: true, message: m };
     if (visee.de !== joueur) prevenir([visee.de], '🐦‍⬛ ' + nom + ' a réagi ' + emoji, visee.type === 'annonce' ? nomDe(visee.de, null) + ' ' + visee.texte : visee.texte);
   } else {
     const texte = String(msg.texte || '').trim().slice(0, 500);
     if (!texte) return { ok: false, erreur: 'vide' };
-    m = ajouterMessage({ type: 'msg', de: joueur, nom: nom, texte: texte });
+    const r = ajouterMessage({ type: 'msg', de: joueur, nom: nom, texte: texte, cid: msg.cid || null });
+    m = r.m; if (!r.nouveau) return { ok: true, message: m };
     prevenir(tousLesJoueurs().filter(function (j) { return j !== joueur; }), '🐦‍⬛ ' + nom, texte);
   }
   return { ok: true, message: m };

@@ -119,13 +119,13 @@ L'onglet Agora (ancien onglet Trésors) réunit, en plus de l'Offrande et de la 
 |---|---|---|
 | 🔮 Oracle de Delphes | après le jour 3 | une énigme mythologique par jour, la même pour tous ; drachmes et éclats d'oracle |
 | 🏟️ Arène des ombres | après le jour 4 | un duel par jour contre l'ombre d'un autre joueur (son équipe, pilotée par l'ordinateur) ; trophées et ligues |
-| ⚒️ Forge d'Héphaïstos | après le jour 4 | des talismans (3 niveaux) fabriqués avec les matériaux ; chaque héros (l'Errant, Phaéna, la créature) en porte un, qui ne renforce que lui, partout |
-| 🗺️ Expéditions | après le jour 5 | jusqu'à 3 créatures (Kelos et l'Enclos) explorent en même temps pour 2, 4 ou 8 heures ; plus c'est long, plus le butin est riche |
+| ⚒️ Forge d'Héphaïstos | après le jour 4 | des talismans (3 niveaux) fabriqués avec les matériaux ; chaque personnage (l'Errant, Phaéna, Kelos et chaque créature de l'Enclos) peut en porter un, qui ne renforce que lui quand il combat |
+| 🗺️ Expéditions | après le jour 5 | jusqu'à 3 créatures (Kelos et l'Enclos) explorent en même temps pour 2, 4 ou 8 heures ; plus c'est long, plus le butin est riche ; le lieu du jour (⭐, le même pour tous) double le butin |
 | 🗿 Titan de la semaine | après le jour 6 | un boss commun du lundi au dimanche ; un assaut de 12 actions par jour, les dégâts de tous s'additionnent ; récompenses à 25, 50, 75 et 100 % |
 | 🌀 Labyrinthe des Échos | après le jour 7 | descente de salle en salle, PV conservés, un bienfait au choix entre les salles ; rejouable, seule la meilleure profondeur du jour est récompensée |
 | 🎲 Astragales d'Hermès | après le jour 4 | jeu d'osselets contre Hermès, mise de 10 drachmes, 10 parties par jour |
 
-L'Arène et le Titan lisent les autres joueurs dans le classement du script de sauvegarde (version 7 ou plus). La version 13 du script ajoute la profondeur du Labyrinthe au classement, la version 14 les talismans portés par chaque héros (pour les ombres de l'Arène ; avec un script plus ancien, l'ombre ne porte que le talisman de l'Errant). Sans sauvegarde commune, on affronte sa propre ombre et on combat le Titan seul.
+L'Arène et le Titan lisent les autres joueurs dans le classement du script de sauvegarde (version 7 ou plus). La version 15 du script évite les messages et réactions en double dans le Corbeau. La version 13 ajoute la profondeur du Labyrinthe au classement, la version 14 les talismans portés par chaque héros (pour les ombres de l'Arène ; avec un script plus ancien, l'ombre ne porte que le talisman de l'Errant). Sans sauvegarde commune, on affronte sa propre ombre et on combat le Titan seul.
 
 ## Le Corbeau d'Hermès (messagerie)
 
@@ -147,6 +147,12 @@ ntfy refuse souvent les messages venant de Google (erreur 429 : les serveurs de 
 4. Lancer la fonction `testerRobot` depuis l'éditeur : une notification de test doit arriver.
 
 Vérification : `<adresse du script>/exec?version=1` affiche le journal des derniers envois (200 = envoyé directement, « confié au robot » puis « robot réveillé -> 204 » = passé par GitHub). Quand le jeton expire, le journal affiche « robot réveillé -> 401 » : en générer un nouveau.
+
+## Jouer à deux
+
+- **Défi de la semaine** (en haut de l'Agora) : un objectif commun du lundi au dimanche, qui change chaque semaine (étoiles, épreuves parfaites, victoires, Titan à 75 %). Une fois atteint, chacun réclame 60 drachmes, 1 perle et 1 éclat.
+- **Titan, tous ensemble** : si chaque tisserand fait au moins 3 assauts dans la semaine, chacun reçoit 1 perle et 40 drachmes. Quand un assaut fait tomber un palier (25, 50, 75 ou 100 %), le Corbeau prévient les autres.
+- **Arène** : en plus des ombres des autres tisserands, deux champions du jour (personnages du récit), taillés à la mesure de ton équipe.
 
 ## Le Chant II : « La Forge sous la Montagne »
 

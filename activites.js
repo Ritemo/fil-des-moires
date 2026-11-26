@@ -37,6 +37,7 @@
     a.talismans = a.talismans || {};
     if (a.talisman === undefined) a.talisman = null;
     if (!a.portes) a.portes = a.talisman ? { errant: a.talisman } : {};
+    migrerPortes(profil);
     a.oracle = a.oracle || { serie: 0, justes: 0 };
     a.expedition = a.expedition || null;
     a.arene = a.arene || { trophees: 0, journal: [] };
@@ -183,30 +184,44 @@
     a.talismans[id] = (a.talismans[id] || 0) + 1;
     // un talisman tout neuf va au premier héros sans talisman
     const portes = portesDe(a);
-    if (a.talismans[id] === 1 && !Object.values(portes).includes(id)) { const libre = PORTEURS.find(x => !portes[x]); if (libre) porter(profil, libre, id); }
+    if (a.talismans[id] === 1 && !Object.values(portes).includes(id)) { const libre = porteursDe(profil).find(x => !portes[x]); if (libre) porter(profil, libre, id); }
     return a.talismans[id];
   }
   // ---------- Qui porte quoi ----------
-  const PORTEURS = ['errant', 'phaena', 'compagnon'];
-  const porteurDe = u => (u.invite ? null : u.id === 'errant' || u.id === 'phaena' ? u.id : 'compagnon');
-  // Anciennes parties (et ombres d'un script plus ancien) : un seul talisman, porté par l'Errant
+  // Chaque personnage peut porter un talisman : l'Errant, Phaéna, Kelos et chaque créature liée de l'Enclos (clé : son uid).
+  // Le talisman suit son porteur : il ne sert que quand celui-ci combat.
+  const PORTEURS = ['errant', 'phaena', 'griffon'];
+  const porteurDe = u => (u.invite ? null : u.id === 'errant' || u.id === 'phaena' ? u.id : u.lienUid || u.id);
   function portesDe(act) {
     if (!act) return {};
     if (act.portes) return act.portes;
     return act.talisman ? { errant: act.talisman } : {};
   }
+  // Tous les porteurs possibles d'un profil
+  function porteursDe(profil) {
+    return PORTEURS.filter(x => x === 'errant' || (profil.compagnons || []).includes(x)).concat((profil.liens || []).map(l => l.uid));
+  }
+  // L'ancien emplacement « compagnon » (version 1.27.0) passe à la créature qui était dans l'équipe
+  function migrerPortes(profil) {
+    const a = profil.activites; if (!a || !a.portes || !a.portes.compagnon) return;
+    const cle = profil.lienActif || 'griffon';
+    if (!a.portes[cle]) a.portes[cle] = a.portes.compagnon;
+    delete a.portes.compagnon;
+  }
   function porter(profil, porteur, id) {
     const a = profil.activites; a.portes = Object.assign({}, portesDe(a));
-    PORTEURS.forEach(x => { if (a.portes[x] === id) delete a.portes[x]; });
+    Object.keys(a.portes).forEach(x => { if (a.portes[x] === id) delete a.portes[x]; });
     if (id) a.portes[porteur] = id; else delete a.portes[porteur];
-    a.talisman = a.portes.errant || a.portes.phaena || a.portes.compagnon || null; // pour les scripts de sauvegarde plus anciens
+    a.talisman = a.portes.errant || Object.values(a.portes)[0] || null; // pour les scripts de sauvegarde plus anciens
     return a.portes;
   }
   // Applique à chaque héros le talisman qu'il porte
   function appliquerTalisman(equipe, act) {
     const portes = portesDe(act);
     equipe.forEach(u => {
-      const id = portes[porteurDe(u)], n = id && act.talismans && act.talismans[id], t = id && talisman(id);
+      const cle = porteurDe(u);
+      // une ombre venue d'une sauvegarde 1.27.0 a encore un emplacement « compagnon »
+      const id = cle && (portes[cle] || (cle !== 'errant' && cle !== 'phaena' ? portes.compagnon : null)), n = id && act.talismans && act.talismans[id], t = id && talisman(id);
       if (t && n) { t.appliquer(u, n); u.talismanPorte = t.emoji; }
     });
     return equipe;
@@ -224,6 +239,12 @@
       recits: ["{c} a plongé dans l'eau noire et ressort avec une perle de Thétis.", "Sur la rive, {c} a trouvé des coquillages… et mieux encore.", "Quelque chose a bougé sous la surface. {c} a filé, en emportant son butin.", "{c} a veillé toute la nuit au bord de l'étang. La lune lui a laissé un cadeau.", "Entre les roseaux, {c} a repêché un trésor englouti."] }
   ];
   function lieuxOuverts(profil) { return LIEUX.filter(l => (profil.joursJoues || 0) + 1 >= l.jour); }
+  // Le lieu du jour : le même pour tous les tisserands (parmi les lieux ouverts). Butin doublé, et une perle au retour d'une longue expédition.
+  function lieuDuJour(profil, date) {
+    const ouverts = lieuxOuverts(profil), h = hasardDe('lieu-du-jour|' + date);
+    return ouverts[Math.floor(h() * LIEUX.length) % ouverts.length];
+  }
+  const dateLocale = t => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   function explorateurs(profil) {
     const ids = (profil.compagnons || []).includes('griffon') ? ['griffon'] : [];
     return ids.concat(profil.creatures || []).map(id => D.HEROS.concat(D.CREATURES).find(x => x.id === id)).filter(Boolean);
@@ -253,7 +274,8 @@
   function partirExpedition(profil, maintenant, uid, lieuId, dureeId) {
     const ex = migrerExpeditions(profil), x = explorateursEnclos(profil).find(c => c.uid === uid), du = DUREES.find(d => d.id === dureeId);
     if (!x || !du || ex.length >= PLACES_EXPEDITION || ex.some(e => e.creature === uid)) return false;
-    ex.push({ id: maintenant.toString(36) + '-' + uid, creature: uid, espece: x.espece, nom: x.nom, lieu: lieuId, duree: dureeId, depart: maintenant, fin: maintenant + du.heures * 3600e3 });
+    const vogue = lieuDuJour(profil, dateLocale(maintenant)).id === lieuId;
+    ex.push({ id: maintenant.toString(36) + '-' + uid, creature: uid, espece: x.espece, nom: x.nom, lieu: lieuId, duree: dureeId, depart: maintenant, fin: maintenant + du.heures * 3600e3, vogue: vogue || undefined });
     return true;
   }
   const expeditionsPretes = (profil, maintenant) => migrerExpeditions(profil).filter(e => e.fin <= maintenant);
@@ -266,8 +288,9 @@
     const cr = D.HEROS.concat(D.CREATURES).find(x => x.id === e.espece) || { nom: 'Ta créature', affinite: '' };
     const h = hasardDe('expedition|' + e.id + '|' + e.creature + '|' + e.lieu + '|' + (profil.pseudo || ''));
     const affine = cr.affinite === lieu.affinite;
-    const n = du.n + Math.floor(h() * 2) + (affine ? (du.n >= 5 ? 2 : 1) : 0), materiaux = {};
+    const n = (du.n + Math.floor(h() * 2) + (affine ? (du.n >= 5 ? 2 : 1) : 0)) * (e.vogue ? 2 : 1), materiaux = {};
     for (let i = 0; i < n; i++) { const m = lieu.butin[Math.floor(h() * lieu.butin.length)]; materiaux[m] = (materiaux[m] || 0) + 1; }
+    if (e.vogue && du.id === 'long') materiaux.perle = (materiaux.perle || 0) + 1;
     const fete = (feteDuJour(date) || {}).id === 'dionysies';
     if (fete) for (let i = 0; i < Math.ceil(du.n / 2); i++) { const m = lieu.butin[Math.floor(h() * lieu.butin.length)]; materiaux[m] = (materiaux[m] || 0) + 1; }
     const drachmes = du.drachmes + Math.floor(h() * du.drachmes * 0.6);
@@ -276,7 +299,7 @@
     profil.activites.expeditionsFaites = (profil.activites.expeditionsFaites || 0) + 1;
     noterPenchant(profil, 'ruse', 1);
     const fragment = h() < du.frag ? donnerFragment(profil, h) : null;
-    return { lieu, creature: Object.assign({}, cr, { nom: e.nom || cr.nom }), materiaux, drachmes, recit, affine, fete, fragment, duree: du };
+    return { lieu, creature: Object.assign({}, cr, { nom: e.nom || cr.nom }), materiaux, drachmes, recit, affine, fete, fragment, duree: du, vogue: !!e.vogue };
   }
 
   // ====================== LE LABYRINTHE DES ÉCHOS ======================
@@ -375,6 +398,34 @@
     return equipeHorsChant(fiche).map(u => Object.assign(u, { pvMax: Math.round(u.pvMax * 0.9), attaque: Math.round(u.attaque * 0.9), ombre: true, comportement: 'agressif', nom: u.nom + (nom ? ' (' + nom + ')' : ''),
       desc: "L'ombre d'un tisserand, telle qu'elle était à sa dernière sauvegarde.", special: 'Elle joue ses cartes comme un vrai joueur.' }));
   }
+  // Les champions de l'Arène : des personnages du jeu, pour ne pas toujours affronter les mêmes ombres.
+  // Deux champions par jour (les mêmes pour tous), parmi ceux déjà rencontrés dans le récit.
+  const CHAMPIONS = [
+    { id: 'nikias', nom: 'Nikias et les satyres de Dionysos', emoji: '🍇', jour: 4, ennemis: ['satyre', 'satyre', 'harpie'], force: 1.45, mot: "Nikias rit : « Mes satyres sont ivres, mais ils tapent fort ! »" },
+    { id: 'sirenes', nom: 'Le chœur des Sirènes', emoji: '🧜‍♀️', jour: 10, ennemis: ['sirene', 'sirene', 'harpie'], force: 1.2, mot: "« Écoute notre chant, tisserand. Juste un instant. »" },
+    { id: 'dryades', nom: 'Les Dryades effilochées', emoji: '🌳', jour: 6, ennemis: ['dryade', 'dryade', 'satyre'], force: 1.85, mot: "Les branches craquent : la forêt t'a reconnu." },
+    { id: 'chimere', nom: 'La Chimère', emoji: '🦁', jour: 14, ennemis: ['chimere'], force: 1.9, mot: "Trois têtes, un seul appétit." },
+    { id: 'lysandre', nom: 'Lysandre et ses Effilés', emoji: '✂️', jour: 21, ennemis: ['effile', 'lysandre', 'effile'], force: 0.72, mot: "« Ma Dame m'a dit de te tester. Pas de te tuer. Pas encore. »" },
+    { id: 'hermes', nom: 'Les voleurs d\'Hermès', emoji: '🪽', jour: 9, ennemis: ['harpie', 'harpie', 'harpie'], force: 0.9, mot: "Hermès parie contre toi. Il parie toujours contre tout le monde." },
+    { id: 'forges', nom: 'Les gardiennes des Forges', emoji: '🤖', jour: 45, ennemis: ['automate', 'salamandre', 'automate'], force: 1.4, mot: "Cédalion soupire : « Elles ne m'écoutent plus du tout. »" },
+    { id: 'keres', nom: 'Les Kères d\'Atropos', emoji: '👻', jour: 35, ennemis: ['kere', 'kere', 'chien_cendre'], force: 0.75, mot: "Atropos regarde depuis les gradins. Elle ne sourit pas." }
+  ];
+  function championsDuJour(profil, date) {
+    const ouverts = CHAMPIONS.filter(c => (profil.joursJoues || 0) >= c.jour);
+    const h = hasardDe('champions|' + date), l = ouverts.slice();
+    for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(h() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; }
+    return l.slice(0, 2);
+  }
+  // Le champion est taillé à la mesure de ton équipe (PV et attaque), puis ajusté par sa « force »
+  function equipeChampion(profil, c) {
+    const moi = equipeHorsChant(profil);
+    const pv = moi.reduce((x, u) => x + u.pvMax, 0), atk = moi.reduce((x, u) => x + u.attaque, 0) / moi.length;
+    const base = c.ennemis.map(id => JSON.parse(JSON.stringify(D.ENNEMIS[id])));
+    const bpv = base.reduce((x, u) => x + u.pvMax, 0), batk = base.reduce((x, u) => x + u.attaque, 0) / base.length;
+    const kpv = pv * FORCE_CHAMPION.pv * c.force / bpv, katk = atk * FORCE_CHAMPION.atk * c.force / batk;
+    return base.map(u => Object.assign(u, { pvMax: Math.round(u.pvMax * kpv), attaque: Math.round(u.attaque * katk), liable: false, mortel: true, gardien: false }));
+  }
+  const FORCE_CHAMPION = { pv: 1.8, atk: 1.5 };
   function areneFaite(profil, date) { return profil.activites.arene.date === date; }
   function resultatArene(profil, date, adversaire, victoire) {
     const a = profil.activites.arene;
@@ -443,6 +494,24 @@
     const t = etatTitan(profil, date);
     return PALIERS.filter(p => total >= objectif * p.pct / 100 && !t.paliers.includes(p.pct));
   }
+  // Tous ensemble : si chaque tisserand a fait au moins 3 assauts dans la semaine, chacun reçoit une récompense commune
+  const ENSEMBLE = { assauts: 3, libelle: '1 perle de Thétis et 40 drachmes pour chacun', gains: { drachmes: 40, materiaux: { perle: 1 } } };
+  function ensembleTitan(profil, date, autres) {
+    const s = semaine(date), moi = etatTitan(profil, date);
+    const tous = [{ nom: 'Toi', essais: (moi.essais || []).length, moi: true }].concat((autres || []).map(x => ({ nom: x.nom, essais: x.titan && x.titan.semaine === s ? (x.titan.essais || []).length : 0 })));
+    return { tous, actif: tous.length > 1, ok: tous.length > 1 && tous.every(x => x.essais >= ENSEMBLE.assauts), pris: !!moi.ensemble };
+  }
+  function reclamerEnsemble(profil, date, autres) {
+    const e = ensembleTitan(profil, date, autres); if (!e.ok || e.pris) return null;
+    etatTitan(profil, date).ensemble = true;
+    profil.drachmes += ENSEMBLE.gains.drachmes; ajouterMateriaux(profil, ENSEMBLE.gains.materiaux);
+    return ENSEMBLE;
+  }
+  // Le palier le plus haut franchi par un assaut (pour prévenir les autres tisserands)
+  function palierFranchi(avant, apres, objectif) {
+    const p = PALIERS.filter(x => avant < objectif * x.pct / 100 && apres >= objectif * x.pct / 100).pop();
+    return p ? p.pct : null;
+  }
   function reclamerPalier(profil, date, pct) {
     const t = etatTitan(profil, date), p = PALIERS.find(x => x.pct === pct);
     if (!p || t.paliers.includes(pct)) return null;
@@ -454,6 +523,40 @@
     return Object.assign({}, p, { fragment });
   }
 
+
+  // ====================== DÉFI COMMUN DE LA SEMAINE ======================
+  // Un objectif partagé par tous les tisserands, du lundi au dimanche. Chacun réclame la récompense une fois l'objectif atteint.
+  const DEFIS = [
+    { id: 'etoiles', nom: 'La toile étoilée', emoji: '⭐', desc: n => `À vous tous, ${n} étoiles dans les épreuves de la semaine`, cible: nb => 14 * nb,
+      mesure: rangs => rangs.reduce((n, r) => n + (r.victoire ? r.etoiles || 0 : 0), 0) },
+    { id: 'parfaits', nom: 'Le fil sans nœud', emoji: '✨', desc: n => `À vous tous, ${n} épreuves parfaites (3 étoiles) cette semaine`, cible: nb => 4 * nb,
+      mesure: rangs => rangs.filter(r => r.victoire && r.etoiles === 3).length },
+    { id: 'victoires', nom: 'Les fileuses tiennent bon', emoji: '🧵', desc: n => `À vous tous, ${n} épreuves gagnées cette semaine`, cible: nb => 6 * nb,
+      mesure: rangs => rangs.filter(r => r.victoire).length },
+    { id: 'titan', nom: 'Le Titan à genoux', emoji: '🗿', desc: () => 'Faire perdre au Titan de la semaine au moins 75 % de sa vie', cible: () => 75, titan: true }
+  ];
+  const GAINS_DEFI = { drachmes: 60, materiaux: { perle: 1, eclat: 1 }, libelle: '60 drachmes, 1 perle et 1 éclat d\'oracle pour chacun' };
+  function defiDeLaSemaine(date) { return DEFIS[Math.floor(joursDepuis(semaine(date)) / 7) % DEFIS.length]; } // chaque semaine le suivant
+  function etatDefi(profil, date, autres) {
+    const s = semaine(date), defi = defiDeLaSemaine(date), nb = 1 + (autres || []).length;
+    const a = profil.activites; if (!a.defi || a.defi.semaine !== s) a.defi = { semaine: s, pris: false };
+    const fin = dateDe(joursDepuis(s) + 6), dans = r => r.date && r.date >= s && r.date <= fin && !r.echo;
+    let valeur, detail;
+    if (defi.titan) { const t = totalTitan(profil, date, autres); valeur = Math.min(100, Math.floor(100 * t.total / t.objectif)); detail = []; }
+    else {
+      detail = [{ nom: 'Toi', valeur: defi.mesure((profil.rangs || []).filter(dans)) }]
+        .concat((autres || []).map(x => ({ nom: x.nom, valeur: defi.mesure(((x.fiche && x.fiche.recents) || []).filter(dans)) })));
+      valeur = detail.reduce((n, x) => n + x.valeur, 0);
+    }
+    const cible = defi.cible(nb);
+    return { defi, nom: defi.nom, emoji: defi.emoji, texte: defi.desc(cible) + '.', cible, valeur, detail, ok: valeur >= cible, pris: a.defi.pris, unite: defi.titan ? ' %' : '' };
+  }
+  function reclamerDefi(profil, date, autres) {
+    const e = etatDefi(profil, date, autres); if (!e.ok || e.pris) return null;
+    profil.activites.defi.pris = true;
+    profil.drachmes += GAINS_DEFI.drachmes; ajouterMateriaux(profil, GAINS_DEFI.materiaux);
+    return GAINS_DEFI;
+  }
 
   // ====================== PENCHANT (Honneur, Ruse, Piété) ======================
   // Les choix du Chant comptent 10 points, chaque activité 1 point : assaut sur le Titan et victoire dans l'Arène = Honneur, expédition = Ruse, bonne réponse à l'Oracle = Piété.
@@ -467,13 +570,12 @@
     const r = {}; Object.keys(PENCHANTS).forEach(k => { r[k] = 10 * (j[k] || 0) + (e[k] || 0); }); return r;
   }
   function dominante(profil) {
-    const sc = scoresPenchant(profil), tri = Object.keys(sc).sort((a, b) => sc[b] - sc[a]);
-    return sc[tri[0]] >= 5 && sc[tri[0]] > sc[tri[1]] ? tri[0] : null;
+    return P.departager(scoresPenchant(profil), profil.histoire);
   }
   // Renvoie le nouveau penchant s'il vient de changer (Lachésis l'annonce)
   function noterPenchant(profil, id, n) {
     const h = profil.histoire = profil.histoire || { choix: {}, jauges: {}, sceaux: [] };
-    h.echos = h.echos || {}; h.echos[id] = (h.echos[id] || 0) + (n || 1);
+    h.echos = h.echos || {}; h.echos[id] = (h.echos[id] || 0) + (n || 1); h.dernierPenchant = id;
     return majDominante(profil);
   }
   function majDominante(profil) {
@@ -627,12 +729,14 @@
     DEBLOCAGE, NOMS, MATERIAUX, QUESTIONS, TALISMANS, LIEUX, TITANS, LIGUES, PALIERS, ACTIONS_TITAN, OBJECTIF_PAR_JOUEUR,
     initialiser, debloquee, ajouterMateriaux, joursDepuis,
     oracleDuJour, oracleFait, repondreOracle,
-    talisman, coutForge, peutForger, forger, appliquerTalisman, PORTEURS, portesDe, porter,
-    lieuxOuverts, explorateurs, explorateursEnclos, migrerExpeditions, partirExpedition, expeditionPrete, expeditionsPretes, recolterExpedition, DUREES, PLACES_EXPEDITION,
+    DEFIS, GAINS_DEFI, defiDeLaSemaine, etatDefi, reclamerDefi,
+    CHAMPIONS, championsDuJour, equipeChampion, FORCE_CHAMPION,
+    talisman, coutForge, peutForger, forger, appliquerTalisman, PORTEURS, portesDe, porteursDe, porter, migrerPortes,
+    lieuxOuverts, lieuDuJour, explorateurs, explorateursEnclos, migrerExpeditions, partirExpedition, expeditionPrete, expeditionsPretes, recolterExpedition, DUREES, PLACES_EXPEDITION,
     BIENFAITS, salleLabyrinthe, deuxBienfaits, etatLabyrinthe, finLabyrinthe, gainsProfondeur,
     MISE, PARTIES_MAX, valeurCoup, etatAstragales, jouerAstragales,
     ligue, equipeHorsChant, equipeOmbre, areneFaite, resultatArene,
-    semaine, titanDeLaSemaine, etatTitan, titanFait, totalTitan, uniteTitan, enregistrerTitan, paliersAReclamer, reclamerPalier,
+    semaine, titanDeLaSemaine, etatTitan, titanFait, totalTitan, uniteTitan, ENSEMBLE, ensembleTitan, reclamerEnsemble, palierFranchi, enregistrerTitan, paliersAReclamer, reclamerPalier,
     enAttente,
     PENCHANTS, scoresPenchant, dominante, noterPenchant, majDominante,
     FETES, feteDuJour, prochaineFete,

@@ -127,7 +127,7 @@
       const u = Object.assign({}, h, { competences: comps, pvMax: Math.round(h.pvMax * m), attaque: Math.round(h.attaque * m) });
       appliquerPassifs(u, profil);
       const la = lienActif(profil);
-      if (la && la.espece === u.id && profil.creature === u.id) { const t = trait(la.trait); if (t) { t.appliquer(u); u.traitNom = t.nom; u.traitDesc = t.desc; } if (la.surnom) u.nom = la.surnom; }
+      if (la && la.espece === u.id && profil.creature === u.id) { const t = trait(la.trait); if (t) { t.appliquer(u); u.traitNom = t.nom; u.traitDesc = t.desc; } if (la.surnom) u.nom = la.surnom; u.lienUid = la.uid; }
       return u;
     });
   }
@@ -135,8 +135,16 @@
   function majDominante(profil) {
     const h = profil.histoire || {}, j = h.jauges || {}, e = h.echos || {};
     const sc = {}; ['honneur', 'ruse', 'piete'].forEach(k => { sc[k] = 10 * (j[k] || 0) + (e[k] || 0); });
-    const tri = Object.keys(sc).sort((a, b) => sc[b] - sc[a]);
-    if (profil.histoire) profil.histoire.dominante = sc[tri[0]] >= 5 && sc[tri[0]] > sc[tri[1]] ? tri[0] : null;
+    if (profil.histoire) profil.histoire.dominante = departager(sc, h);
+  }
+  // Le plus haut penchant ; en cas d'égalité, celui qui dominait déjà, sinon le dernier qui a bougé
+  function departager(sc, h) {
+    const max = Math.max(...Object.values(sc)); if (max < 5) return null;
+    const ex = Object.keys(sc).filter(k => sc[k] === max);
+    if (ex.length === 1) return ex[0];
+    if (h && ex.includes(h.dominante)) return h.dominante;
+    if (h && ex.includes(h.dernierPenchant)) return h.dernierPenchant;
+    return ex[0];
   }
   // Passifs de Voie (Errant) et de Serments (toute l'équipe)
   function appliquerPassifs(u, profil) {
@@ -293,7 +301,7 @@
     const h = profil.histoire;
     if (h.choix[cle]) return 0;
     h.choix[cle] = option.id;
-    if (option.jauge) h.jauges[option.jauge] = (h.jauges[option.jauge] || 0) + 1;
+    if (option.jauge) { h.jauges[option.jauge] = (h.jauges[option.jauge] || 0) + 1; h.dernierPenchant = option.jauge; }
     majDominante(profil);
     const e = option.effet || {};
     if (e.drachmes) profil.drachmes += e.drachmes;
@@ -435,7 +443,7 @@
     NIVEAU_MAX_CARTE, NIVEAU_MAX_EQUIPE, SLOTS, LIENS_MAX, TRAITS, trait, lienActif, choisirLien, libererLien, NOMS_RARETE, COULEURS_RARETE,
     initialiser, rarete, carteInfo, coutAmelioration, peutAmeliorer, ameliorer, basculerEquipement,
     equipeDuJoueur, ennemisPourJoueur, butin, xpPourNiveau, gains, ajouterXp, herosDisponibles, genererDon, appliquerDon,
-    multiplicateurCarte, multiplicateurEquipe, invite
+    multiplicateurCarte, multiplicateurEquipe, invite, departager
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Progression;
   else racine.Progression = Progression;
