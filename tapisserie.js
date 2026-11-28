@@ -44,7 +44,7 @@
       const cv = document.createElement('canvas'); cv.width = COLS * 4; cv.height = JOURS * SH;
       const x = cv.getContext('2d');
       // L'image 3D du Gardien si elle est chargée ; sinon l'emoji en texte, et on redessinera une fois l'image arrivée
-      const img = racine.Emojis && racine.Emojis.image(emoji, () => { delete motifs[cle]; if (dernierDessin) dessiner.apply(null, dernierDessin); });
+      const img = racine.Emojis && racine.Emojis.image(emoji, () => { delete motifs[cle]; redessinerTout(); });
       const t = Math.min(cv.width, cv.height) * 0.86;
       if (img && img.complete && img.naturalWidth) x.drawImage(img, (cv.width - t) / 2, (cv.height - t) / 2, t, t);
       else { x.font = Math.round(t) + 'px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(emoji, cv.width / 2, cv.height * 0.52); }
@@ -100,10 +100,17 @@
   }
 
   // Dessine la tapisserie. progression (0 à 1) anime le rang du dernier jour joué.
-  let dernierDessin = null;
+  // Toutes les tapisseries dessinées (accueil, classement, fiche d'un joueur...) : quand l'image 3D du Gardien arrive,
+  // on les redessine toutes, pour que le motif soit partout le même (et pas l'emoji du téléphone sur certaines)
+  const dessins = new Map();
+  let attente = null;
+  function redessinerTout() {
+    clearTimeout(attente);
+    attente = setTimeout(() => dessins.forEach((args, cv) => { if (cv.isConnected) dessiner.apply(null, args); else dessins.delete(cv); }), 30);
+  }
   function dessiner(canvas, rangs, progression, opts) {
     opts = opts || {};
-    if (progression == null) dernierDessin = [canvas, rangs, null, opts];
+    if (progression == null) dessins.set(canvas, [canvas, rangs, null, opts]);
     const chant = opts.chant || chantDe(rangs);
     rangs = duChant(rangs, chant);
     const { W, H, w, h } = dimensions(canvas);
@@ -197,5 +204,9 @@
     requestAnimationFrame(etape);
   }
 
+  // Précharge les images des Gardiens dès que les emojis 3D sont disponibles
+  if (typeof window !== 'undefined') window.addEventListener('DOMContentLoaded', () => {
+    if (racine.Emojis) Object.values(MOTIFS).forEach(m => racine.Emojis.image(m.emoji, () => { Object.keys(motifs).forEach(k => delete motifs[k]); redessinerTout(); }));
+  });
   racine.Tapisserie = { dessiner, rangTouche, tisser, chantDe, JOURS };
 })(window);
